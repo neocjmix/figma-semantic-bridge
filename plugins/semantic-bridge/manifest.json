@@ -1,0 +1,12 @@
+{
+  "name": "Figma Semantic Bridge — Local",
+  "id": "figma-semantic-bridge-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["ws://127.0.0.1:4177"]
+  }
+}

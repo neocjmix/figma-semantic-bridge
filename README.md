@@ -1,6 +1,6 @@
 # Figma Semantic Bridge
 
-**Status: feasibility — bounded fixture analysis tooling; no production bridge yet.**
+**Status: executable local MVP; automated browser/HTTP/WebSocket/MCP tests are available. Actual Figma Desktop acceptance and release gates remain pending.**
 
 Human-guided, AI-assisted semantic annotation and MCP bridge for Figma Desktop.
 
@@ -11,6 +11,30 @@ Figma's editing hierarchy is not a software component hierarchy. Large real-worl
 Figma Desktop plugin ↔ local server ↔ local web annotation UI + MCP clients.
 
 Figma stays **read-only by default**. This is not an automatic production code generator.
+
+## Run locally
+
+Requires Node.js 22 or later.
+
+```sh
+npm ci
+npm run check
+npm start
+```
+
+Open `http://127.0.0.1:4177` and pair with the token printed in the local terminal.
+Choose **Load demo** to use the self-generated screen and separate specification
+notes without a Figma account. Draw component regions, save and match their source
+nodes, link verbatim specification text, and explicitly approve the results.
+
+For live captures, import `plugins/semantic-bridge/manifest.json` as a development
+plugin in Figma Desktop, pair it with the same token, and select one container.
+The local editor's **Capture selection** adds its image and bounded metadata.
+
+- [Installation, MCP setup and optional AI](docs/product-quickstart.md)
+- [Exact Desktop verification protocol](docs/desktop-verification.md)
+- [Executed checks, measurements and remaining gates](docs/product-validation.md)
+- [Runtime decision record](docs/adr/0001-local-product-runtime.md)
 
 ## Planning documents
 - [Project context](docs/context.md)

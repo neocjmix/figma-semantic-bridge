@@ -1,0 +1,22 @@
+{
+  "name": "figma-semantic-bridge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "build:fixture-plugin": "node scripts/build-fixture-plugin.mjs",
+    "benchmark:fixtures": "tsx scripts/benchmark-fixtures.ts",
+    "check": "npm run typecheck && npm test && npm run build:fixture-plugin",
+    "fixtures:validate": "tsx scripts/validate-manifests.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}

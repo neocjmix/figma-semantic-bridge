@@ -23,6 +23,26 @@ async function openDemo(page: Page, app: { url: string; token: string }) {
   await expect(page.getByRole('img', { name: 'Design canvas' })).toBeVisible();
 }
 
+async function saveAnnotation(page: Page, whilePending?: () => Promise<void>) {
+  const savedResponse = page.waitForResponse(response => {
+    const request = response.request();
+    return request.method() === 'POST' && /\/api\/projects\/[^/]+\/mutate$/.test(new URL(response.url()).pathname)
+      && request.postDataJSON()?.operation?.type === 'upsert_annotation';
+  });
+  const button = page.getByRole('button', { name: 'Save annotation', exact: true });
+  await button.click();
+  await whilePending?.();
+  const response = await savedResponse;
+  expect(response.status()).toBe(200);
+  const saved: Project = await response.json();
+  expect(saved.revision).toBe(response.request().postDataJSON().expectedRevision + 1);
+  await expect(page.locator('.revision')).toHaveText(`revision ${saved.revision}`);
+  await expect(page.getByRole('status')).toHaveText('Annotation saved. Match source nodes, then review it.');
+  await expect(page.locator('.unsaved')).toHaveCount(0);
+  await expect(button).toBeEnabled();
+  return saved;
+}
+
 async function drawRegion(page: Page, bbox: { x: number; y: number; width: number; height: number }, name: string) {
   await page.getByRole('button', { name: 'Draw region', exact: true }).click();
   const points = await page.getByRole('img', { name: 'Design canvas' }).evaluate((element, box) => {
@@ -36,7 +56,7 @@ async function drawRegion(page: Page, bbox: { x: number; y: number; width: numbe
   await page.mouse.move(points.end.x, points.end.y, { steps: 5 });
   await page.mouse.up();
   await page.getByLabel('Component name').fill(name);
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await saveAnnotation(page);
   await expect(page.locator('.component-list')).toContainText(name);
 }
 
@@ -82,12 +102,12 @@ test('coordinate editing, hierarchy, undo/redo and malformed proposals remain re
   await openDemo(page, app);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   await page.getByLabel('Component name').fill('Parent');
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await saveAnnotation(page);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   await page.getByLabel('Component name').fill('Child');
   await page.getByLabel('Parent component').selectOption({ label: 'Parent' });
   await page.getByLabel('Region width', { exact: true }).fill('120');
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await saveAnnotation(page);
   await expect(page.locator('.component-list')).toContainText('Child');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.locator('.component-list')).not.toContainText('Child');
@@ -147,7 +167,25 @@ test('zoomed and panned canvas moves and resizes in original document coordinate
   await dragPoints({ x: 645, y: 465 }, { x: 675, y: 485 });
   expect(Number(await page.getByLabel('Region width', { exact: true }).inputValue())).toBeCloseTo(150, 1);
   expect(Number(await page.getByLabel('Region height', { exact: true }).inputValue())).toBeCloseTo(100, 1);
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  // Hold the real mutation before it reaches the server so pending-save feedback
+  // and the subsequent reload cannot accidentally pass on a fast local machine.
+  let releaseSave!: () => void;
+  let markIntercepted!: () => void;
+  const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
+  const intercepted = new Promise<void>(resolve => { markIntercepted = resolve; });
+  await page.route('**/api/projects/*/mutate', async route => {
+    markIntercepted();
+    await saveGate;
+    await route.continue();
+  }, { times: 1 });
+  await saveAnnotation(page, async () => {
+    try {
+      await intercepted;
+      await expect(page.getByRole('button', { name: 'Save annotation', exact: true })).toBeDisabled();
+      await expect(page.getByRole('status')).toHaveText('Working with your local server…');
+      await expect(page.locator('.unsaved')).toBeVisible();
+    } finally { releaseSave(); }
+  });
   await page.reload();
   await page.locator('.component-list').getByRole('button', { name: 'Movable region', exact: true }).click();
   expect(Number(await page.getByLabel('Region width', { exact: true }).inputValue())).toBeCloseTo(150, 1);

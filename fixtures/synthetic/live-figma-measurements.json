@@ -1,0 +1,1097 @@
+{
+  "schemaVersion": "1.0.0",
+  "executionEnvironment": "official Figma MCP use_figma (not Figma Desktop/local bridge)",
+  "sourceUrl": "https://www.figma.com/design/4dKjnCZ8lTY8fVXUugJGxP",
+  "sourceRevision": {
+    "status": "not measured",
+    "reason": "Plugin API does not expose immutable source revision"
+  },
+  "pageInventory": {
+    "observedAt": "2026-10-22T21:10:55.805Z",
+    "pageIds": [
+      "0:1"
+    ],
+    "pageCount": 1
+  },
+  "timingMethod": "Single observation per scope, Date.now milliseconds inside Plugin API; tool round trip measured independently. No cold/warm classification; not a performance baseline. A 0 ms phase is below timer resolution, not zero work.",
+  "sourceContentPolicy": "Aggregate statistics only; no node names, original texts, images, or raw node records.",
+  "runs": [
+    {
+      "rootId": "0:1",
+      "observedAt": "2026-10-22T21:14:09.727Z",
+      "toolRoundTripMs": 2971,
+      "report": {
+        "schemaVersion": "1.0.0",
+        "analyzerVersion": "0.1.0",
+        "source": {
+          "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+          "pageId": "0:1",
+          "rootId": "0:1"
+        },
+        "parameters": {
+          "limits": {
+            "maxNodes": 1000,
+            "maxRecordBytes": 500000,
+            "maxDurationMs": 5000,
+            "maxPairChecks": 250000
+          },
+          "tolerancePx": 0.5
+        },
+        "extraction": {
+          "complete": true,
+          "stopReason": null,
+          "durationMs": 22,
+          "serializedRecordBytes": 11793
+        },
+        "scopeNodeCount": {
+          "status": "measured",
+          "value": 80
+        },
+        "wholeFileNodeCount": {
+          "status": "not measured",
+          "reason": "one explicit scope only; no whole-file traversal"
+        },
+        "structure": {
+          "nodeCount": 80,
+          "typeCounts": {
+            "PAGE": 1,
+            "FRAME": 3,
+            "RECTANGLE": 20,
+            "TEXT": 56
+          },
+          "maxDepth": 2,
+          "meanDepth": 1.9375,
+          "frameGroupComponentInstanceRatios": {
+            "FRAME": 0.0375,
+            "GROUP": 0,
+            "COMPONENT": 0,
+            "INSTANCE": 0
+          },
+          "autoLayoutEligibleCount": 3,
+          "autoLayoutCount": 0,
+          "autoLayoutRatio": 0,
+          "textNodeCount": 56,
+          "textNodeRatio": 0.7,
+          "textNodesPerMillionSquarePixels": {
+            "status": "not measured",
+            "reason": "root has no positive-area bbox; no inferred canvas area"
+          },
+          "hiddenNodeCount": 0,
+          "invalidOrMissingBoundsCount": 1
+        },
+        "spatial": {
+          "complete": true,
+          "stopReason": null,
+          "pairChecks": 853,
+          "boundedNodeCount": 79,
+          "possiblePairCount": 3081,
+          "exactEqualBoxPairCount": 1,
+          "exactEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0.02531645569620253
+          },
+          "nearEqualBoxPairCount": 1,
+          "nearEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0.02531645569620253
+          },
+          "overlapPairCount": 134,
+          "overlapPairRatio": {
+            "status": "measured",
+            "value": 0.04349237260629666
+          },
+          "containmentPairCount": 123,
+          "containmentWithoutAncestryCount": 48,
+          "containmentWithoutAncestryRatio": {
+            "status": "measured",
+            "value": 0.3902439024390244
+          },
+          "directParentPairCount": 76,
+          "directParentNotContainingCount": 1,
+          "directParentNotContainingRatio": {
+            "status": "measured",
+            "value": 0.013157894736842105
+          }
+        },
+        "timing": {
+          "extractionMs": 22,
+          "spatialMs": 3,
+          "totalMs": 26,
+          "clock": "caller-provided milliseconds"
+        },
+        "bytes": {
+          "recordNdjsonUtf8": 11793,
+          "reportJsonUtf8": 3118,
+          "networkTransfer": {
+            "status": "not measured",
+            "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+          }
+        },
+        "memory": {
+          "pluginHeapBytes": {
+            "status": "not measured",
+            "reason": "Plugin API exposes no portable heap counter"
+          },
+          "serverPeakHeapBytes": {
+            "status": "not measured",
+            "reason": "requires external process instrumentation; record byte budget is not heap memory"
+          }
+        },
+        "limitations": [
+          "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+          "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+          "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+          "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+          "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+          "No node names, text contents, assets, images or inferred semantic labels are included.",
+          "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+        ]
+      }
+    },
+    {
+      "rootId": "1:2",
+      "observedAt": "2026-10-22T21:14:09.728Z",
+      "toolRoundTripMs": 4097,
+      "report": {
+        "schemaVersion": "1.0.0",
+        "analyzerVersion": "0.1.0",
+        "source": {
+          "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+          "pageId": "0:1",
+          "rootId": "1:2"
+        },
+        "parameters": {
+          "limits": {
+            "maxNodes": 1000,
+            "maxRecordBytes": 500000,
+            "maxDurationMs": 5000,
+            "maxPairChecks": 250000
+          },
+          "tolerancePx": 0.5
+        },
+        "extraction": {
+          "complete": true,
+          "stopReason": null,
+          "durationMs": 13,
+          "serializedRecordBytes": 8343
+        },
+        "scopeNodeCount": {
+          "status": "measured",
+          "value": 56
+        },
+        "wholeFileNodeCount": {
+          "status": "not measured",
+          "reason": "one explicit scope only; no whole-file traversal"
+        },
+        "structure": {
+          "nodeCount": 56,
+          "typeCounts": {
+            "FRAME": 1,
+            "RECTANGLE": 14,
+            "TEXT": 41
+          },
+          "maxDepth": 1,
+          "meanDepth": 0.9821428571428571,
+          "frameGroupComponentInstanceRatios": {
+            "FRAME": 0.017857142857142856,
+            "GROUP": 0,
+            "COMPONENT": 0,
+            "INSTANCE": 0
+          },
+          "autoLayoutEligibleCount": 1,
+          "autoLayoutCount": 0,
+          "autoLayoutRatio": 0,
+          "textNodeCount": 41,
+          "textNodeRatio": 0.7321428571428571,
+          "textNodesPerMillionSquarePixels": {
+            "status": "measured",
+            "value": 31.635802469135804
+          },
+          "hiddenNodeCount": 0,
+          "invalidOrMissingBoundsCount": 0
+        },
+        "spatial": {
+          "complete": true,
+          "stopReason": null,
+          "pairChecks": 604,
+          "boundedNodeCount": 56,
+          "possiblePairCount": 1540,
+          "exactEqualBoxPairCount": 0,
+          "exactEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "nearEqualBoxPairCount": 0,
+          "nearEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "overlapPairCount": 111,
+          "overlapPairRatio": {
+            "status": "measured",
+            "value": 0.07207792207792207
+          },
+          "containmentPairCount": 102,
+          "containmentWithoutAncestryCount": 48,
+          "containmentWithoutAncestryRatio": {
+            "status": "measured",
+            "value": 0.47058823529411764
+          },
+          "directParentPairCount": 55,
+          "directParentNotContainingCount": 1,
+          "directParentNotContainingRatio": {
+            "status": "measured",
+            "value": 0.01818181818181818
+          }
+        },
+        "timing": {
+          "extractionMs": 13,
+          "spatialMs": 2,
+          "totalMs": 16,
+          "clock": "caller-provided milliseconds"
+        },
+        "bytes": {
+          "recordNdjsonUtf8": 8343,
+          "reportJsonUtf8": 3068,
+          "networkTransfer": {
+            "status": "not measured",
+            "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+          }
+        },
+        "memory": {
+          "pluginHeapBytes": {
+            "status": "not measured",
+            "reason": "Plugin API exposes no portable heap counter"
+          },
+          "serverPeakHeapBytes": {
+            "status": "not measured",
+            "reason": "requires external process instrumentation; record byte budget is not heap memory"
+          }
+        },
+        "limitations": [
+          "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+          "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+          "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+          "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+          "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+          "No node names, text contents, assets, images or inferred semantic labels are included.",
+          "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+        ]
+      }
+    },
+    {
+      "rootId": "1:58",
+      "observedAt": "2026-10-22T21:14:09.727Z",
+      "toolRoundTripMs": 2206,
+      "report": {
+        "schemaVersion": "1.0.0",
+        "analyzerVersion": "0.1.0",
+        "source": {
+          "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+          "pageId": "0:1",
+          "rootId": "1:58"
+        },
+        "parameters": {
+          "limits": {
+            "maxNodes": 1000,
+            "maxRecordBytes": 500000,
+            "maxDurationMs": 5000,
+            "maxPairChecks": 250000
+          },
+          "tolerancePx": 0.5
+        },
+        "extraction": {
+          "complete": true,
+          "stopReason": null,
+          "durationMs": 15,
+          "serializedRecordBytes": 2472
+        },
+        "scopeNodeCount": {
+          "status": "measured",
+          "value": 17
+        },
+        "wholeFileNodeCount": {
+          "status": "not measured",
+          "reason": "one explicit scope only; no whole-file traversal"
+        },
+        "structure": {
+          "nodeCount": 17,
+          "typeCounts": {
+            "FRAME": 1,
+            "TEXT": 14,
+            "RECTANGLE": 2
+          },
+          "maxDepth": 1,
+          "meanDepth": 0.9411764705882353,
+          "frameGroupComponentInstanceRatios": {
+            "FRAME": 0.058823529411764705,
+            "GROUP": 0,
+            "COMPONENT": 0,
+            "INSTANCE": 0
+          },
+          "autoLayoutEligibleCount": 1,
+          "autoLayoutCount": 0,
+          "autoLayoutRatio": 0,
+          "textNodeCount": 14,
+          "textNodeRatio": 0.8235294117647058,
+          "textNodesPerMillionSquarePixels": {
+            "status": "measured",
+            "value": 27.77777777777778
+          },
+          "hiddenNodeCount": 0,
+          "invalidOrMissingBoundsCount": 0
+        },
+        "spatial": {
+          "complete": true,
+          "stopReason": null,
+          "pairChecks": 136,
+          "boundedNodeCount": 17,
+          "possiblePairCount": 136,
+          "exactEqualBoxPairCount": 0,
+          "exactEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "nearEqualBoxPairCount": 0,
+          "nearEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "overlapPairCount": 16,
+          "overlapPairRatio": {
+            "status": "measured",
+            "value": 0.11764705882352941
+          },
+          "containmentPairCount": 16,
+          "containmentWithoutAncestryCount": 0,
+          "containmentWithoutAncestryRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "directParentPairCount": 16,
+          "directParentNotContainingCount": 0,
+          "directParentNotContainingRatio": {
+            "status": "measured",
+            "value": 0
+          }
+        },
+        "timing": {
+          "extractionMs": 15,
+          "spatialMs": 1,
+          "totalMs": 16,
+          "clock": "caller-provided milliseconds"
+        },
+        "bytes": {
+          "recordNdjsonUtf8": 2472,
+          "reportJsonUtf8": 3027,
+          "networkTransfer": {
+            "status": "not measured",
+            "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+          }
+        },
+        "memory": {
+          "pluginHeapBytes": {
+            "status": "not measured",
+            "reason": "Plugin API exposes no portable heap counter"
+          },
+          "serverPeakHeapBytes": {
+            "status": "not measured",
+            "reason": "requires external process instrumentation; record byte budget is not heap memory"
+          }
+        },
+        "limitations": [
+          "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+          "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+          "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+          "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+          "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+          "No node names, text contents, assets, images or inferred semantic labels are included.",
+          "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+        ]
+      }
+    },
+    {
+      "rootId": "1:75",
+      "observedAt": "2026-10-22T21:14:09.728Z",
+      "toolRoundTripMs": 4870,
+      "report": {
+        "schemaVersion": "1.0.0",
+        "analyzerVersion": "0.1.0",
+        "source": {
+          "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+          "pageId": "0:1",
+          "rootId": "1:75"
+        },
+        "parameters": {
+          "limits": {
+            "maxNodes": 1000,
+            "maxRecordBytes": 500000,
+            "maxDurationMs": 5000,
+            "maxPairChecks": 250000
+          },
+          "tolerancePx": 0.5
+        },
+        "extraction": {
+          "complete": true,
+          "stopReason": null,
+          "durationMs": 3,
+          "serializedRecordBytes": 879
+        },
+        "scopeNodeCount": {
+          "status": "measured",
+          "value": 6
+        },
+        "wholeFileNodeCount": {
+          "status": "not measured",
+          "reason": "one explicit scope only; no whole-file traversal"
+        },
+        "structure": {
+          "nodeCount": 6,
+          "typeCounts": {
+            "FRAME": 1,
+            "TEXT": 1,
+            "RECTANGLE": 4
+          },
+          "maxDepth": 1,
+          "meanDepth": 0.8333333333333334,
+          "frameGroupComponentInstanceRatios": {
+            "FRAME": 0.16666666666666666,
+            "GROUP": 0,
+            "COMPONENT": 0,
+            "INSTANCE": 0
+          },
+          "autoLayoutEligibleCount": 1,
+          "autoLayoutCount": 0,
+          "autoLayoutRatio": 0,
+          "textNodeCount": 1,
+          "textNodeRatio": 0.16666666666666666,
+          "textNodesPerMillionSquarePixels": {
+            "status": "measured",
+            "value": 8.116883116883116
+          },
+          "hiddenNodeCount": 0,
+          "invalidOrMissingBoundsCount": 0
+        },
+        "spatial": {
+          "complete": true,
+          "stopReason": null,
+          "pairChecks": 11,
+          "boundedNodeCount": 6,
+          "possiblePairCount": 15,
+          "exactEqualBoxPairCount": 1,
+          "exactEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0.3333333333333333
+          },
+          "nearEqualBoxPairCount": 1,
+          "nearEqualBoxNodeRatio": {
+            "status": "measured",
+            "value": 0.3333333333333333
+          },
+          "overlapPairCount": 7,
+          "overlapPairRatio": {
+            "status": "measured",
+            "value": 0.4666666666666667
+          },
+          "containmentPairCount": 5,
+          "containmentWithoutAncestryCount": 0,
+          "containmentWithoutAncestryRatio": {
+            "status": "measured",
+            "value": 0
+          },
+          "directParentPairCount": 5,
+          "directParentNotContainingCount": 0,
+          "directParentNotContainingRatio": {
+            "status": "measured",
+            "value": 0
+          }
+        },
+        "timing": {
+          "extractionMs": 3,
+          "spatialMs": 0,
+          "totalMs": 3,
+          "clock": "caller-provided milliseconds"
+        },
+        "bytes": {
+          "recordNdjsonUtf8": 879,
+          "reportJsonUtf8": 3045,
+          "networkTransfer": {
+            "status": "not measured",
+            "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+          }
+        },
+        "memory": {
+          "pluginHeapBytes": {
+            "status": "not measured",
+            "reason": "Plugin API exposes no portable heap counter"
+          },
+          "serverPeakHeapBytes": {
+            "status": "not measured",
+            "reason": "requires external process instrumentation; record byte budget is not heap memory"
+          }
+        },
+        "limitations": [
+          "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+          "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+          "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+          "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+          "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+          "No node names, text contents, assets, images or inferred semantic labels are included.",
+          "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+        ]
+      }
+    }
+  ],
+  "finalBundleVerification": {
+    "bundlePath": "dist/fixture-analyzer.mcp.js",
+    "sha256": "fbe2cb59a108f4ad3f3a9d5e3408e22caac39fd204a0d1cb2454254bd33dd957",
+    "purpose": "Verify hidden-instance coverage and final returned JSON byte calculation; structural results unchanged across both observations. These are two smoke observations, not the five-run cold/warm performance protocol.",
+    "runs": [
+      {
+        "rootId": "0:1",
+        "observedAt": "2026-10-22T21:17:43.507Z",
+        "toolRoundTripMs": 3192,
+        "report": {
+          "schemaVersion": "1.0.0",
+          "analyzerVersion": "0.1.0",
+          "source": {
+            "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+            "pageId": "0:1",
+            "rootId": "0:1",
+            "revision": null
+          },
+          "parameters": {
+            "limits": {
+              "maxNodes": 1000,
+              "maxRecordBytes": 500000,
+              "maxDurationMs": 5000,
+              "maxPairChecks": 250000
+            },
+            "tolerancePx": 0.5
+          },
+          "extraction": {
+            "complete": true,
+            "stopReason": null,
+            "durationMs": 25,
+            "serializedRecordBytes": 11793
+          },
+          "scopeNodeCount": {
+            "status": "measured",
+            "value": 80
+          },
+          "wholeFileNodeCount": {
+            "status": "not measured",
+            "reason": "one explicit scope only; no whole-file traversal"
+          },
+          "structure": {
+            "nodeCount": 80,
+            "typeCounts": {
+              "PAGE": 1,
+              "FRAME": 3,
+              "RECTANGLE": 20,
+              "TEXT": 56
+            },
+            "maxDepth": 2,
+            "meanDepth": 1.9375,
+            "frameGroupComponentInstanceRatios": {
+              "FRAME": 0.0375,
+              "GROUP": 0,
+              "COMPONENT": 0,
+              "INSTANCE": 0
+            },
+            "autoLayoutEligibleCount": 3,
+            "autoLayoutCount": 0,
+            "autoLayoutRatio": 0,
+            "textNodeCount": 56,
+            "textNodeRatio": 0.7,
+            "textNodesPerMillionSquarePixels": {
+              "status": "not measured",
+              "reason": "root has no positive-area bbox; no inferred canvas area"
+            },
+            "hiddenNodeCount": 0,
+            "invalidOrMissingBoundsCount": 1
+          },
+          "spatial": {
+            "complete": true,
+            "stopReason": null,
+            "pairChecks": 853,
+            "boundedNodeCount": 79,
+            "possiblePairCount": 3081,
+            "exactEqualBoxPairCount": 1,
+            "exactEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0.02531645569620253
+            },
+            "nearEqualBoxPairCount": 1,
+            "nearEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0.02531645569620253
+            },
+            "overlapPairCount": 134,
+            "overlapPairRatio": {
+              "status": "measured",
+              "value": 0.04349237260629666
+            },
+            "containmentPairCount": 123,
+            "containmentWithoutAncestryCount": 48,
+            "containmentWithoutAncestryRatio": {
+              "status": "measured",
+              "value": 0.3902439024390244
+            },
+            "directParentPairCount": 76,
+            "directParentNotContainingCount": 1,
+            "directParentNotContainingRatio": {
+              "status": "measured",
+              "value": 0.013157894736842105
+            }
+          },
+          "timing": {
+            "extractionMs": 25,
+            "spatialMs": 4,
+            "totalMs": 29,
+            "clock": "caller-provided milliseconds"
+          },
+          "bytes": {
+            "recordNdjsonUtf8": 11793,
+            "reportJsonUtf8": 3200,
+            "networkTransfer": {
+              "status": "not measured",
+              "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+            }
+          },
+          "memory": {
+            "pluginHeapBytes": {
+              "status": "not measured",
+              "reason": "Plugin API exposes no portable heap counter"
+            },
+            "serverPeakHeapBytes": {
+              "status": "not measured",
+              "reason": "requires external process instrumentation; record byte budget is not heap memory"
+            }
+          },
+          "limitations": [
+            "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+            "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+            "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+            "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+            "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+            "No node names, text contents, assets, images or inferred semantic labels are included.",
+            "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+          ],
+          "hiddenInstanceChildren": {
+            "status": "measured",
+            "value": "included"
+          }
+        }
+      },
+      {
+        "rootId": "1:2",
+        "observedAt": "2026-10-22T21:17:43.507Z",
+        "toolRoundTripMs": 2437,
+        "report": {
+          "schemaVersion": "1.0.0",
+          "analyzerVersion": "0.1.0",
+          "source": {
+            "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+            "pageId": "0:1",
+            "rootId": "1:2",
+            "revision": null
+          },
+          "parameters": {
+            "limits": {
+              "maxNodes": 1000,
+              "maxRecordBytes": 500000,
+              "maxDurationMs": 5000,
+              "maxPairChecks": 250000
+            },
+            "tolerancePx": 0.5
+          },
+          "extraction": {
+            "complete": true,
+            "stopReason": null,
+            "durationMs": 24,
+            "serializedRecordBytes": 8343
+          },
+          "scopeNodeCount": {
+            "status": "measured",
+            "value": 56
+          },
+          "wholeFileNodeCount": {
+            "status": "not measured",
+            "reason": "one explicit scope only; no whole-file traversal"
+          },
+          "structure": {
+            "nodeCount": 56,
+            "typeCounts": {
+              "FRAME": 1,
+              "RECTANGLE": 14,
+              "TEXT": 41
+            },
+            "maxDepth": 1,
+            "meanDepth": 0.9821428571428571,
+            "frameGroupComponentInstanceRatios": {
+              "FRAME": 0.017857142857142856,
+              "GROUP": 0,
+              "COMPONENT": 0,
+              "INSTANCE": 0
+            },
+            "autoLayoutEligibleCount": 1,
+            "autoLayoutCount": 0,
+            "autoLayoutRatio": 0,
+            "textNodeCount": 41,
+            "textNodeRatio": 0.7321428571428571,
+            "textNodesPerMillionSquarePixels": {
+              "status": "measured",
+              "value": 31.635802469135804
+            },
+            "hiddenNodeCount": 0,
+            "invalidOrMissingBoundsCount": 0
+          },
+          "spatial": {
+            "complete": true,
+            "stopReason": null,
+            "pairChecks": 604,
+            "boundedNodeCount": 56,
+            "possiblePairCount": 1540,
+            "exactEqualBoxPairCount": 0,
+            "exactEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "nearEqualBoxPairCount": 0,
+            "nearEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "overlapPairCount": 111,
+            "overlapPairRatio": {
+              "status": "measured",
+              "value": 0.07207792207792207
+            },
+            "containmentPairCount": 102,
+            "containmentWithoutAncestryCount": 48,
+            "containmentWithoutAncestryRatio": {
+              "status": "measured",
+              "value": 0.47058823529411764
+            },
+            "directParentPairCount": 55,
+            "directParentNotContainingCount": 1,
+            "directParentNotContainingRatio": {
+              "status": "measured",
+              "value": 0.01818181818181818
+            }
+          },
+          "timing": {
+            "extractionMs": 24,
+            "spatialMs": 3,
+            "totalMs": 27,
+            "clock": "caller-provided milliseconds"
+          },
+          "bytes": {
+            "recordNdjsonUtf8": 8343,
+            "reportJsonUtf8": 3150,
+            "networkTransfer": {
+              "status": "not measured",
+              "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+            }
+          },
+          "memory": {
+            "pluginHeapBytes": {
+              "status": "not measured",
+              "reason": "Plugin API exposes no portable heap counter"
+            },
+            "serverPeakHeapBytes": {
+              "status": "not measured",
+              "reason": "requires external process instrumentation; record byte budget is not heap memory"
+            }
+          },
+          "limitations": [
+            "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+            "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+            "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+            "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+            "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+            "No node names, text contents, assets, images or inferred semantic labels are included.",
+            "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+          ],
+          "hiddenInstanceChildren": {
+            "status": "measured",
+            "value": "included"
+          }
+        }
+      },
+      {
+        "rootId": "1:58",
+        "observedAt": "2026-10-22T21:17:43.507Z",
+        "toolRoundTripMs": 4055,
+        "report": {
+          "schemaVersion": "1.0.0",
+          "analyzerVersion": "0.1.0",
+          "source": {
+            "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+            "pageId": "0:1",
+            "rootId": "1:58",
+            "revision": null
+          },
+          "parameters": {
+            "limits": {
+              "maxNodes": 1000,
+              "maxRecordBytes": 500000,
+              "maxDurationMs": 5000,
+              "maxPairChecks": 250000
+            },
+            "tolerancePx": 0.5
+          },
+          "extraction": {
+            "complete": true,
+            "stopReason": null,
+            "durationMs": 8,
+            "serializedRecordBytes": 2472
+          },
+          "scopeNodeCount": {
+            "status": "measured",
+            "value": 17
+          },
+          "wholeFileNodeCount": {
+            "status": "not measured",
+            "reason": "one explicit scope only; no whole-file traversal"
+          },
+          "structure": {
+            "nodeCount": 17,
+            "typeCounts": {
+              "FRAME": 1,
+              "TEXT": 14,
+              "RECTANGLE": 2
+            },
+            "maxDepth": 1,
+            "meanDepth": 0.9411764705882353,
+            "frameGroupComponentInstanceRatios": {
+              "FRAME": 0.058823529411764705,
+              "GROUP": 0,
+              "COMPONENT": 0,
+              "INSTANCE": 0
+            },
+            "autoLayoutEligibleCount": 1,
+            "autoLayoutCount": 0,
+            "autoLayoutRatio": 0,
+            "textNodeCount": 14,
+            "textNodeRatio": 0.8235294117647058,
+            "textNodesPerMillionSquarePixels": {
+              "status": "measured",
+              "value": 27.77777777777778
+            },
+            "hiddenNodeCount": 0,
+            "invalidOrMissingBoundsCount": 0
+          },
+          "spatial": {
+            "complete": true,
+            "stopReason": null,
+            "pairChecks": 136,
+            "boundedNodeCount": 17,
+            "possiblePairCount": 136,
+            "exactEqualBoxPairCount": 0,
+            "exactEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "nearEqualBoxPairCount": 0,
+            "nearEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "overlapPairCount": 16,
+            "overlapPairRatio": {
+              "status": "measured",
+              "value": 0.11764705882352941
+            },
+            "containmentPairCount": 16,
+            "containmentWithoutAncestryCount": 0,
+            "containmentWithoutAncestryRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "directParentPairCount": 16,
+            "directParentNotContainingCount": 0,
+            "directParentNotContainingRatio": {
+              "status": "measured",
+              "value": 0
+            }
+          },
+          "timing": {
+            "extractionMs": 8,
+            "spatialMs": 0,
+            "totalMs": 9,
+            "clock": "caller-provided milliseconds"
+          },
+          "bytes": {
+            "recordNdjsonUtf8": 2472,
+            "reportJsonUtf8": 3106,
+            "networkTransfer": {
+              "status": "not measured",
+              "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+            }
+          },
+          "memory": {
+            "pluginHeapBytes": {
+              "status": "not measured",
+              "reason": "Plugin API exposes no portable heap counter"
+            },
+            "serverPeakHeapBytes": {
+              "status": "not measured",
+              "reason": "requires external process instrumentation; record byte budget is not heap memory"
+            }
+          },
+          "limitations": [
+            "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+            "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+            "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+            "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+            "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+            "No node names, text contents, assets, images or inferred semantic labels are included.",
+            "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+          ],
+          "hiddenInstanceChildren": {
+            "status": "measured",
+            "value": "included"
+          }
+        }
+      },
+      {
+        "rootId": "1:75",
+        "observedAt": "2026-10-22T21:17:43.507Z",
+        "toolRoundTripMs": 4822,
+        "report": {
+          "schemaVersion": "1.0.0",
+          "analyzerVersion": "0.1.0",
+          "source": {
+            "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+            "pageId": "0:1",
+            "rootId": "1:75",
+            "revision": null
+          },
+          "parameters": {
+            "limits": {
+              "maxNodes": 1000,
+              "maxRecordBytes": 500000,
+              "maxDurationMs": 5000,
+              "maxPairChecks": 250000
+            },
+            "tolerancePx": 0.5
+          },
+          "extraction": {
+            "complete": true,
+            "stopReason": null,
+            "durationMs": 4,
+            "serializedRecordBytes": 879
+          },
+          "scopeNodeCount": {
+            "status": "measured",
+            "value": 6
+          },
+          "wholeFileNodeCount": {
+            "status": "not measured",
+            "reason": "one explicit scope only; no whole-file traversal"
+          },
+          "structure": {
+            "nodeCount": 6,
+            "typeCounts": {
+              "FRAME": 1,
+              "TEXT": 1,
+              "RECTANGLE": 4
+            },
+            "maxDepth": 1,
+            "meanDepth": 0.8333333333333334,
+            "frameGroupComponentInstanceRatios": {
+              "FRAME": 0.16666666666666666,
+              "GROUP": 0,
+              "COMPONENT": 0,
+              "INSTANCE": 0
+            },
+            "autoLayoutEligibleCount": 1,
+            "autoLayoutCount": 0,
+            "autoLayoutRatio": 0,
+            "textNodeCount": 1,
+            "textNodeRatio": 0.16666666666666666,
+            "textNodesPerMillionSquarePixels": {
+              "status": "measured",
+              "value": 8.116883116883116
+            },
+            "hiddenNodeCount": 0,
+            "invalidOrMissingBoundsCount": 0
+          },
+          "spatial": {
+            "complete": true,
+            "stopReason": null,
+            "pairChecks": 11,
+            "boundedNodeCount": 6,
+            "possiblePairCount": 15,
+            "exactEqualBoxPairCount": 1,
+            "exactEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0.3333333333333333
+            },
+            "nearEqualBoxPairCount": 1,
+            "nearEqualBoxNodeRatio": {
+              "status": "measured",
+              "value": 0.3333333333333333
+            },
+            "overlapPairCount": 7,
+            "overlapPairRatio": {
+              "status": "measured",
+              "value": 0.4666666666666667
+            },
+            "containmentPairCount": 5,
+            "containmentWithoutAncestryCount": 0,
+            "containmentWithoutAncestryRatio": {
+              "status": "measured",
+              "value": 0
+            },
+            "directParentPairCount": 5,
+            "directParentNotContainingCount": 0,
+            "directParentNotContainingRatio": {
+              "status": "measured",
+              "value": 0
+            }
+          },
+          "timing": {
+            "extractionMs": 4,
+            "spatialMs": 0,
+            "totalMs": 4,
+            "clock": "caller-provided milliseconds"
+          },
+          "bytes": {
+            "recordNdjsonUtf8": 879,
+            "reportJsonUtf8": 3127,
+            "networkTransfer": {
+              "status": "not measured",
+              "reason": "serialized bytes are not measured transport or Figma internal loading bytes"
+            }
+          },
+          "memory": {
+            "pluginHeapBytes": {
+              "status": "not measured",
+              "reason": "Plugin API exposes no portable heap counter"
+            },
+            "serverPeakHeapBytes": {
+              "status": "not measured",
+              "reason": "requires external process instrumentation; record byte budget is not heap memory"
+            }
+          },
+          "limitations": [
+            "All counts/depths/ratios refer to this scope (root depth 0), or the observed pre-order prefix when extraction.complete is false.",
+            "Absolute axis-aligned BBoxes ignore rendered clipping, masks, rotation silhouettes and occlusion; hidden nodes are included.",
+            "Near-equal compares all four edges within tolerancePx; exact and near-equal ratios count participating bounded nodes. Near-equal includes exact.",
+            "Strict one-way tolerant containment excludes mutual containment; this relation is geometric, never a semantic component hierarchy.",
+            "Spatial counts are lower bounds if spatial.complete is false; extraction truncation also prevents whole-scope inference.",
+            "No node names, text contents, assets, images or inferred semantic labels are included.",
+            "Time budgets are cooperative between node/property and pair reads, not preemptive limits on a blocked host API call."
+          ],
+          "hiddenInstanceChildren": {
+            "status": "measured",
+            "value": "included"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # Figma Semantic Bridge
 
-**Status: planning / feasibility — no production implementation yet.**
+**Status: feasibility — bounded fixture analysis tooling; no production bridge yet.**
 
 Human-guided, AI-assisted semantic annotation and MCP bridge for Figma Desktop.
 
@@ -19,6 +19,9 @@ Figma stays **read-only by default**. This is not an automatic production code g
 - [Data model](docs/data-model.md)
 - [Feasibility gates](docs/feasibility.md)
 - [Public Figma test-file research (2026-10-23)](docs/research/public-figma-fixtures-2026-10-23.md)
+- [Real-world fixture evaluation and measured results](docs/fixture-evaluation-results.md)
+- [Fixture registry and schema](fixtures/README.md)
+- [Read-only analyzer / Figma Desktop instructions](docs/fixture-plugin.md)
 - [Roadmap](docs/roadmap.md)
 - [Codex instructions](AGENTS.md)
 
@@ -26,3 +29,10 @@ Figma stays **read-only by default**. This is not an automatic production code g
 Never commit proprietary design screenshots, Figma dumps, specs, access tokens or company metadata. Public tests use synthetic or explicitly licensed fixtures. Remote inference on internal designs requires authorization.
 
 License selection is pending. Public visibility is not an OSS license.
+
+## Fixture tooling
+
+Requires Node.js 22 or later. Run `npm ci`, `npm run check`, and
+`npm run fixtures:validate`. `npm run benchmark:fixtures` regenerates local
+synthetic benchmark observations. Public candidate manifests contain metadata
+only; automated tests never fetch Figma documents.

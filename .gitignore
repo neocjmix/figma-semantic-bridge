@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.fixture-local/
+plugins/fixture-analyzer/code.js
+*.fig
+.env
+.env.*
+!.env.example

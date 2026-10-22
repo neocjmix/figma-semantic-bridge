@@ -18,6 +18,7 @@ Figma stays **read-only by default**. This is not an automatic production code g
 - [Pipeline and algorithms](docs/pipeline.md)
 - [Data model](docs/data-model.md)
 - [Feasibility gates](docs/feasibility.md)
+- [Public Figma test-file research (2026-10-23)](docs/research/public-figma-fixtures-2026-10-23.md)
 - [Roadmap](docs/roadmap.md)
 - [Codex instructions](AGENTS.md)
 

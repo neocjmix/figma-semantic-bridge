@@ -33,6 +33,11 @@ npm run benchmark:product
 server/MCP bundles. The browser suite needs Chromium (`npx playwright install
 chromium` if unavailable); it uses `/usr/bin/chromium` when installed. Tests use
 temporary directories, self-generated designs and local mock providers only.
+CI first discovers an installed Google Chrome/Chromium executable and supplies
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; otherwise it installs Playwright Chromium
+under a five-minute step limit. The initial hosted run passed code checks but
+stalled in OS/browser dependency installation, so using the runner's existing
+browser avoids making package-mirror availability a mandatory test dependency.
 
 Executed on this development branch: **83 Node tests passed, 5 Chromium browser
 tests passed, TypeScript passed, both plugins/web/server/MCP builds passed, and

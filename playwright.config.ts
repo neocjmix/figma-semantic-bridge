@@ -15,7 +15,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: {
-      ...(existsSync('/usr/bin/chromium') ? { executablePath: '/usr/bin/chromium' } : {}),
+      ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+        : existsSync('/usr/bin/chromium') ? { executablePath: '/usr/bin/chromium' } : {}),
       args: ['--no-sandbox'],
     },
   },

@@ -1,4 +1,4 @@
-name: Fixture analysis
+name: Product and fixture checks
 on:
   push:
   pull_request:
@@ -16,3 +16,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run fixtures:validate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

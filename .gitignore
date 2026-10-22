@@ -6,3 +6,7 @@ plugins/fixture-analyzer/code.js
 .env
 .env.*
 !.env.example
+plugins/semantic-bridge/code.js
+.bridge-local/
+test-results/
+playwright-report/

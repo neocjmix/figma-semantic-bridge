@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-22T21:39:22.971Z",
+  "fileKey": "4dKjnCZ8lTY8fVXUugJGxP",
+  "probe": "bounded direct Plugin API export, not bundled product adapter or Desktop bridge",
+  "mutatedNodeIds": [],
+  "memory": "not measured",
+  "results": [
+    {
+      "id": "1:2",
+      "count": 56,
+      "textNodes": 41,
+      "complete": true,
+      "bounds": {
+        "x": 120,
+        "y": 120,
+        "width": 1440,
+        "height": 900
+      },
+      "traversalMs": 52,
+      "exportMs": 500,
+      "image": {
+        "bytes": 55940,
+        "width": 1440,
+        "height": 900
+      },
+      "error": null
+    },
+    {
+      "id": "1:58",
+      "count": 17,
+      "textNodes": 14,
+      "complete": true,
+      "bounds": {
+        "x": 1635,
+        "y": 120,
+        "width": 560,
+        "height": 900
+      },
+      "traversalMs": 2,
+      "exportMs": 119,
+      "image": {
+        "bytes": 41772,
+        "width": 560,
+        "height": 900
+      },
+      "error": null
+    },
+    {
+      "id": "1:75",
+      "count": 6,
+      "textNodes": 1,
+      "complete": true,
+      "bounds": {
+        "x": 1635,
+        "y": 1070,
+        "width": 560,
+        "height": 220
+      },
+      "traversalMs": 1,
+      "exportMs": 34,
+      "image": {
+        "bytes": 5002,
+        "width": 560,
+        "height": 220
+      },
+      "error": null
+    }
+  ],
+  "limitations": [
+    "Single remote Plugin API observation, not Desktop networking or full bundled adapter validation.",
+    "The 71982-character bundled product adapter exceeded the remote connector code limit of 50000 characters and was rejected before execution.",
+    "No raw node text or image bytes stored; timings include remote Plugin API overhead and are not performance thresholds."
+  ]
+}

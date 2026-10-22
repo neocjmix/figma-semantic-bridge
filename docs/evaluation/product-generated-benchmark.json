@@ -1,0 +1,278 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "generated-product-adapter-and-matching-benchmark",
+  "measuredAt": "2026-10-22T21:39:33.802Z",
+  "command": "npm run benchmark:product",
+  "generator": "scripts/benchmark-product.ts",
+  "runtime": {
+    "node": "v24.19.0",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "limitations": [
+    "Generated scalar tree only. Neither the linked Figma synthetic file nor any public Figma candidate was measured.",
+    "No Figma Desktop, native node loading/export, WebSocket/HTTP transfer or browser image rendering was exercised.",
+    "The source is a lazy six-way tree with generated UI-like text and mixed node types. It is not a representative real product corpus.",
+    "Three scope sizes use a 2,000-node extraction cap; the fourth case explicitly captures the maximum supported 10,000-node scope.",
+    "One run per case; no warmup, forced GC, performance pass threshold, or inference about Desktop latency. Process samples may include startup, earlier cases and garbage collection.",
+    "Timing includes runtime schema validation. BBox exact-query results measure geometry, not semantic accuracy."
+  ],
+  "results": [
+    {
+      "label": "generated-100-nodes-budget-2000",
+      "knownGeneratedScopeNodeCount": 100,
+      "limits": {
+        "maxNodes": 2000,
+        "maxBytes": 4000000,
+        "maxDurationMs": 15000,
+        "maxImageDimension": 2048
+      },
+      "extraction": {
+        "elapsedMs": 10.461,
+        "capturedNodes": 100,
+        "materializedNodeHandles": 100,
+        "visitedUniqueNodes": 100,
+        "childHandleReads": 99,
+        "cooperativeYields": 1,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "nodeArrayJsonUtf8Bytes": 25504,
+        "snapshotJsonUtf8Bytes": 26215,
+        "pluginResponseJsonUtf8Bytes": 26286,
+        "actualTransportBytes": {
+          "status": "not measured",
+          "reason": "Adapter runs in-process; JSON byte counts measure serialization, not network transfer."
+        },
+        "preview": {
+          "status": "not measured",
+          "reason": "Generated lazy nodes do not implement native Figma exportAsync; no image or public design is used."
+        }
+      },
+      "matching": {
+        "indexedNodes": 100,
+        "indexBuildMs": 0.948,
+        "queryCount": 20,
+        "reusedIndexQueriesMs": 0.525,
+        "reusedIndexTotalCandidates": 40,
+        "matchRegionTotalMs": 7.272,
+        "matchRegionMedianMs": 0.301,
+        "matchRegionMinMs": 0.137,
+        "matchRegionMaxMs": 1.022,
+        "sourceReferences": 20,
+        "ambiguousQueries": 0,
+        "method": "20 deterministic exact-BBox queries from the captured prefix. matchRegion builds its own index for each call; reusedIndex timing measures SpatialNodeIndex.query separately."
+      },
+      "nodeProcessMemory": {
+        "method": "process.memoryUsage before capture, after capture, after matching; whole-process samples, not allocation or peak measurements. GC is not forced.",
+        "beforeCaptureHeapUsedBytes": 11062072,
+        "afterCaptureHeapUsedBytes": 12976544,
+        "afterMatchingHeapUsedBytes": 14498072,
+        "captureHeapDeltaBytes": 1914472,
+        "totalHeapDeltaBytes": 3436000,
+        "beforeCaptureRssBytes": 65036288,
+        "afterCaptureRssBytes": 68153344,
+        "afterMatchingRssBytes": 73048064,
+        "peakHeapBytes": {
+          "status": "not measured"
+        },
+        "figmaNativeMemoryBytes": {
+          "status": "not measured"
+        }
+      }
+    },
+    {
+      "label": "generated-1000-nodes-budget-2000",
+      "knownGeneratedScopeNodeCount": 1000,
+      "limits": {
+        "maxNodes": 2000,
+        "maxBytes": 4000000,
+        "maxDurationMs": 15000,
+        "maxImageDimension": 2048
+      },
+      "extraction": {
+        "elapsedMs": 17.562,
+        "capturedNodes": 1000,
+        "materializedNodeHandles": 1000,
+        "visitedUniqueNodes": 1000,
+        "childHandleReads": 999,
+        "cooperativeYields": 10,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "nodeArrayJsonUtf8Bytes": 258103,
+        "snapshotJsonUtf8Bytes": 258815,
+        "pluginResponseJsonUtf8Bytes": 258886,
+        "actualTransportBytes": {
+          "status": "not measured",
+          "reason": "Adapter runs in-process; JSON byte counts measure serialization, not network transfer."
+        },
+        "preview": {
+          "status": "not measured",
+          "reason": "Generated lazy nodes do not implement native Figma exportAsync; no image or public design is used."
+        }
+      },
+      "matching": {
+        "indexedNodes": 1000,
+        "indexBuildMs": 2.782,
+        "queryCount": 20,
+        "reusedIndexQueriesMs": 0.613,
+        "reusedIndexTotalCandidates": 40,
+        "matchRegionTotalMs": 37.312,
+        "matchRegionMedianMs": 1.938,
+        "matchRegionMinMs": 1.058,
+        "matchRegionMaxMs": 3.05,
+        "sourceReferences": 20,
+        "ambiguousQueries": 0,
+        "method": "20 deterministic exact-BBox queries from the captured prefix. matchRegion builds its own index for each call; reusedIndex timing measures SpatialNodeIndex.query separately."
+      },
+      "nodeProcessMemory": {
+        "method": "process.memoryUsage before capture, after capture, after matching; whole-process samples, not allocation or peak measurements. GC is not forced.",
+        "beforeCaptureHeapUsedBytes": 14610280,
+        "afterCaptureHeapUsedBytes": 13633784,
+        "afterMatchingHeapUsedBytes": 14481168,
+        "captureHeapDeltaBytes": -976496,
+        "totalHeapDeltaBytes": -129112,
+        "beforeCaptureRssBytes": 73048064,
+        "afterCaptureRssBytes": 74821632,
+        "afterMatchingRssBytes": 84885504,
+        "peakHeapBytes": {
+          "status": "not measured"
+        },
+        "figmaNativeMemoryBytes": {
+          "status": "not measured"
+        }
+      }
+    },
+    {
+      "label": "generated-10000-nodes-budget-2000",
+      "knownGeneratedScopeNodeCount": 10000,
+      "limits": {
+        "maxNodes": 2000,
+        "maxBytes": 4000000,
+        "maxDurationMs": 15000,
+        "maxImageDimension": 2048
+      },
+      "extraction": {
+        "elapsedMs": 26.399,
+        "capturedNodes": 2000,
+        "materializedNodeHandles": 2000,
+        "visitedUniqueNodes": 2000,
+        "childHandleReads": 1999,
+        "cooperativeYields": 20,
+        "completeness": {
+          "complete": false,
+          "reason": "Node budget reached; this is an observed prefix only."
+        },
+        "nodeArrayJsonUtf8Bytes": 523027,
+        "snapshotJsonUtf8Bytes": 523792,
+        "pluginResponseJsonUtf8Bytes": 523863,
+        "actualTransportBytes": {
+          "status": "not measured",
+          "reason": "Adapter runs in-process; JSON byte counts measure serialization, not network transfer."
+        },
+        "preview": {
+          "status": "not measured",
+          "reason": "Generated lazy nodes do not implement native Figma exportAsync; no image or public design is used."
+        }
+      },
+      "matching": {
+        "indexedNodes": 2000,
+        "indexBuildMs": 3.628,
+        "queryCount": 20,
+        "reusedIndexQueriesMs": 0.869,
+        "reusedIndexTotalCandidates": 40,
+        "matchRegionTotalMs": 44.782,
+        "matchRegionMedianMs": 2.17,
+        "matchRegionMinMs": 2.016,
+        "matchRegionMaxMs": 2.944,
+        "sourceReferences": 20,
+        "ambiguousQueries": 0,
+        "method": "20 deterministic exact-BBox queries from the captured prefix. matchRegion builds its own index for each call; reusedIndex timing measures SpatialNodeIndex.query separately."
+      },
+      "nodeProcessMemory": {
+        "method": "process.memoryUsage before capture, after capture, after matching; whole-process samples, not allocation or peak measurements. GC is not forced.",
+        "beforeCaptureHeapUsedBytes": 15267072,
+        "afterCaptureHeapUsedBytes": 21446424,
+        "afterMatchingHeapUsedBytes": 18124400,
+        "captureHeapDeltaBytes": 6179352,
+        "totalHeapDeltaBytes": 2857328,
+        "beforeCaptureRssBytes": 86982656,
+        "afterCaptureRssBytes": 84946944,
+        "afterMatchingRssBytes": 86126592,
+        "peakHeapBytes": {
+          "status": "not measured"
+        },
+        "figmaNativeMemoryBytes": {
+          "status": "not measured"
+        }
+      }
+    },
+    {
+      "label": "generated-10000-nodes-budget-10000",
+      "knownGeneratedScopeNodeCount": 10000,
+      "limits": {
+        "maxNodes": 10000,
+        "maxBytes": 4000000,
+        "maxDurationMs": 15000,
+        "maxImageDimension": 2048
+      },
+      "extraction": {
+        "elapsedMs": 122.554,
+        "capturedNodes": 10000,
+        "materializedNodeHandles": 10000,
+        "visitedUniqueNodes": 10000,
+        "childHandleReads": 9999,
+        "cooperativeYields": 100,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "nodeArrayJsonUtf8Bytes": 2620900,
+        "snapshotJsonUtf8Bytes": 2621614,
+        "pluginResponseJsonUtf8Bytes": 2621685,
+        "actualTransportBytes": {
+          "status": "not measured",
+          "reason": "Adapter runs in-process; JSON byte counts measure serialization, not network transfer."
+        },
+        "preview": {
+          "status": "not measured",
+          "reason": "Generated lazy nodes do not implement native Figma exportAsync; no image or public design is used."
+        }
+      },
+      "matching": {
+        "indexedNodes": 10000,
+        "indexBuildMs": 21.518,
+        "queryCount": 20,
+        "reusedIndexQueriesMs": 2.442,
+        "reusedIndexTotalCandidates": 40,
+        "matchRegionTotalMs": 307.221,
+        "matchRegionMedianMs": 15.756,
+        "matchRegionMinMs": 13.226,
+        "matchRegionMaxMs": 17.669,
+        "sourceReferences": 20,
+        "ambiguousQueries": 0,
+        "method": "20 deterministic exact-BBox queries from the captured prefix. matchRegion builds its own index for each call; reusedIndex timing measures SpatialNodeIndex.query separately."
+      },
+      "nodeProcessMemory": {
+        "method": "process.memoryUsage before capture, after capture, after matching; whole-process samples, not allocation or peak measurements. GC is not forced.",
+        "beforeCaptureHeapUsedBytes": 19706104,
+        "afterCaptureHeapUsedBytes": 51174176,
+        "afterMatchingHeapUsedBytes": 57720200,
+        "captureHeapDeltaBytes": 31468072,
+        "totalHeapDeltaBytes": 38014096,
+        "beforeCaptureRssBytes": 88186880,
+        "afterCaptureRssBytes": 143405056,
+        "afterMatchingRssBytes": 157376512,
+        "peakHeapBytes": {
+          "status": "not measured"
+        },
+        "figmaNativeMemoryBytes": {
+          "status": "not measured"
+        }
+      }
+    }
+  ]
+}

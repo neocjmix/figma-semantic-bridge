@@ -1,0 +1,118 @@
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { releaseWebAssets } from './release-web-assets.mjs';
+import { renderOfflineGuide } from './render-offline-guide.mjs';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+process.chdir(root);
+if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Build this alpha on macOS Apple Silicon.');
+const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+if (!/^\d+\.\d+\.\d+$/.test(pkg.version)) throw new Error('A numeric release version is required.');
+const version = pkg.version;
+const nodeVersion = '22.23.4';
+const nodeArchive = `node-v${nodeVersion}-darwin-arm64.tar.gz`;
+const nodeSha256 = 'c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428';
+const cache = resolve('.bridge-local/release-cache');
+const staging = resolve('dist/macos');
+const releases = resolve('dist/releases');
+const app = join(staging, 'Figma Semantic Bridge.app');
+const resources = join(app, 'Contents/Resources');
+const run = (command, args, options = {}) => execFileSync(command, args, { cwd: root, stdio: 'inherit', ...options });
+const exists = path => stat(path).then(() => true, () => false);
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+await mkdir(cache, { recursive: true }); await mkdir(releases, { recursive: true });
+// A rebuild replaces same-version artifacts. Never leave a successful report
+// from an earlier build beside a new or partially assembled candidate.
+const verification = join(releases, `figma-semantic-bridge-${version}-verification.json`);
+await rm(verification, { force: true });
+await rm(`${verification}.sha256`, { force: true });
+if (!process.argv.includes('--skip-build')) run('npm', ['run', 'build']);
+run(process.execPath, ['scripts/package-plugin.mjs']);
+
+const archivePath = join(cache, nodeArchive);
+if (!await exists(archivePath)) {
+  const response = await fetch(`https://nodejs.org/dist/v${nodeVersion}/${nodeArchive}`, { signal: AbortSignal.timeout(180_000) });
+  if (!response.ok) throw new Error(`Node download failed: ${response.status}`);
+  await writeFile(archivePath, Buffer.from(await response.arrayBuffer()));
+}
+if (sha(await readFile(archivePath)) !== nodeSha256) throw new Error('Official Node archive checksum mismatch.');
+run('/usr/bin/tar', ['-xzf', archivePath, '-C', cache]);
+const nodeRoot = join(cache, `node-v${nodeVersion}-darwin-arm64`);
+
+// Only a known generated directory is replaced; never copy the checkout or user data.
+await rm(staging, { recursive: true, force: true });
+await mkdir(join(app, 'Contents/MacOS'), { recursive: true });
+await mkdir(join(resources, 'runtime'), { recursive: true });
+await mkdir(join(resources, 'app'), { recursive: true });
+await cp(join(nodeRoot, 'bin/node'), join(resources, 'runtime/node'));
+await cp(join(nodeRoot, 'LICENSE'), join(resources, 'runtime/NODE-LICENSE'));
+for (const name of ['server.mjs', 'mcp.mjs']) await cp(join(root, 'dist', name), join(resources, 'app', name));
+await mkdir(join(resources, 'app/web/assets'), { recursive: true });
+for (const name of await releaseWebAssets('dist/web')) await cp(join('dist/web', name), join(resources, 'app/web', name));
+for (const name of ['package.json', 'package-lock.json']) await cp(name, join(resources, 'app', name));
+run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: join(resources, 'app') });
+await mkdir(join(resources, 'plugins/semantic-bridge'), { recursive: true });
+for (const name of ['manifest.json', 'code.js']) await cp(join('plugins/semantic-bridge', name), join(resources, 'plugins/semantic-bridge', name));
+await cp('docs/alpha-installation.md', join(resources, 'INSTALLATION.md'));
+await cp('README.md', join(resources, 'README.md'));
+await cp('docs/releases/0.1.0.md', join(resources, 'RELEASE-NOTES.md'));
+if (await exists('LICENSE')) await cp('LICENSE', join(resources, 'LICENSE'));
+
+const guide = await readFile('docs/alpha-installation.md', 'utf8');
+await writeFile(join(resources, 'setup-guide.html'), renderOfflineGuide(`Figma Semantic Bridge ${version} 설치 안내`, guide));
+
+const dependencies = [];
+async function packagesAt(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const path = join(directory, entry.name);
+    if (entry.name.startsWith('@')) { await packagesAt(path); continue; }
+    const manifest = join(path, 'package.json');
+    if (!await exists(manifest)) continue;
+    const metadata = JSON.parse(await readFile(manifest, 'utf8'));
+    dependencies.push({ name: metadata.name, version: metadata.version, license: metadata.license ?? 'SEE PACKAGE LICENSE' });
+    if (await exists(join(path, 'node_modules'))) await packagesAt(join(path, 'node_modules'));
+  }
+}
+await packagesAt(join(resources, 'app/node_modules'));
+dependencies.sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
+await writeFile(join(resources, 'THIRD-PARTY-NOTICES.md'), `# Third-party notices\n\nNode.js ${nodeVersion}: see runtime/NODE-LICENSE (including bundled dependencies).\n\nProduction npm dependencies are included with their original license files in app/node_modules.\n\n${dependencies.map(d => `- ${d.name}@${d.version}: ${typeof d.license === 'string' ? d.license : JSON.stringify(d.license)}`).join('\n')}\n`);
+await writeFile(join(resources, 'dependencies.json'), JSON.stringify(dependencies, null, 2) + '\n');
+
+const swift = '/Library/Developer/CommandLineTools/usr/bin/swiftc';
+const sdk = '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk';
+const swiftSources = (await readdir('desktop')).filter(name => name.endsWith('.swift')).sort().map(name => join('desktop', name));
+run(swift, ['-swift-version', '5', '-sdk', sdk, '-target', 'arm64-apple-macosx13.0', '-O', '-framework', 'AppKit', '-framework', 'WebKit', ...swiftSources, '-o', join(app, 'Contents/MacOS/FigmaSemanticBridge')]);
+const iconTool = join(staging, 'create-icon'), iconSet = join(staging, 'Bridge.iconset');
+run(swift, ['-sdk', sdk, '-target', 'arm64-apple-macosx13.0', '-O', '-framework', 'AppKit', 'scripts/create-app-icon.swift', '-o', iconTool]);
+run(iconTool, [iconSet]);
+run('/usr/bin/iconutil', ['-c', 'icns', iconSet, '-o', join(resources, 'AppIcon.icns')]);
+await writeFile(join(app, 'Contents/Info.plist'), `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.neocjmix.figma-semantic-bridge.desktop</string><key>CFBundleName</key><string>Figma Semantic Bridge</string><key>CFBundleDisplayName</key><string>Figma Semantic Bridge</string><key>CFBundleExecutable</key><string>FigmaSemanticBridge</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>${version}</string><key>CFBundleVersion</key><string>${version}</string><key>LSMinimumSystemVersion</key><string>13.0</string><key>NSHighResolutionCapable</key><true/><key>NSLocalNetworkUsageDescription</key><string>Connect the Figma plugin to the authenticated bridge on this Mac.</string><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`);
+
+const plist = join(app, 'Contents/Info.plist');
+run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleIconFile string AppIcon.icns', plist]);
+const revision = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const dirty = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
+const manifest = { product: 'figma-semantic-bridge', version, channel: 'alpha', platform: 'darwin', arch: 'arm64', minimumMacOS: '13.0', node: { version: nodeVersion, archive: nodeArchive, sha256: nodeSha256, source: `https://nodejs.org/dist/v${nodeVersion}/` }, sourceRevision: revision, sourceDirty: dirty, signing: 'ad-hoc', notarized: false, pluginDistribution: 'Figma Desktop local development import', builtAt: new Date().toISOString() };
+await writeFile(join(resources, 'release.json'), JSON.stringify(manifest, null, 2) + '\n');
+run('/usr/bin/codesign', ['--force', '--sign', '-', join(resources, 'runtime/node')]);
+run('/usr/bin/codesign', ['--force', '--sign', '-', app]);
+run('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', app]);
+const basename = `figma-semantic-bridge-${version}-macos-arm64`;
+const zip = join(releases, `${basename}.zip`), dmg = join(releases, `${basename}.dmg`);
+await rm(zip, { force: true });
+run('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip]);
+const disk = join(staging, 'disk-image'); await mkdir(disk);
+await cp(app, join(disk, 'Figma Semantic Bridge.app'), { recursive: true, preserveTimestamps: true, verbatimSymlinks: true });
+run('/usr/bin/codesign', ['--verify', '--deep', '--strict', join(disk, 'Figma Semantic Bridge.app')]);
+run('/bin/ln', ['-s', '/Applications', join(disk, 'Applications')]);
+await cp('docs/alpha-installation.md', join(disk, 'INSTALLATION.md'));
+run('/usr/bin/hdiutil', ['create', '-volname', `Figma Semantic Bridge ${version}`, '-srcfolder', disk, '-ov', '-format', 'UDZO', dmg]);
+await writeFile(join(releases, `figma-semantic-bridge-${version}-release.json`), JSON.stringify(manifest, null, 2) + '\n');
+await cp('docs/alpha-installation.md', join(releases, `figma-semantic-bridge-${version}-INSTALLATION.md`));
+const assets = [zip, dmg, join(releases, `figma-semantic-bridge-plugin-${version}.zip`), join(releases, `figma-semantic-bridge-${version}-release.json`), join(releases, `figma-semantic-bridge-${version}-INSTALLATION.md`)];
+await writeFile(join(releases, 'SHA256SUMS'), (await Promise.all(assets.map(async path => `${sha(await readFile(path))}  ${path.split('/').at(-1)}`))).join('\n') + '\n');
+console.log(`Packaged ${version} alpha: ${releases}. Ad-hoc signed; not notarized. Publication requires a clean, verified release commit and owner license decision.`);

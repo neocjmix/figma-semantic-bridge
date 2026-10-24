@@ -1,0 +1,757 @@
+{
+  "schemaVersion": "1.0.0",
+  "observedOn": "2026-10-24",
+  "evidenceKind": "actual-native-desktop-synthetic-fixture",
+  "environment": {
+    "platform": "darwin",
+    "osRelease": "25.6.0",
+    "arch": "arm64",
+    "desktopVersion": "126.10.11",
+    "macOsVersion": "26.6.2",
+    "macOsBuild": "25G83",
+    "browserName": "Google Chrome",
+    "browserVersion": "155.0.8059.85"
+  },
+  "fixture": {
+    "construction": "Self-generated geometry in a new, dedicated Design test file; remote creation is separate from native capture evidence.",
+    "scripts": [
+      "fixtures/native-lab/create-geometry.js",
+      "fixtures/native-lab/create-performance.js"
+    ],
+    "permissionBoundary": "Tested in an owned synthetic file. These observations do not establish can-view-only access, Dev-seat availability or organization policy permissions.",
+    "publicDataPolicy": "Only generic aggregates and synthetic roles; no Figma file/node IDs, source text, PNG bytes, project/session IDs, tokens or local paths."
+  },
+  "coordinateRegistration": {
+    "schemaVersion": "1.0.0",
+    "verifiedAt": "2026-10-24T02:42:37.515793+00:00",
+    "evidence": "supplied native plugin capture PNG; bytes match saved snapshot",
+    "passed": true,
+    "image": {
+      "width": 512,
+      "height": 384,
+      "scaleX": 0.64,
+      "scaleY": 0.64,
+      "negativeDocumentOrigin": true
+    },
+    "registration": {
+      "measuredEdges": 8,
+      "expectedEdges": 8,
+      "passedEdges": 8,
+      "tolerancePixels": 1,
+      "maximumMeasuredErrorPixels": 0.20000000000000284
+    },
+    "colorSamples": {
+      "passedCases": 14,
+      "totalCases": 14,
+      "patchSizePixels": 9,
+      "channelTolerance": 3,
+      "cases": [
+        {
+          "case": "red_landmark_interior",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "blue_landmark_interior",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "background",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "clip_inside",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "clip_left_overflow_excluded",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "clip_right_overflow_excluded",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "mask_inside",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "mask_ellipse_corner_excluded",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "mask_right_outside_excluded",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "hidden_ancestor_background",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "zero_opacity_ancestor_background",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "same_parent_covered_blue",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "different_branches_covered_green",
+          "passed": true,
+          "maxChannelError": 0
+        },
+        {
+          "case": "external_yellow_sibling_excluded",
+          "passed": true,
+          "maxChannelError": 0
+        }
+      ]
+    },
+    "limitations": [
+      "One fixed synthetic scope and scale; not all F3 cases.",
+      "Raster edge sampling has one-pixel resolution and omits corner antialiasing.",
+      "Color checks sample interior patches, not every pixel or arbitrary paint behavior.",
+      "This verifies the supplied native PNG, not the remote creation renderer or live viewport.",
+      "No automatic occlusion classifier, source freshness guarantee, Dev-only permission proof or Section registration proof."
+    ],
+    "nodeCount": 21
+  },
+  "nodeExportComparisons": {
+    "schemaVersion": "1.0.0",
+    "verifiedAt": "2026-10-24T02:44:47.153634+00:00",
+    "evidence": "Actual native node-export PNG bytes match saved native responses and captured scalar metadata.",
+    "passed": true,
+    "cases": [
+      {
+        "case": "covered",
+        "width": 120,
+        "height": 80,
+        "pixelCount": 9600,
+        "expected": "red",
+        "matchingPixels": 9600,
+        "passed": true,
+        "alphaMinimum": 255,
+        "alphaMaximum": 255,
+        "observation": "The covered source exports solid red while its sampled captured composite is blue."
+      },
+      {
+        "case": "mask-target",
+        "width": 140,
+        "height": 100,
+        "pixelCount": 14000,
+        "expected": "cyan",
+        "matchingPixels": 14000,
+        "passed": true,
+        "alphaMinimum": 255,
+        "alphaMaximum": 255,
+        "observation": "The mask target exports a full cyan rectangle while the captured composite is ellipse-masked."
+      },
+      {
+        "case": "hidden-child",
+        "width": 100,
+        "height": 100,
+        "pixelCount": 10000,
+        "expected": "red",
+        "matchingPixels": 10000,
+        "passed": true,
+        "alphaMinimum": 255,
+        "alphaMaximum": 255,
+        "observation": "The locally visible child exports solid red despite its captured hidden ancestor."
+      },
+      {
+        "case": "transparent-parent",
+        "width": 100,
+        "height": 100,
+        "pixelCount": 10000,
+        "expected": "fully transparent",
+        "matchingPixels": 10000,
+        "passed": true,
+        "alphaMinimum": 0,
+        "alphaMaximum": 0,
+        "observation": "The node with observed local opacity zero exports fully transparent pixels."
+      }
+    ],
+    "limitations": [
+      "These are four fixed native observations, not a general exportAsync guarantee for ancestor visibility, masks, clipping or blends.",
+      "The original visibility, opacity and hierarchy were not changed by this analysis; native command immutability is checked by the separate capture workflow.",
+      "A blank arbitrary source export still does not establish its cause.",
+      "No automatic source choice, source confirmation or semantic approval follows from these images."
+    ],
+    "nativeSelectionAndProjectUnchanged": true
+  },
+  "renderingAndMatching": {
+    "observedAt": "2026-10-24T02:43:25.454Z",
+    "passed": true,
+    "evidence": "Local deterministic core computation over the actual native Desktop capture; no new native call and no semantic ground truth.",
+    "nodeCount": 21,
+    "stateCounts": {
+      "hidden": 2,
+      "transparent": 2,
+      "unknown": 0,
+      "potential": 17
+    },
+    "excludedVisualCandidateCount": 4,
+    "rawExcludedSourcesPreserved": true,
+    "coverageCases": [
+      {
+        "label": "same_parent_coverage",
+        "exactCandidateCount": 2,
+        "ambiguous": true,
+        "bothSourcesRemainPotential": true,
+        "deterministicSuggestionIsEarlierCoveredSource": true
+      },
+      {
+        "label": "different_branch_coverage",
+        "exactCandidateCount": 2,
+        "ambiguous": true,
+        "bothSourcesRemainPotential": true,
+        "deterministicSuggestionIsEarlierCoveredSource": true
+      }
+    ],
+    "snapshotFileUnchanged": true,
+    "limitations": [
+      "Potential does not prove pixel contribution. Covered sources intentionally remain potential and geometrically ambiguous.",
+      "Deterministic suggestions can select the covered source; human source confirmation remains required for ambiguity.",
+      "This is not independent human semantic labeling, precision/recall evaluation, or a new approval."
+    ],
+    "approvalCodeReview": {
+      "observation": "Matching leaves an annotation proposed and its new source review unconfirmed. Both observed covered-source ties remain ambiguous; UI and core approval require explicit confirmation. Viewing a node export does not confirm or approve sources.",
+      "kind": "Read-only code inspection, separate from native image measurement.",
+      "paths": [
+        "src/core/project.ts",
+        "src/core/source-review.ts",
+        "web/App.tsx",
+        "web/SourceReviewPanel.tsx"
+      ]
+    }
+  },
+  "unsupportedRoots": [
+    {
+      "case": "rotated",
+      "capturedNodes": 2,
+      "previewWithheld": true,
+      "boundary": "Rotated root metadata capture is supported; PNG mapping is intentionally unsupported. Select an unrotated enclosing Frame."
+    },
+    {
+      "case": "section",
+      "capturedNodes": 3,
+      "previewWithheld": true,
+      "boundary": "Section metadata capture is supported; PNG mapping is intentionally unsupported. Select an explicit unrotated inner Frame."
+    }
+  ],
+  "performance": {
+    "frozenAt": "2026-10-24T02:54:48.408Z",
+    "sampling": "Exactly five strict plugin-session-cold and five warm samples per size. Thirty measured captures plus three excluded warmups. Later lifecycle and recovery captures are excluded permanently from this distribution.",
+    "coldDefinition": "First capture attempt across all scopes in each GUI-restarted plugin session; selection preflight reads are allowed. Page already loaded; OS, renderer and filesystem cache coldness are not established.",
+    "coldSessions": 15,
+    "coldSessionsGloballyUnique": true,
+    "firstAttemptAudit": {
+      "checkedColdSamples": 15,
+      "distinctSessions": 15,
+      "priorHarnessCaptureAttemptsFound": 0,
+      "passed": true,
+      "scope": "Harness reports and global attempt ledger only; GUI fresh-launch evidence remains separate."
+    },
+    "measuredCaptures": 30,
+    "excludedWarmups": 3,
+    "completeMetadataAndPngCaptures": 33,
+    "failedCaptures": 0,
+    "limits": {
+      "maxNodes": 6000,
+      "maxBytes": 4000000,
+      "maxDurationMs": 15000,
+      "maxImageDimension": 1024
+    },
+    "timingDefinition": "Capture HTTP response readiness, including transport, validation, persistence and serialization. Excludes source selection/preflight and temporary-project creation.",
+    "quantiles": "Nearest rank for p50 and p95; with five samples p95 equals max and does not estimate a stable tail.",
+    "memoryDefinition": "100ms process RSS samples, summed over explicitly selected Figma process PIDs; includes other open Figma documents. Not true peak or plugin JavaScript heap. PIDs omitted from this aggregate.",
+    "cases": [
+      {
+        "rectangles": 100,
+        "capturedNodes": 101,
+        "cohort": "plugin-session-cold",
+        "measuredRuns": 5,
+        "excludedWarmups": 0,
+        "latencyMs": {
+          "samples": 5,
+          "min": 66.079,
+          "p50": 74.101,
+          "p95": 85.303,
+          "max": 85.303
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 27680,
+          "p50": 27680,
+          "p95": 27680,
+          "max": 27680
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 36469,
+          "p50": 36469,
+          "p95": 36469,
+          "max": 36469
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 5804,
+          "p50": 5804,
+          "p95": 5804,
+          "max": 5804
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 1859584,
+          "p50": 1939344,
+          "p95": 1975072,
+          "max": 1975072
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 51904,
+          "p50": 52704,
+          "p95": 52832,
+          "max": 52832
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "max": 1
+        },
+        "existingProjectsUnchanged": true
+      },
+      {
+        "rectangles": 100,
+        "capturedNodes": 101,
+        "cohort": "warm",
+        "measuredRuns": 5,
+        "excludedWarmups": 1,
+        "latencyMs": {
+          "samples": 5,
+          "min": 66.253,
+          "p50": 79.189,
+          "p95": 94.701,
+          "max": 94.701
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 27680,
+          "p50": 27680,
+          "p95": 27680,
+          "max": 27680
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 36469,
+          "p50": 36469,
+          "p95": 36469,
+          "max": 36469
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 5804,
+          "p50": 5804,
+          "p95": 5804,
+          "max": 5804
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 1773088,
+          "p50": 1782592,
+          "p95": 1789728,
+          "max": 1789728
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 65648,
+          "p50": 65728,
+          "p95": 65760,
+          "max": 65760
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "max": 1
+        },
+        "existingProjectsUnchanged": true
+      },
+      {
+        "rectangles": 1000,
+        "capturedNodes": 1001,
+        "cohort": "plugin-session-cold",
+        "measuredRuns": 5,
+        "excludedWarmups": 0,
+        "latencyMs": {
+          "samples": 5,
+          "min": 333.112,
+          "p50": 341.937,
+          "p95": 349.058,
+          "max": 349.058
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 254565,
+          "p50": 254565,
+          "p95": 254565,
+          "max": 254565
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 309604,
+          "p50": 309604,
+          "p95": 309604,
+          "max": 309604
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 40489,
+          "p50": 40489,
+          "p95": 40489,
+          "max": 40489
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 2077696,
+          "p50": 2084528,
+          "p95": 2091312,
+          "max": 2091312
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 58624,
+          "p50": 70176,
+          "p95": 75872,
+          "max": 75872
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 4,
+          "p50": 4,
+          "p95": 4,
+          "max": 4
+        },
+        "existingProjectsUnchanged": true
+      },
+      {
+        "rectangles": 1000,
+        "capturedNodes": 1001,
+        "cohort": "warm",
+        "measuredRuns": 5,
+        "excludedWarmups": 1,
+        "latencyMs": {
+          "samples": 5,
+          "min": 324.912,
+          "p50": 329.781,
+          "p95": 360.166,
+          "max": 360.166
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 254565,
+          "p50": 254565,
+          "p95": 254565,
+          "max": 254565
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 309604,
+          "p50": 309604,
+          "p95": 309604,
+          "max": 309604
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 40489,
+          "p50": 40489,
+          "p95": 40489,
+          "max": 40489
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 2004320,
+          "p50": 2007616,
+          "p95": 2007920,
+          "max": 2007920
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 86704,
+          "p50": 99648,
+          "p95": 145984,
+          "max": 145984
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 3,
+          "p50": 4,
+          "p95": 4,
+          "max": 4
+        },
+        "existingProjectsUnchanged": true
+      },
+      {
+        "rectangles": 5000,
+        "capturedNodes": 5001,
+        "cohort": "plugin-session-cold",
+        "measuredRuns": 5,
+        "excludedWarmups": 0,
+        "latencyMs": {
+          "samples": 5,
+          "min": 1491.062,
+          "p50": 1513.245,
+          "p95": 1693.769,
+          "max": 1693.769
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 1512506,
+          "p50": 1512506,
+          "p95": 1512506,
+          "max": 1512506
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 1732933,
+          "p50": 1732933,
+          "p95": 1732933,
+          "max": 1732933
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 164531,
+          "p50": 164531,
+          "p95": 164531,
+          "max": 164531
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 1874400,
+          "p50": 2101168,
+          "p95": 2165184,
+          "max": 2165184
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 72672,
+          "p50": 103888,
+          "p95": 117296,
+          "max": 117296
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 14,
+          "p50": 14,
+          "p95": 16,
+          "max": 16
+        },
+        "existingProjectsUnchanged": true
+      },
+      {
+        "rectangles": 5000,
+        "capturedNodes": 5001,
+        "cohort": "warm",
+        "measuredRuns": 5,
+        "excludedWarmups": 1,
+        "latencyMs": {
+          "samples": 5,
+          "min": 1431.756,
+          "p50": 1454.501,
+          "p95": 1499.481,
+          "max": 1499.481
+        },
+        "sourceNodeJsonBytes": {
+          "samples": 5,
+          "min": 1512506,
+          "p50": 1512506,
+          "p95": 1512506,
+          "max": 1512506
+        },
+        "responseJsonBytes": {
+          "samples": 5,
+          "min": 1732933,
+          "p50": 1732933,
+          "p95": 1732933,
+          "max": 1732933
+        },
+        "pngBytes": {
+          "samples": 5,
+          "min": 164531,
+          "p50": 164531,
+          "p95": 164531,
+          "max": 164531
+        },
+        "pngDimensions": [
+          "600x600"
+        ],
+        "warningCounts": [
+          3
+        ],
+        "sampledFigmaProcessRssKiB": {
+          "samples": 5,
+          "min": 1920880,
+          "p50": 1945120,
+          "p95": 1988096,
+          "max": 1988096
+        },
+        "sampledServerProcessRssKiB": {
+          "samples": 5,
+          "min": 120976,
+          "p50": 145520,
+          "p95": 150624,
+          "max": 150624
+        },
+        "rssSamplesPerRun": {
+          "samples": 5,
+          "min": 14,
+          "p50": 14,
+          "p95": 14,
+          "max": 14
+        },
+        "existingProjectsUnchanged": true
+      }
+    ],
+    "limitations": [
+      "Image-export-only latency, first-node latency, wire bytes and actual peak plugin/server memory are not measured.",
+      "No numerical performance pass threshold is inferred.",
+      "Fixture dimensions and node count do not represent arbitrary real design complexity.",
+      "No source identifiers, text, file keys, project IDs, session IDs, digests or image bytes are included."
+    ]
+  },
+  "lifecycle": {
+    "twoNativeFileReplacement": {
+      "result": "two-native-files-and-new-stable-session-observed",
+      "distinctSourceFilesObserved": true,
+      "distinctPluginSessionsObserved": true,
+      "replacementStableForSeconds": 10,
+      "existingProjectsUnchanged": true,
+      "previousPluginGui": {
+        "message": "Another plugin connected. Connect explicitly to use this file again.",
+        "tokenFieldEmpty": true,
+        "connectWithoutPairingRefused": true,
+        "explicitSecurePairingRestoredConnection": true,
+        "nativeGeometryHighlightSucceededAfterPairing": true,
+        "evidence": "Separate native Figma GUI observations by the verification operator; status polling alone does not establish these states."
+      },
+      "limitations": [
+        "Status sampling does not prove the WebSocket close code or exclude disconnects shorter than the polling interval.",
+        "Two native file identities are verified privately; their IDs and contents are excluded from this artifact."
+      ]
+    },
+    "wrongSourceNavigation": {
+      "denied": true,
+      "errorCode": "PLUGIN_ERROR",
+      "message": "The connected plugin is not in the requested source file.",
+      "selectionUnchanged": true,
+      "includedInPerformanceDistribution": false
+    },
+    "clientCancellation": {
+      "result": "native-pending-client-cancel-observed",
+      "attempts": 1,
+      "pendingObserved": true,
+      "clientAbortAfterPending": true,
+      "pendingCleared": true,
+      "connectedAfter": true,
+      "existingProjectsUnchanged": true,
+      "nativeLateResponseObserved": false
+    },
+    "nativeWindowClose": {
+      "result": "native-pending-disconnect-observed",
+      "attempts": 4,
+      "capturesCompletedBeforeWindowClose": 3,
+      "pendingObserved": true,
+      "errorCode": "PLUGIN_DISCONNECTED",
+      "httpStatus": 503,
+      "pendingCleared": true,
+      "connectedAfter": false,
+      "failedProjectRetained": true,
+      "existingProjectsUnchanged": true,
+      "nativeLateResponseObserved": false
+    },
+    "reconnectRecovery": {
+      "result": "Reopened and paired product plugin returned two complete 5001-node captures with PNGs.",
+      "captures": 2,
+      "pendingCleared": true,
+      "existingProjectsUnchanged": true,
+      "includedInPerformanceDistribution": false
+    },
+    "isolatedShortDeadline": {
+      "result": "actual-native-request-short-deadline-timeout-and-recovery-observed",
+      "timeoutMs": 50,
+      "captureResponseReadyMs": 52.537,
+      "errorCode": "PLUGIN_TIMEOUT",
+      "httpStatus": 504,
+      "pendingObserved": true,
+      "pendingCleared": true,
+      "freshNativeSelectionSucceeded": true,
+      "sessionUnchanged": true,
+      "projectRevision": 0,
+      "snapshotCount": 0,
+      "httpDiskEqual": true,
+      "productionPluginChanged": false,
+      "sourceWrites": false,
+      "existingProjectsUnchanged": true,
+      "isolatedServerClosed": true,
+      "nativeExecutionStartObserved": false,
+      "nativeLateResponseObserved": false,
+      "limitations": [
+        "Configured short server deadline, not a naturally slow export or a default 20-second timeout.",
+        "Pending proves actual broker dispatch; it does not reveal when native traversal/export began.",
+        "Native host identity/mode needs independent GUI correlation; unchanged production plugin must be active.",
+        "Recovery selection and empty local project do not prove that native exportAsync was preempted or a late result arrived."
+      ]
+    },
+    "limitation": "Pending, timeout and cancellation observations do not prove preemption of native exportAsync, bounded native allocation or arrival of a late native response. Lifecycle captures are not performance samples."
+  },
+  "acceptanceBoundary": [
+    "This closes the recorded synthetic native geometry and repeated bounded-capture experiments only; it is not a universal Figma rendering or performance guarantee.",
+    "Section PNG mapping remains explicitly unsupported, and arbitrary blank node exports do not establish their cause.",
+    "Covered sources may be deterministic geometric suggestions. Human source confirmation and annotation approval remain separate required decisions for ambiguity.",
+    "No independent semantic precision/recall study or human productivity improvement is established."
+  ]
+}

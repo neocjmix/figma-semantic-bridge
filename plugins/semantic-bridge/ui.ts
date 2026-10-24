@@ -6,7 +6,7 @@ const connect=document.querySelector<HTMLButtonElement>('#connect')!;
 const disconnect=document.querySelector<HTMLButtonElement>('#disconnect')!;
 const status=document.querySelector<HTMLElement>('#status')!;
 const indicator=document.querySelector<HTMLElement>('#indicator')!;
-const clientId=`figma-${crypto.randomUUID()}`;
+const clientId=`figma-${Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('')}`;
 const client=new BridgeClient({clientId,
   socketFactory:url=>new WebSocket(url) as unknown as SocketLike,
   onRequest:(request,generation)=>parent.postMessage({pluginMessage:{type:'execute',request,generation}},'*'),
@@ -23,7 +23,8 @@ connect.onclick=()=>{
 token.addEventListener('keydown',event=>{if(event.key==='Enter'&&!connect.disabled)connect.click();});
 disconnect.onclick=()=>client.stop();
 window.addEventListener('message',event=>{
-  if(event.source!==parent)return;
+  const fromFigmaHost=(event.origin==='https://www.figma.com'||event.origin==='https://figma.com')&&event.source===top;
+  if(event.source!==parent&&!fromFigmaHost)return;
   const message=event.data?.pluginMessage;
   if(message?.type!=='complete'||typeof message.generation!=='number')return;
   const response=PluginResponseSchema.safeParse(message.response);

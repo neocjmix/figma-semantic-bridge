@@ -1,12 +1,15 @@
 {
   "name": "figma-semantic-bridge",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "build:fixture-plugin": "node scripts/build-fixture-plugin.mjs",
+    "package:plugin": "node scripts/package-plugin.mjs",
+    "package:macos": "node scripts/package-macos.mjs",
+    "release:verify": "node scripts/verify-release.mjs",
     "benchmark:fixtures": "tsx scripts/benchmark-fixtures.ts",
     "check": "npm run typecheck && npm test && npm run build",
     "fixtures:validate": "tsx scripts/validate-manifests.ts",
@@ -19,7 +22,8 @@
     "mcp": "node dist/mcp.mjs",
     "test:e2e": "npm run build:web && playwright test",
     "demo:generate": "tsx scripts/generate-demo-previews.ts",
-    "benchmark:product": "tsx scripts/benchmark-product.ts"
+    "benchmark:product": "tsx scripts/benchmark-product.ts",
+    "benchmark:local-pipeline": "tsx scripts/benchmark-local-pipeline.ts"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.142.0",

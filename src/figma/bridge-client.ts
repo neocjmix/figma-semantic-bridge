@@ -75,7 +75,7 @@ export class BridgeClient {
     this.authenticated=false;
     this.options.onState(this.retry?'reconnecting':'connecting',this.retry?'Reconnecting to the local bridge…':'Connecting to the local bridge…');
     let socket:SocketLike;
-    try {socket=this.options.socketFactory('ws://127.0.0.1:4177/bridge');}
+    try {socket=this.options.socketFactory('ws://localhost:4177/bridge');}
     catch {this.reconnect();return;}
     this.socket=socket;
     const current=()=>this.running&&this.socket===socket&&this.generation===generation;

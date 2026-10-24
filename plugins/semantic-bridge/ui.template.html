@@ -20,9 +20,9 @@
   #status { margin:0; font-size:12px; }
 </style>
 <h1>Figma Semantic Bridge</h1>
-<p>Connect to the bridge running on this computer, then capture your selected frame from the local web app.</p>
+<p>Open the Figma Semantic Bridge app on this computer. Copy its pairing token from the Bridge menu, connect here, then capture your selected frame in the app.</p>
 <label for="token">Pairing token</label>
-<input id="token" type="password" autocomplete="off" minlength="32" maxlength="1024" placeholder="Paste the token from your terminal" spellcheck="false">
+<input id="token" type="password" autocomplete="off" minlength="32" maxlength="1024" placeholder="Bridge → Copy Pairing Token" spellcheck="false">
 <div class="actions"><button id="connect">Connect</button><button class="secondary" id="disconnect" disabled>Disconnect</button></div>
 <div class="connection"><span id="indicator" data-state="disconnected"></span><p id="status" role="status">Disconnected. Your Figma document remains unchanged.</p></div>
 <!-- BRIDGE_SCRIPT -->

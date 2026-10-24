@@ -31,7 +31,8 @@
   selection.onclick = () => request('analyze-selection');
   page.onclick = () => request('analyze-page');
   window.onmessage = (event) => {
-    if (event.source !== parent) return;
+    const fromFigmaHost = (event.origin === 'https://www.figma.com' || event.origin === 'https://figma.com') && event.source === top;
+    if (event.source !== parent && !fromFigmaHost) return;
     const message = event.data.pluginMessage;
     if (!message) return;
     if (message.type === 'result') {

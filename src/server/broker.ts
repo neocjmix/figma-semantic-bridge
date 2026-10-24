@@ -1,8 +1,8 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import WebSocket from 'ws';
 import { z } from 'zod';
-import { PluginCommandSchema, PluginResponseSchema, SelectionSchema, SnapshotSchema, type PluginCommand } from '../shared/contracts.js';
-import { validatePreview } from './preview.js';
+import { NodePreviewResultSchema, PluginCommandSchema, PluginResponseSchema, SelectionSchema, SnapshotSchema, type PluginCommand } from '../shared/contracts.js';
+import { validateNodePreview, validatePreview } from './preview.js';
 import { ServiceError } from './errors.js';
 
 const HelloSchema=z.object({type:z.literal('hello'),token:z.string().min(32).max(1024),clientId:z.string().min(1).max(160)}).strict();
@@ -65,6 +65,7 @@ export class PluginBroker {
         let result:unknown;
         if(pending.command.type==='get_selection')result=SelectionSchema.parse(response.result);
         else if(pending.command.type==='capture_selection'){result=SnapshotSchema.parse(response.result);validatePreview(result as z.infer<typeof SnapshotSchema>);}
+        else if(pending.command.type==='preview_node'){const preview=NodePreviewResultSchema.parse(response.result);validateNodePreview(preview);result=preview;}
         else result=HighlightSchema.parse(response.result);
         pending.resolve(result);
       } catch {pending.reject(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid result from Figma plugin.',502));}

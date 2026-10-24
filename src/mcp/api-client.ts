@@ -14,32 +14,37 @@ export class BridgeApi {
     if (token.length < 32 || token.length > 1024) throw new Error('A local pairing token is required.');
     this.url = parsed.origin;
   }
-  async request<T = unknown>(path: string, body?: unknown): Promise<T> {
+  async request<T = unknown>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     if (!path.startsWith('/api/') || path.includes('..')) throw new BridgeApiError('INVALID_PATH', 'Invalid bridge API path.');
-    let response: Response;
+    const timeout = AbortSignal.timeout(25000);
+    const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     try {
-      response = await fetch(this.url + path, {
+      const response = await fetch(this.url + path, {
         method: body === undefined ? 'GET' : 'POST',
         headers: { authorization: `Bearer ${this.token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(25000), redirect: 'error',
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: requestSignal, redirect: 'error',
       });
-    } catch { throw new BridgeApiError('BRIDGE_UNAVAILABLE', 'Local bridge is unavailable or timed out. Start it and check pairing.'); }
-    const reader = response.body?.getReader();
-    if (!reader) throw new BridgeApiError('INVALID_RESPONSE', 'Empty bridge response.');
-    const chunks: Uint8Array[] = []; let total = 0;
-    while (true) {
-      const { value, done } = await reader.read(); if (done) break;
-      total += value.byteLength;
-      if (total > 16_000_000) { await reader.cancel(); throw new BridgeApiError('RESPONSE_TOO_LARGE', 'Bridge response exceeds the bounded client limit.'); }
-      chunks.push(value);
+      const reader = response.body?.getReader();
+      if (!reader) throw new BridgeApiError('INVALID_RESPONSE', 'Empty bridge response.');
+      const chunks: Uint8Array[] = []; let total = 0;
+      while (true) {
+        const { value, done } = await reader.read(); if (done) break;
+        total += value.byteLength;
+        if (total > 16_000_000) { await reader.cancel(); throw new BridgeApiError('RESPONSE_TOO_LARGE', 'Bridge response exceeds the bounded client limit.'); }
+        chunks.push(value);
+      }
+      let result: unknown;
+      try { result = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+      catch { throw new BridgeApiError('INVALID_RESPONSE', 'Bridge returned invalid JSON.'); }
+      if (!response.ok) {
+        const error = result as { error?: { code?: string; message?: string } };
+        throw new BridgeApiError(error.error?.code ?? 'BRIDGE_ERROR', error.error?.message ?? `Bridge request failed (${response.status}).`);
+      }
+      return result as T;
+    } catch (error) {
+      if (signal?.aborted) throw new BridgeApiError('CANCELLED', 'Bridge request was cancelled.');
+      if (error instanceof BridgeApiError) throw error;
+      throw new BridgeApiError('BRIDGE_UNAVAILABLE', 'Local bridge is unavailable or timed out. Start it and check pairing.');
     }
-    let result: unknown;
-    try { result = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-    catch { throw new BridgeApiError('INVALID_RESPONSE', 'Bridge returned invalid JSON.'); }
-    if (!response.ok) {
-      const error = result as { error?: { code?: string; message?: string } };
-      throw new BridgeApiError(error.error?.code ?? 'BRIDGE_ERROR', error.error?.message ?? `Bridge request failed (${response.status}).`);
-    }
-    return result as T;
   }
 }

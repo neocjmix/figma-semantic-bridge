@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const { renderOfflineGuide } = await import(new URL('../scripts/render-offline-guide.mjs', import.meta.url).href) as {
+  renderOfflineGuide(title: string, markdown: string): string;
+};
+const body = (markdown: string) => renderOfflineGuide('설치 <안내> & 도움말', markdown);
+
+test('offline guide renders Korean headings, wrapped prose and inline emphasis without losing code', () => {
+  const html = body('# 설치 안내\n\n첫 번째 줄의 **중요한\n안내**와 `npm ci`를 읽는다.\n\n## 다음 단계');
+  assert.match(html, /<!doctype html>/i);
+  assert.match(html, /<html lang="ko">/);
+  assert.match(html, /<title>설치 &lt;안내&gt; &amp; 도움말<\/title>/);
+  assert.match(html, /<h1>설치 안내<\/h1>/);
+  assert.match(html, /<p>첫 번째 줄의 <strong>중요한 안내<\/strong>와 <code>npm ci<\/code>를 읽는다\.<\/p>/);
+  assert.match(html, /<h2>다음 단계<\/h2>/);
+});
+
+test('offline guide builds readable tables and preserves literal pipes inside cells', () => {
+  const html = body('| 항목 | 값 |\n| --- | --- |\n| 기본 위치 | `~/bridge` |\n| 파이프 | `a|b` 또는 a\\|b |');
+  assert.match(html, /<table>/);
+  assert.match(html, /<thead><tr><th scope="col">항목<\/th><th scope="col">값<\/th><\/tr><\/thead>/);
+  assert.match(html, /<td><code>~\/bridge<\/code><\/td>/);
+  assert.match(html, /<td><code>a\|b<\/code> 또는 a\|b<\/td>/);
+  assert.equal((html.match(/<td>/g) ?? []).length, 4);
+});
+
+test('offline guide preserves ordered steps, continuation text and nested lists', () => {
+  const html = body('3. 앱을 연다.\n   이어지는 설명이다.\n   - 첫 번째 확인\n   - 두 번째 확인\n4. 저장한다.\n\n다음 문단.');
+  assert.match(html, /<ol start="3">/);
+  assert.match(html, /<li><p>앱을 연다\. 이어지는 설명이다\.<\/p><ul><li><p>첫 번째 확인<\/p><\/li><li><p>두 번째 확인<\/p><\/li><\/ul><\/li>/);
+  assert.match(html, /<li><p>저장한다\.<\/p><\/li><\/ol>\s*<p>다음 문단\.<\/p>/);
+});
+
+test('offline guide renders callouts and inert checklist states', () => {
+  const html = body('> 첫 줄\n> 둘째 줄\n\n- [ ] 아직 확인 전\n  계속되는 안내\n- [x] 확인 완료');
+  assert.match(html, /<blockquote><p>첫 줄 둘째 줄<\/p><\/blockquote>/);
+  assert.match(html, /aria-label="미완료">☐<\/span>/);
+  assert.match(html, /aria-label="완료">☑<\/span>/);
+  assert.match(html, /아직 확인 전 계속되는 안내/);
+  assert.doesNotMatch(html, /<input\b/i);
+});
+
+test('offline guide escapes fenced code verbatim and supports a longer containing fence', () => {
+  const code = '```toml\ncommand = "<script>alert(1)</script>"\n```';
+  const html = body('````text\n' + code + '\n````');
+  assert.match(html, /<pre><code>```toml\ncommand = &quot;&lt;script&gt;alert\(1\)&lt;\/script&gt;&quot;\n```<\/code><\/pre>/);
+  assert.doesNotMatch(html, /<script\b/i);
+});
+
+test('offline guide never turns raw HTML, links or images into executable or network content', () => {
+  const html = renderOfflineGuide('</title><script>bad()</script>', '# 안전\n\n<script>bad()</script><img src="https://untrusted.invalid/pixel" onerror="bad()">\n\n[공식 문서](https://example.invalid/a?x=1&y=2) ![이미지](https://example.invalid/image.png) [위험](javascript:bad())\n\n<iframe src="file:///etc/passwd"></iframe>');
+  assert.doesNotMatch(html, /<(?:script|img|iframe|a|link|base|form|input|object|embed)\b/i);
+  assert.doesNotMatch(html, /\s(?:href|src|onerror|onclick)="/i);
+  assert.match(html, /&lt;script&gt;bad\(\)&lt;\/script&gt;/);
+  assert.match(html, /공식 문서/);
+  assert.match(html, /https:\/\/example\.invalid\/a\?x=1&amp;y=2/);
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /default-src 'none'/);
+});
+
+test('the shipped installation guide becomes structured, self-contained HTML', async () => {
+  const markdown = await readFile(new URL('../docs/alpha-installation.md', import.meta.url), 'utf8');
+  const html = renderOfflineGuide('Figma Semantic Bridge 설치 안내', markdown);
+  assert.ok((html.match(/<h2>/g) ?? []).length >= 10);
+  assert.ok((html.match(/<table>/g) ?? []).length >= 3);
+  assert.ok((html.match(/<ol(?: start="\d+")?>/g) ?? []).length >= 5);
+  assert.match(html, /<pre><code>\[mcp_servers\.figma_semantic_bridge\]/);
+  assert.match(html, /@media/);
+  assert.doesNotMatch(html, /<a\b|<script\b|<link\b|<img\b/i);
+  assert.doesNotMatch(html, /<pre># 0\.1\.0/);
+});

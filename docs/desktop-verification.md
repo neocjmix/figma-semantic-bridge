@@ -1,10 +1,11 @@
 # Figma Desktop verification procedure
 
-This is the remaining host-integration acceptance procedure, not a record of a
-successful Desktop run. The extraction adapter, UI connection state machine and
-actual loopback WebSocket request/response have automated tests. Figma Desktop's
-iframe permissions, image-export coordinates and plugin shutdown behavior still
-require the following run on the same computer as the local server.
+This is the repeatable host-integration procedure, not a list of all unfinished
+work. The owned-fixture Desktop lifecycle, scale and supported geometry matrix
+ran on 2026-10-24; [the validation log](product-validation.md) records the results.
+[Completion status](completion-status.md) identifies the remaining account/file
+and human-evaluation dependencies. A new permission/runtime combination needs its
+own evidence; do not reinstall or rerun passed cases without a changed condition.
 
 ## Install and pair
 
@@ -26,11 +27,63 @@ require the following run on the same computer as the local server.
    plugin holds this token only in iframe memory and clears the input field.
 
 The manifest uses `documentAccess: "dynamic-page"`, `allowedDomains: ["none"]`
-and `devAllowedDomains: ["ws://127.0.0.1:4177"]`. The [official manifest reference](https://developers.figma.com/docs/plugins/manifest/) permits `ws` and development
-localhost ports. That documented support does not prove a particular Desktop
+and `devAllowedDomains: ["ws://localhost:4177"]`. The [official manifest reference](https://developers.figma.com/docs/plugins/manifest/) permits `ws` and development
+localhost ports. Desktop 126.10.11 on macOS rejected the numeric loopback host in the manifest; the plugin uses localhost while the server remains bound to 127.0.0.1. That documented support does not prove a particular Desktop
 version or company policy permits the connection. If blocked, record the exact
 Desktop version and console error; do not broaden the allow-list or expose the
 server externally as a workaround.
+
+The local development manifest also sets `enablePrivatePluginApi: true` to enable
+host-provided `figma.fileKey`, as documented in the [manifest reference](https://developers.figma.com/docs/plugins/manifest/#enableprivatepluginapi-boolean).
+Close and rerun the plugin after a manifest change. Verify that new selection and
+capture results carry the host identity before testing navigation. This flag is
+documented for private/local development plugins, not public Community plugins.
+An existing snapshot with a null identity stays non-navigable; do not backfill it
+from a URL or silently rewrite approved records. Use a newly captured scope.
+
+## Dev seat and view access acceptance
+
+This is a product requirement: a developer must be able to use the bridge with
+a **Dev seat and `can view` access**, without source edit permission or a Full
+seat. Dev Mode inspection plugins can read the document, export images, show
+iframe UIs and communicate with the local bridge. See the [official Dev Mode
+API guide](https://developers.figma.com/docs/plugins/working-in-dev-mode/) and
+[seat definitions](https://help.figma.com/hc/en-us/articles/19813618057623-Dev-Mode-for-admins).
+
+Both local manifests declare `"dev"` with the `"inspect"` capability. Automated
+tests run the bundled plugin entrypoints against synthetic nodes that reject
+document writes, and verify selection/capture/aggregate analysis. They do not
+emulate Figma's license or permission enforcement. On 2026-10-23, actual Desktop
+Dev Mode ran the local Inspect plugin, captured 56 nodes and a 1440×900 PNG, and
+navigated to a source node through MCP. Metadata and PNG matched the earlier
+Design-mode capture. That run used the owned synthetic file, so the **Dev-only
+account plus can-view permission acceptance remains pending**.
+
+1. Use an authorized Dev-only account with `can view` access to an existing source
+   file. Record the seat, file role and whether copy/export is restricted. Do not
+   grant edit access, change seats or change the source file to make this pass.
+2. Confirm the account can enter Dev Mode and launch the existing local inspection
+   plugin there. Record host version and actual `editorType`/mode if observable.
+   Pair its Inspect-panel UI with the running local server.
+3. Select one small frame; perform selection metadata, bounded capture and PNG
+   export through the local bridge. Then verify local annotation/review/export
+   and MCP approved reads. An export-policy denial must remain explicit.
+4. Verify host-provided file identity, then test source highlighting separately.
+   Record whether page/selection/viewport APIs work in this read-only runtime;
+   never replace this test with document modifications or inferred identity.
+   If the authorized scope already contains hidden instance children, also test
+   an explicit saved reference to one, followed by selection metadata and a new
+   bounded capture when the target is a container. Record host behavior without
+   changing source visibility. The adapter temporarily permits hidden-instance
+   reads and restores the original traversal setting; synthetic proxy tests do
+   not establish the native selection/viewport result.
+5. Run the lifecycle checks below and record the exact scope/result. An owned
+   duplicate is useful for fixture acquisition, but proves neither Dev-only
+   access to someone else's file nor the absence of an edit-permission dependency.
+
+An edit-access rejection from the separate remote Figma Plugin API execution
+service is evidence about that service/account, not this local adapter's access
+requirement. Do not request source editor rights as the default workaround.
 
 ## Execute the human-first scenario
 
@@ -42,8 +95,10 @@ server externally as a workaround.
    For the unchanged baseline dashboard this is 56 nodes, including the FRAME
    root. If the document changed, record the actual count instead of forcing it.
 3. Draw a component region over the table or filters, name it, match source nodes
-   and inspect the candidates. Equal boxes may be ambiguous. Geometric matches
-   do not approve semantic boundaries. Edit/reparent regions and save them.
+   and inspect the candidates. Equal boxes may be ambiguous. Inspect in Figma,
+   add intended native selections one at a time and save the local set. Confirm
+   ambiguous sources before approving the component's meaning. Source confirmation
+   and semantic approval are distinct; neither changes the original Figma tree.
 4. Select the baseline notes frame `1:58` in Desktop and capture it into the same
    project. It is a second scope, not a replacement for the dashboard. The unchanged
    baseline contains 17 nodes including the root. Select its exact source text and

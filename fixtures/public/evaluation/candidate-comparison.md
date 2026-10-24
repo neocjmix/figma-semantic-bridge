@@ -1,5 +1,7 @@
 # 공개 Figma Fixture 기술 평가
 
+2026-10-23 후속 실행: Bonafide 사본 생성과 Login 한 프레임의 제품 캡처가 성공했다. 아래 표와 manifest는 초기 평가 시점의 기록이다. 최신 결과와 권한별 제약은 [접근 경로 검증](../../../docs/research/figma-access-paths-2026-10-23.md)을 참조한다. 사본의 개인 식별자와 캡처는 공개 registry에 추가하지 않는다.
+
 검증일: 2026-10-22 UTC. 이 시각은 Asia/Seoul에서 2026-10-23이다. 기존 [Work 조사](../../../docs/research/public-figma-fixtures-2026-10-23.md)는 저장소 기준 커밋 `5ea3703`에서 복원했다. 신규 후보를 추측해 늘리지 않고, 기존 17개 중 우선순위 5개를 재평가했다. 현재 결과와 과거 조사 결과를 구분한다.
 
 **최종 추천은 아래 5개 조건부 후보이며, 실전 파일의 내부 구조 검증 완료는 0개다.** 공개 소개·라이선스 표시 4개와 실제 제품 개발 이슈 2개를 이번 실행에서 재확인했다. 원본 데이터·캔버스 이미지·원문 스펙은 커밋하지 않았다. 파일별 상태는 [manifest](../manifest.json), 조회 근거는 [research-evidence.json](research-evidence.json)에 기록한다. 기존 synthetic fixture는 실전 후보와 별도 대조군으로 유지한다. 실제 synthetic 실행은 [구조 측정](../../synthetic/live-figma-measurements.json)과 [이미지·구조 정성 검토](../../synthetic/live-visual-review.md)에 별도 기록하며 공개 실전 파일 검증 수에 합산하지 않는다.

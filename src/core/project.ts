@@ -3,7 +3,8 @@ import {
   type Rect, type Snapshot, type SourceNode, type SourceReference, type Specification,
 } from '../shared/contracts.js';
 import { contains } from '../fixture-analysis/index.js';
-import { matchRegion } from './matching.js';
+import { matchRegion, type MatchResult } from './matching.js';
+import { annotationSourceReview } from './source-review.js';
 
 /** Stable error codes are safe to expose; source text is never embedded in errors. */
 export class DomainError extends Error {
@@ -97,6 +98,11 @@ function validateContents(project:Project):void {
     if (annotation.parentId !== null && annotations.get(annotation.parentId)?.snapshotId !== annotation.snapshotId) fail('Annotation parents must belong to the same captured scope.');
     if (annotation.sourceRefs.some(ref => ref.snapshotId !== annotation.snapshotId)) fail('Annotation source references must belong to its captured scope.');
     referenceNodes(project,annotation.sourceRefs,sources);
+    if(annotation.sourceReview) {
+      if(annotation.sourceReview.candidates.some(candidate=>!sources.get(annotation.snapshotId)?.has(candidate.nodeId))) fail('Source review candidate is outside its captured scope.');
+      if(annotation.sourceReview.status==='confirmed'&&!annotation.sourceRefs.length) fail('Confirmed source reviews require selected source references.');
+      if(annotation.reviewStatus==='approved'&&(annotation.sourceReview.ambiguous||annotation.sourceReview.renderingReviewRequired)&&annotation.sourceReview.status!=='confirmed') fail('Approved source references with geometric or rendering uncertainty require human confirmation.');
+    }
   }
   for (const specification of project.specifications) {
     if (textForReferences(project,specification.sourceRefs,sources) !== specification.text) fail('Specification text must exactly preserve its ordered source text.');
@@ -112,7 +118,7 @@ function validateContents(project:Project):void {
     if (specification.reviewStatus === 'approved' && !specification.relations.length) fail('Approved specifications require at least one reviewed component relation.');
   }
   for (const proposal of project.proposals) {
-    if (proposal.draft.annotations.some(a => a.origin !== 'ai' || a.reviewStatus !== 'proposed') ||
+    if (proposal.draft.annotations.some(a => a.origin !== 'ai' || a.reviewStatus !== 'proposed' || a.sourceReview !== undefined) ||
         proposal.draft.specifications.some(s => s.origin !== 'ai' || s.reviewStatus !== 'proposed' || s.relations.some(r => r.reviewStatus !== 'proposed'))) fail('AI proposals cannot carry approvals.');
   }
 }
@@ -137,11 +143,13 @@ function invalidateRelations(project:Project, ids:ReadonlySet<string>):void {
     specification.relations = specification.relations.map(relation => ids.has(relation.targetAnnotationId) ? {...relation,reviewStatus:'proposed'} : relation);
   }
 }
-function putAnnotation(project:Project, input:Annotation, origin:'human'|'ai'):void {
+function putAnnotation(project:Project, input:Annotation, origin:'human'|'ai', match?:MatchResult):void {
   const index = project.annotations.findIndex(a => a.id === input.id);
   const prior = index === -1 ? undefined : project.annotations[index];
   if (origin === 'ai' && prior?.reviewStatus === 'approved') throw new DomainError('APPROVED_PROTECTED','AI cannot replace an approved annotation.');
-  const record:Annotation = {...structuredClone(input),origin,reviewStatus:'proposed',revision:prior ? prior.revision + 1 : 0};
+  const snapshot=lookup(project.snapshots,input.snapshotId,'Snapshot');
+  const sourceReview=annotationSourceReview(snapshot,input,origin==='human'?prior:undefined,match);
+  const record:Annotation = {...structuredClone(input),origin,reviewStatus:'proposed',revision:prior ? prior.revision + 1 : 0,sourceReview};
   if (index === -1) project.annotations.push(record); else project.annotations[index] = record;
   invalidateRelations(project,new Set([input.id]));
 }
@@ -155,7 +163,7 @@ function putSpecification(project:Project, input:Specification, origin:'human'|'
 }
 function normalizeDraft(draft:Draft):Draft {
   return {
-    annotations:draft.annotations.map(a => ({...a,origin:'ai',reviewStatus:'proposed'})),
+    annotations:draft.annotations.map(({sourceReview:_,...a}) => ({...a,origin:'ai',reviewStatus:'proposed'})),
     specifications:draft.specifications.map(s => ({...s,origin:'ai',reviewStatus:'proposed',relations:s.relations.map(r => ({...r,reviewStatus:'proposed'}))})),
   };
 }
@@ -201,6 +209,11 @@ export function applyOperation(value:Project, input:Operation, context:Operation
     }
     case 'review_annotation': {
       const annotation = lookup(project.annotations,operation.id,'Annotation');
+      if(operation.status==='approved'&&annotation.reviewStatus!=='approved') {
+        const snapshot=lookup(project.snapshots,annotation.snapshotId,'Snapshot');
+        annotation.sourceReview=annotationSourceReview(snapshot,annotation,annotation);
+        if((annotation.sourceReview.ambiguous||annotation.sourceReview.renderingReviewRequired)&&annotation.sourceReview.status!=='confirmed') throw new DomainError('SOURCE_CONFIRMATION_REQUIRED','Inspect the source evidence and explicitly confirm the chosen source set before approving this annotation.');
+      }
       annotation.reviewStatus = operation.status; annotation.revision += 1;
       if (operation.status !== 'approved') invalidateRelations(project,new Set([annotation.id]));
       break;
@@ -209,7 +222,16 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       const annotation = lookup(project.annotations,operation.id,'Annotation');
       const snapshot = lookup(project.snapshots,annotation.snapshotId,'Snapshot');
       const result = matchRegion(snapshot,annotation.bbox,{tolerance:operation.tolerance});
-      putAnnotation(project,{...annotation,sourceRefs:result.sourceRefs},'human'); break;
+      putAnnotation(project,{...annotation,sourceRefs:result.sourceRefs},'human',result); break;
+    }
+    case 'confirm_annotation_sources': {
+      const annotation=lookup(project.annotations,operation.id,'Annotation');
+      if(annotation.revision!==operation.expectedAnnotationRevision) throw new DomainError('STALE_SOURCE_REVIEW','The annotation changed after this source review. Inspect its current source references before confirming.');
+      if(!annotation.sourceRefs.length) throw new DomainError('SOURCE_REFERENCES_REQUIRED','Choose at least one captured source reference before confirming.');
+      const snapshot=lookup(project.snapshots,annotation.snapshotId,'Snapshot');
+      const review=annotation.sourceReview??annotationSourceReview(snapshot,annotation);
+      annotation.sourceReview={...review,status:'confirmed',confirmedAt:now};
+      annotation.revision+=1;break;
     }
     case 'split_annotation': {
       const original = lookup(project.annotations,operation.id,'Annotation');
@@ -222,7 +244,8 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       const labels = operation.axis === 'vertical' ? ['Left','Right'] : ['Top','Bottom'];
       for (let index=0;index<2;index++) {
         const box = boxes[index]!;
-        putAnnotation(project,{...original,id:index===0?original.id:secondId,name:`${original.name.slice(0,285)} · ${labels[index]}`,bbox:box,sourceRefs:matchRegion(snapshot,box).sourceRefs},'human');
+        const result=matchRegion(snapshot,box);
+        putAnnotation(project,{...original,id:index===0?original.id:secondId,name:`${original.name.slice(0,285)} · ${labels[index]}`,bbox:box,sourceRefs:result.sourceRefs},'human',result);
       }
       replaceTargets(project,new Set([original.id]),[original.id,secondId]); break;
     }
@@ -236,7 +259,8 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       const id=newId(), oldIds=new Set(operation.ids);
       project.annotations = project.annotations.filter(a => !oldIds.has(a.id));
       for (const annotation of project.annotations) if (annotation.parentId && oldIds.has(annotation.parentId)) { annotation.parentId=id; annotation.reviewStatus='proposed'; annotation.revision+=1; invalidateRelations(project,new Set([annotation.id])); }
-      putAnnotation(project,{...first,id,name:operation.name,bbox,sourceRefs:matchRegion(lookup(project.snapshots,first.snapshotId,'Snapshot'),bbox).sourceRefs},'human');
+      const result=matchRegion(lookup(project.snapshots,first.snapshotId,'Snapshot'),bbox);
+      putAnnotation(project,{...first,id,name:operation.name,bbox,sourceRefs:result.sourceRefs},'human',result);
       replaceTargets(project,oldIds,[id]); break;
     }
     case 'upsert_specification': putSpecification(project,operation.specification,'human'); break;

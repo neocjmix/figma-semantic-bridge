@@ -3,10 +3,12 @@
   "id": "figma-semantic-bridge-local",
   "api": "1.0.0",
   "main": "code.js",
-  "editorType": ["figma"],
+  "editorType": ["figma", "dev"],
+  "capabilities": ["inspect"],
   "documentAccess": "dynamic-page",
+  "enablePrivatePluginApi": true,
   "networkAccess": {
     "allowedDomains": ["none"],
-    "devAllowedDomains": ["ws://127.0.0.1:4177"]
+    "devAllowedDomains": ["ws://localhost:4177"]
   }
 }

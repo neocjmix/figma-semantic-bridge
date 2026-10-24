@@ -1,0 +1,389 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-24",
+  "evidenceKind": "Actual Figma Desktop Analyze selection reports collected through the native UI.",
+  "analyzerVersion": "0.1.0",
+  "environment": {
+    "macOsVersion": "26.6.2",
+    "macOsBuild": "25G83",
+    "arch": "arm64",
+    "desktopVersion": "126.10.11"
+  },
+  "parameters": {
+    "limits": {
+      "maxNodes": 10000,
+      "maxRecordBytes": 2000000,
+      "maxDurationMs": 5000,
+      "maxPairChecks": 250000
+    },
+    "tolerancePx": 0.5
+  },
+  "sampling": "One fresh native run per scope; not a cold/warm performance distribution.",
+  "uiRelay": {
+    "nativeResultReceived": true,
+    "compatibility": "Immediate parent remains accepted; the top-window relay additionally requires exact https://www.figma.com or https://figma.com origin. Unrelated senders are rejected by focused built-UI tests."
+  },
+  "reports": [
+    {
+      "scope": "synthetic-geometry",
+      "extractionComplete": true,
+      "spatialComplete": true,
+      "hiddenInstanceChildren": "included",
+      "structure": {
+        "nodeCount": 21,
+        "typeCounts": {
+          "FRAME": 9,
+          "RECTANGLE": 11,
+          "ELLIPSE": 1
+        },
+        "maxDepth": 3,
+        "meanDepth": 1.5714285714285714,
+        "frameGroupComponentInstanceRatios": {
+          "FRAME": 0.42857142857142855,
+          "GROUP": 0,
+          "COMPONENT": 0,
+          "INSTANCE": 0
+        },
+        "autoLayoutEligibleCount": 9,
+        "autoLayoutCount": 0,
+        "autoLayoutRatio": 0,
+        "textNodeCount": 0,
+        "textNodeRatio": 0,
+        "textNodesPerMillionSquarePixels": {
+          "status": "measured",
+          "value": 0
+        },
+        "hiddenNodeCount": 1,
+        "invalidOrMissingBoundsCount": 0
+      },
+      "spatial": {
+        "complete": true,
+        "stopReason": null,
+        "pairChecks": 85,
+        "boundedNodeCount": 21,
+        "possiblePairCount": 210,
+        "exactEqualBoxPairCount": 7,
+        "exactEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0.5238095238095238
+        },
+        "nearEqualBoxPairCount": 7,
+        "nearEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0.5238095238095238
+        },
+        "overlapPairCount": 39,
+        "overlapPairRatio": {
+          "status": "measured",
+          "value": 0.18571428571428572
+        },
+        "containmentPairCount": 31,
+        "containmentWithoutAncestryCount": 3,
+        "containmentWithoutAncestryRatio": {
+          "status": "measured",
+          "value": 0.0967741935483871
+        },
+        "directParentPairCount": 20,
+        "directParentNotContainingCount": 1,
+        "directParentNotContainingRatio": {
+          "status": "measured",
+          "value": 0.05
+        }
+      },
+      "singleRunTimingMs": {
+        "extractionMs": 2,
+        "spatialMs": 0,
+        "totalMs": 2
+      },
+      "serializedBytes": {
+        "records": 3044,
+        "originalReport": 3108
+      },
+      "cachedComparison": {
+        "status": "not applicable",
+        "reason": "Dedicated synthetic scope; not one of the cached Community scopes."
+      }
+    },
+    {
+      "scope": "community-ui-scope",
+      "extractionComplete": true,
+      "spatialComplete": true,
+      "hiddenInstanceChildren": "included",
+      "structure": {
+        "nodeCount": 270,
+        "typeCounts": {
+          "FRAME": 54,
+          "RECTANGLE": 44,
+          "TEXT": 85,
+          "INSTANCE": 20,
+          "VECTOR": 18,
+          "ELLIPSE": 5,
+          "GROUP": 44
+        },
+        "maxDepth": 9,
+        "meanDepth": 6.651851851851852,
+        "frameGroupComponentInstanceRatios": {
+          "FRAME": 0.2,
+          "GROUP": 0.16296296296296298,
+          "COMPONENT": 0,
+          "INSTANCE": 0.07407407407407407
+        },
+        "autoLayoutEligibleCount": 74,
+        "autoLayoutCount": 58,
+        "autoLayoutRatio": 0.7837837837837838,
+        "textNodeCount": 85,
+        "textNodeRatio": 0.3148148148148148,
+        "textNodesPerMillionSquarePixels": {
+          "status": "measured",
+          "value": 295.1388888888889
+        },
+        "hiddenNodeCount": 14,
+        "invalidOrMissingBoundsCount": 0
+      },
+      "spatial": {
+        "complete": true,
+        "stopReason": null,
+        "pairChecks": 15569,
+        "boundedNodeCount": 270,
+        "possiblePairCount": 36315,
+        "exactEqualBoxPairCount": 52,
+        "exactEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0.3851851851851852
+        },
+        "nearEqualBoxPairCount": 53,
+        "nearEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0.3925925925925926
+        },
+        "overlapPairCount": 1744,
+        "overlapPairRatio": {
+          "status": "measured",
+          "value": 0.048024232410849514
+        },
+        "containmentPairCount": 1634,
+        "containmentWithoutAncestryCount": 186,
+        "containmentWithoutAncestryRatio": {
+          "status": "measured",
+          "value": 0.11383108935128519
+        },
+        "directParentPairCount": 269,
+        "directParentNotContainingCount": 5,
+        "directParentNotContainingRatio": {
+          "status": "measured",
+          "value": 0.01858736059479554
+        }
+      },
+      "singleRunTimingMs": {
+        "extractionMs": 89,
+        "spatialMs": 22,
+        "totalMs": 112
+      },
+      "serializedBytes": {
+        "records": 45550,
+        "originalReport": 3276
+      },
+      "cachedComparison": {
+        "status": "passed",
+        "scopeIdentityCheckedPrivately": true,
+        "comparableStructureFields": 11,
+        "allSpatialFieldsEqual": true,
+        "autoLayout": "Native measurement fills fields absent from cached SourceNode captures; cached unknowns are preserved.",
+        "independence": "The same analyzer implementation produced both reports; this is consistency evidence, not independent semantic or renderer validation."
+      }
+    },
+    {
+      "scope": "community-notes-section",
+      "extractionComplete": true,
+      "spatialComplete": true,
+      "hiddenInstanceChildren": "included",
+      "structure": {
+        "nodeCount": 21,
+        "typeCounts": {
+          "SECTION": 1,
+          "GROUP": 4,
+          "FRAME": 7,
+          "TEXT": 7,
+          "RECTANGLE": 2
+        },
+        "maxDepth": 3,
+        "meanDepth": 2.0476190476190474,
+        "frameGroupComponentInstanceRatios": {
+          "FRAME": 0.3333333333333333,
+          "GROUP": 0.19047619047619047,
+          "COMPONENT": 0,
+          "INSTANCE": 0
+        },
+        "autoLayoutEligibleCount": 7,
+        "autoLayoutCount": 7,
+        "autoLayoutRatio": 1,
+        "textNodeCount": 7,
+        "textNodeRatio": 0.3333333333333333,
+        "textNodesPerMillionSquarePixels": {
+          "status": "measured",
+          "value": 9.11892907296967
+        },
+        "hiddenNodeCount": 0,
+        "invalidOrMissingBoundsCount": 0
+      },
+      "spatial": {
+        "complete": true,
+        "stopReason": null,
+        "pairChecks": 169,
+        "boundedNodeCount": 21,
+        "possiblePairCount": 210,
+        "exactEqualBoxPairCount": 0,
+        "exactEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "nearEqualBoxPairCount": 0,
+        "nearEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "overlapPairCount": 59,
+        "overlapPairRatio": {
+          "status": "measured",
+          "value": 0.28095238095238095
+        },
+        "containmentPairCount": 43,
+        "containmentWithoutAncestryCount": 0,
+        "containmentWithoutAncestryRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "directParentPairCount": 20,
+        "directParentNotContainingCount": 0,
+        "directParentNotContainingRatio": {
+          "status": "measured",
+          "value": 0
+        }
+      },
+      "singleRunTimingMs": {
+        "extractionMs": 2,
+        "spatialMs": 0,
+        "totalMs": 2
+      },
+      "serializedBytes": {
+        "records": 3211,
+        "originalReport": 3128
+      },
+      "cachedComparison": {
+        "status": "passed",
+        "scopeIdentityCheckedPrivately": true,
+        "comparableStructureFields": 11,
+        "allSpatialFieldsEqual": true,
+        "autoLayout": "Native measurement fills fields absent from cached SourceNode captures; cached unknowns are preserved.",
+        "independence": "The same analyzer implementation produced both reports; this is consistency evidence, not independent semantic or renderer validation."
+      }
+    },
+    {
+      "scope": "community-inner-frame",
+      "extractionComplete": true,
+      "spatialComplete": true,
+      "hiddenInstanceChildren": "included",
+      "structure": {
+        "nodeCount": 2,
+        "typeCounts": {
+          "FRAME": 1,
+          "TEXT": 1
+        },
+        "maxDepth": 1,
+        "meanDepth": 0.5,
+        "frameGroupComponentInstanceRatios": {
+          "FRAME": 0.5,
+          "GROUP": 0,
+          "COMPONENT": 0,
+          "INSTANCE": 0
+        },
+        "autoLayoutEligibleCount": 1,
+        "autoLayoutCount": 1,
+        "autoLayoutRatio": 1,
+        "textNodeCount": 1,
+        "textNodeRatio": 0.5,
+        "textNodesPerMillionSquarePixels": {
+          "status": "measured",
+          "value": 18.762430109947843
+        },
+        "hiddenNodeCount": 0,
+        "invalidOrMissingBoundsCount": 0
+      },
+      "spatial": {
+        "complete": true,
+        "stopReason": null,
+        "pairChecks": 1,
+        "boundedNodeCount": 2,
+        "possiblePairCount": 1,
+        "exactEqualBoxPairCount": 0,
+        "exactEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "nearEqualBoxPairCount": 0,
+        "nearEqualBoxNodeRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "overlapPairCount": 1,
+        "overlapPairRatio": {
+          "status": "measured",
+          "value": 1
+        },
+        "containmentPairCount": 1,
+        "containmentWithoutAncestryCount": 0,
+        "containmentWithoutAncestryRatio": {
+          "status": "measured",
+          "value": 0
+        },
+        "directParentPairCount": 1,
+        "directParentNotContainingCount": 0,
+        "directParentNotContainingRatio": {
+          "status": "measured",
+          "value": 0
+        }
+      },
+      "singleRunTimingMs": {
+        "extractionMs": 0,
+        "spatialMs": 0,
+        "totalMs": 0
+      },
+      "serializedBytes": {
+        "records": 291,
+        "originalReport": 3001
+      },
+      "cachedComparison": {
+        "status": "passed",
+        "scopeIdentityCheckedPrivately": true,
+        "comparableStructureFields": 11,
+        "allSpatialFieldsEqual": true,
+        "autoLayout": "Native measurement fills fields absent from cached SourceNode captures; cached unknowns are preserved.",
+        "independence": "The same analyzer implementation produced both reports; this is consistency evidence, not independent semantic or renderer validation."
+      }
+    }
+  ],
+  "communityCoverage": {
+    "scopes": 3,
+    "summedScopeNodeCount": 293,
+    "uniquePreviouslyCapturedSourceNodes": 291,
+    "overlap": "The inner Frame is nested in the notes Section; scope counts must not be summed as independent nodes.",
+    "requiredTenScreenCorpusMet": false,
+    "adoptionStatusChanged": false
+  },
+  "notMeasured": [
+    "Whole-file totals and all-page coverage",
+    "Cloud revision/file-key identity from this analyzer",
+    "Native peak/plugin-heap memory and network transfer bytes",
+    "Stable timing distribution or numerical performance threshold",
+    "Independent human semantic accuracy and productivity"
+  ],
+  "limitations": [
+    "All source file/page/node identities, names, exact text, hashes and image bytes are excluded.",
+    "Single-run millisecond readings are not a benchmark distribution; a zero can reflect clock granularity. Serialized original-report bytes are not this sanitized artifact size or network transfer bytes.",
+    "File keys were null in all four native reports and remain unknown. Scope page/root identity was compared privately with cached captures, not backfilled.",
+    "AABB counts include hidden nodes and ignore rendered masks, clipping and occlusion. Local hiddenNodeCount is not effective ancestor visibility.",
+    "Auto Layout is measured only for eligible FRAME, COMPONENT, COMPONENT_SET and INSTANCE nodes in the selected scopes.",
+    "The 21-node synthetic geometry scope and three permitted Community scopes do not establish whole-file coverage, Dev-only access, a representative ten-screen corpus or a semantic ground truth.",
+    "Native source content was inspected without source edits. This report does not promote fixture adoption or authorize redistribution of source assets."
+  ]
+}

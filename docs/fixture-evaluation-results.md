@@ -2,7 +2,13 @@
 
 Evaluation: 2026-10-22 UTC. Tracked in [issue #8](https://github.com/neocjmix/figma-semantic-bridge/issues/8).
 
-**실제 이미지·노드 구조 검증: 기존 synthetic 1개. 공개 실전 파일 검증: 0개.**
+**후속 결과(2026-10-23): Bonafide 사본 1개에서 UI와 별도 설명 두 범위 수집.**
+Login 270 nodes / 85 TEXT / 360×800 PNG, User stories 21 nodes / 7 TEXT를 읽었다.
+설명 PNG는 1,024px 예산 초과로 거절됐다. 두 캡처의 로컬 묶음 이동·오프라인 MCP 재조회를 확인했다.
+독립 fixture analyzer의 전체 지표 및 의미 라벨링 승격은 미완료다.
+[권한 경로와 실제 실행 결과](research/figma-access-paths-2026-10-23.md)를 참조한다.
+
+**아래 초기 평가 시점의 이미지·노드 구조 검증: 기존 synthetic 1개, 공개 실전 파일 0개.**
 기존 Work 조사에서 찾은 17개 후보를 바탕으로 5개를 재평가했다. 공개 후보에
 접근하지 못한 부분을 synthetic 결과로 대체하거나 검증 완료로 표시하지 않았다.
 
@@ -66,11 +72,28 @@ Community 4개는 최신 소개문, `Open in Figma`, `CC BY 4.0` 표시를 관�
 Wikipedia 탐색안도 같은 종류의 오류였다. Community resource ID를 editor fileKey로
 오인해 호출하지 않았다.
 
-따라서 공개 후보의 노드 수·깊이·BBox·성능·메모리 등 모든 내부 지표는
-`not measured`다. 공개 후보 이미지와 노드 구조를 함께 본 정성 평가는 수행하지
-못했다. 예상 테스트 가치는 공개 설명에 대한 LLM 가설로 분리했다. 사본 URL을
-확보한 뒤 [Desktop 절차](fixture-plugin.md)와
-[후속 승격 기준](../fixtures/public/evaluation/README.md)을 실행한다.
+2026-10-23 후속 접근에서는
+[TATA NEU](https://www.figma.com/community/file/1148330409355808941/tata-neu-super-app-ux-case-study-product-redesign)와
+[Bonafide](https://www.figma.com/community/file/1437922574500111933/caso-de-estudio-bonafide-app-ui)의
+공개 페이지에서 `Open in Figma`와 `CC BY 4.0` 표시를 다시 확인했다. Bonafide는
+학습용 복제가 가능한 교육 템플릿이라고 설명한다. 캐시 없이 처음 읽은 응답은
+탐색 메뉴와 메타데이터뿐이었고, 3초 hydration 대기 후 본문이 나타났다.
+Zomato와 WashEase는 이번 부분 응답만으로 현재 이용 조건을 재확인하지 못했다.
+이는 앞선 관찰을 취소하거나 복제를 금지한다는 뜻이 아니다.
+
+후속 브라우저 실행에서는 Bonafide의 `Open in Figma`로 개인 Drafts 사본 1개를
+생성했고, 그 사본의 Login 프레임을 기존 Desktop 플러그인으로 캡처했다.
+원본/사본 URL과 사본 식별자는 Git에서 제외된 로컬 보고서에 기록했다.
+원본은 수정하지 않았다. 사본의 구조·좌표 검증과 **Dev seat + 원본 can-view**
+권한 검증은 별개다. 소유한 사본에서 성공해도 보기 전용 권한 검증을 통과한
+것으로 처리하지 않는다.
+
+초기 공개 manifest의 지표는 당시 `not measured` 기록으로 유지한다. 최신 Bonafide
+한 프레임은 270 nodes / 85 TEXT / BBox (-3517,-3397,360,800), 노드 JSON 61,015 bytes,
+PNG 29,757 bytes다. 이 부분 범위로 파일 전체 크기·깊이·성능을 추정하지 않는다.
+화면 밖 BBox를 가진 TEXT 67개도 포함되어 clipping과 시각적 확인의 필요성을 확인했다.
+[Desktop 절차](fixture-plugin.md)와 [후속 승격 기준](../fixtures/public/evaluation/README.md)의
+나머지 구조 지표·정성 라벨링은 남아 있다. 원본 can-view 권한 검증도 별도로 남긴다.
 
 ## 검증과 남은 일
 
@@ -83,6 +106,8 @@ Wikipedia 탐색안도 같은 종류의 오류였다. Community resource ID를 e
 별도 lint 도구는 저장소에 구성되어 있지 않다. GitHub Actions 구성도
 추가했지만 실행 여부는 별도 CI 결과를 확인해야 한다.
 
-Desktop 플러그인 실행, 실제 복제, 공개 파일 내부 측정, 좌표 충실도, human-labeled
-grounding precision/recall, 개발자 생산성 시험은 미실행이다. 전체 파일 사전 로딩,
+이 fixture 평가 당시 Desktop 플러그인 실행은 미실행이었다. 이후 synthetic 파일의
+Desktop 실행과 제한된 픽셀 정합성 관찰은 [제품 검증 기록](product-validation.md)에
+별도로 기록했다. Bonafide 복제와 두 범위의 제품 캡처는 위 후속 기록으로 보완한다. 공개 파일의 독립 analyzer 지표, 넓은 범위의 좌표 충실도,
+human-labeled grounding precision/recall, 개발자 생산성 시험은 여전히 미실행이다. 전체 파일 사전 로딩,
 의미론적 자동 분할, 원본 Figma 수정, 라이선스 미확인 데이터 커밋은 하지 않았다.

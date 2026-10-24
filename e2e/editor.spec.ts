@@ -9,7 +9,7 @@ const test = base.extend<{ app: { url: string; token: string } }>({
   app: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), 'fsb-browser-'));
     const token = 'synthetic-browser-test-token-0123456789';
-    const server = await startServer({ port: 0, token, dataDir: dir, webDir: resolve('dist/web') });
+    const server = await startServer({ port: 0, token, dataDir: dir, webDir: resolve(process.env.FSB_E2E_WEB_DIR ?? 'dist/web') });
     try { await use({ url: server.url, token }); }
     finally { await server.close(); await rm(dir, { recursive: true, force: true }); }
   },

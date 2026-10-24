@@ -14,11 +14,29 @@ export const SourceNodeSchema = z.object({
   id: IdSchema, parentId: IdSchema.nullable(), type: z.string().min(1).max(80),
   name: z.string().max(1000), bbox: NodeBoundsSchema.nullable(),
   text: z.string().max(50000).optional(), visible: z.boolean(),
+  rendering: z.object({ opacity: z.number().finite().min(0).max(1).optional(),
+    siblingIndex: z.number().int().min(0).optional() }).strict().optional(),
   sourceFileKey: z.string().min(1).max(160).nullable(), sourcePageId: IdSchema,
 }).strict();
 export const PreviewSchema = z.object({
   mimeType: z.literal('image/png'), base64: z.string().max(12_000_000),
   width: z.number().int().min(1).max(4096), height: z.number().int().min(1).max(4096),
+}).strict();
+export const NODE_PREVIEW_MAX_DIMENSION = 1024;
+export const NODE_PREVIEW_MAX_BYTES = 2_000_000;
+export const NODE_PREVIEW_MAX_DURATION_MS = 5000;
+export const NodePreviewResultSchema = z.object({
+  fileKey: IdSchema, pageId: IdSchema, node: SourceNodeSchema,
+  observedAt: z.string().datetime(), preview: PreviewSchema,
+  warnings: z.array(z.string().max(2000)).max(20),
+}).strict();
+export const SourcePreviewInputSchema = z.object({
+  expectedRevision: z.number().int().min(0), annotationId: IdSchema,
+  expectedSessionId: IdSchema, nodeId: IdSchema,
+}).strict();
+export const SourcePreviewResultSchema = z.object({
+  projectId: IdSchema, revision: z.number().int().min(0), annotationId: IdSchema,
+  snapshotId: IdSchema, sessionId: IdSchema, result: NodePreviewResultSchema,
 }).strict();
 export const SnapshotSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION), id: IdSchema, name: z.string().min(1).max(300),
@@ -34,11 +52,20 @@ export const SourceReferenceSchema = z.object({
   matchType: z.enum(['exact', 'contained', 'partial', 'aggregate']),
   coverage: z.number().finite().min(0).max(1).optional(),
 }).strict();
+export const SourceReviewSchema = z.object({
+  candidates: z.array(z.object({ nodeId: IdSchema, coverage: z.number().finite().min(0).max(1),
+    iou: z.number().finite().min(0).max(1), reason: z.string().max(1000) }).strict()).max(200),
+  ambiguous: z.boolean(), warnings: z.array(z.string().max(2000)).max(100),
+  renderingReviewRequired: z.boolean().optional(),
+  status: z.enum(['unconfirmed', 'confirmed']), confirmedAt: z.string().datetime().nullable(),
+}).strict().refine(value => (value.status === 'confirmed') === (value.confirmedAt !== null),
+  { message: 'Only confirmed source reviews carry a confirmation time.' });
 export const AnnotationSchema = z.object({
   id: IdSchema, snapshotId: IdSchema, name: z.string().min(1).max(300),
   role: z.enum(['page', 'section', 'component', 'element', 'specification', 'ignore']),
   bbox: RectSchema, parentId: IdSchema.nullable(), sourceRefs: z.array(SourceReferenceSchema).max(1000),
   origin: z.enum(['human', 'ai']), reviewStatus: ReviewStatusSchema, revision: z.number().int().min(0),
+  sourceReview: SourceReviewSchema.optional(),
 }).strict();
 export const SpecRelationSchema = z.object({
   targetAnnotationId: IdSchema, relationType: z.enum(['describes', 'behavior', 'constraint', 'interaction', 'dependency']),
@@ -70,6 +97,7 @@ export const OperationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('delete_annotation'), id: IdSchema }).strict(),
   z.object({ type: z.literal('review_annotation'), id: IdSchema, status: ReviewStatusSchema }).strict(),
   z.object({ type: z.literal('match_annotation'), id: IdSchema, tolerance: z.number().finite().min(0).max(10).default(0.5) }).strict(),
+  z.object({ type: z.literal('confirm_annotation_sources'), id: IdSchema, expectedAnnotationRevision: z.number().int().min(0) }).strict(),
   z.object({ type: z.literal('split_annotation'), id: IdSchema, axis: z.enum(['horizontal', 'vertical']), ratio: z.number().min(0.1).max(0.9).default(0.5) }).strict(),
   z.object({ type: z.literal('merge_annotations'), ids: z.array(IdSchema).min(2).max(50), name: z.string().min(1).max(300) }).strict(),
   z.object({ type: z.literal('upsert_specification'), specification: SpecificationSchema }).strict(),
@@ -88,6 +116,7 @@ export const CaptureLimitsSchema = z.object({ maxNodes: z.number().int().min(1).
 export const PluginCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('get_selection') }).strict(),
   z.object({ type: z.literal('capture_selection'), limits: CaptureLimitsSchema }).strict(),
+  z.object({ type: z.literal('preview_node'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),
   z.object({ type: z.literal('highlight_nodes'), fileKey: IdSchema, pageId: IdSchema, nodeIds: z.array(IdSchema).min(1).max(100) }).strict(),
 ]);
 export const PluginRequestSchema = z.object({ type: z.literal('request'), requestId: IdSchema, command: PluginCommandSchema }).strict();
@@ -101,6 +130,7 @@ export const SelectionSchema = z.object({ fileKey: z.string().max(160).nullable(
 export type Rect = z.infer<typeof RectSchema>;
 export type SourceNode = z.infer<typeof SourceNodeSchema>;
 export type SourceReference = z.infer<typeof SourceReferenceSchema>;
+export type SourceReview = z.infer<typeof SourceReviewSchema>;
 export type Snapshot = z.infer<typeof SnapshotSchema>;
 export type Annotation = z.infer<typeof AnnotationSchema>;
 export type Specification = z.infer<typeof SpecificationSchema>;
@@ -111,3 +141,5 @@ export type Operation = z.infer<typeof OperationSchema>;
 export type PluginCommand = z.infer<typeof PluginCommandSchema>;
 export type CaptureLimits = z.infer<typeof CaptureLimitsSchema>;
 export type Selection = z.infer<typeof SelectionSchema>;
+export type NodePreviewResult = z.infer<typeof NodePreviewResultSchema>;
+export type SourcePreviewResult = z.infer<typeof SourcePreviewResultSchema>;

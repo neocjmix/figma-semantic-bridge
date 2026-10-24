@@ -4,12 +4,15 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
+import { createServer } from 'node:http';
 import WebSocket from 'ws';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { startServer } from '../src/server/index.js';
 import { createDemoProject } from '../src/demo/project.js';
-import { BridgeApi } from '../src/mcp/api-client.js';
+import { BridgeApi, BridgeApiError } from '../src/mcp/api-client.js';
+import { createMcpServer } from '../src/mcp/server.js';
 import type { Annotation, Project, Specification } from '../src/shared/contracts.js';
 
 test('real MCP stdio -> authenticated HTTP -> plugin WS, persisted approval reads and proposal protection', async t => {
@@ -90,4 +93,93 @@ test('MCP API client forbids external destinations and credentials in URLs', () 
   for (const url of ['https://example.com', 'http://127.0.0.1@evil.example', 'http://localhost:4177/path', 'http://localhost:4177/?token=secret']) {
     assert.throws(() => new BridgeApi(url, 'test-token'), /loopback/);
   }
+});
+
+test('SDK cancellation reaches the plugin and a late capture cannot persist or complete the next request', { timeout: 5000 }, async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'fsb-mcp-cancel-'));
+  const bridge = await startServer({ port: 0, dataDir, aiConfig: null });
+  const client = new Client({ name: 'cancellation-test', version: '1.0.0' });
+  const mcp = createMcpServer(new BridgeApi(bridge.url, bridge.token));
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  t.after(async () => { await client.close(); await mcp.close(); await bridge.close(); await rm(dataDir, { recursive: true, force: true }); });
+  await mcp.connect(serverTransport);
+  await client.connect(clientTransport);
+  const project = await bridge.store.importProject(createDemoProject());
+  const ws = new WebSocket(bridge.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
+  t.after(() => ws.terminate());
+  await once(ws, 'open');
+  const welcomed = once(ws, 'message');
+  ws.send(JSON.stringify({ type: 'hello', token: bridge.token, clientId: 'synthetic-cancellation-plugin' }));
+  await welcomed;
+
+  const abort = new AbortController();
+  const requested = once(ws, 'message');
+  const pending = client.callTool({ name: 'capture_selection', arguments: { projectId: project.id, expectedRevision: project.revision } }, undefined, { signal: abort.signal });
+  const rejected = assert.rejects(pending, /abort|cancel/i);
+  const first = JSON.parse(String((await requested)[0])) as { type: string; requestId: string };
+  assert.equal(first.type, 'request');
+  const cancelled = once(ws, 'message', { signal: AbortSignal.timeout(1500) });
+  abort.abort();
+  await rejected;
+  const cancellation = JSON.parse(String((await cancelled)[0]));
+  assert.deepEqual(cancellation, { type: 'cancel', requestId: first.requestId });
+  assert.equal(bridge.broker.status.pendingRequests, 0);
+
+  const nextRequested = once(ws, 'message');
+  let nextSettled = false;
+  const next = client.callTool({ name: 'capture_selection', arguments: { projectId: project.id, expectedRevision: project.revision } });
+  void next.then(() => { nextSettled = true; }, () => { nextSettled = true; });
+  const second = JSON.parse(String((await nextRequested)[0])) as { type: string; requestId: string };
+  assert.equal(second.type, 'request');
+  assert.notEqual(second.requestId, first.requestId);
+  const snapshot = project.snapshots[0]!;
+  ws.send(JSON.stringify({ type: 'response', requestId: first.requestId, ok: true, result: { ...snapshot, id: 'late-cancelled-capture' } }));
+  // A pong on the same socket proves the preceding stale response was processed.
+  const pong = once(ws, 'message');
+  ws.send(JSON.stringify({ type: 'ping' }));
+  assert.equal(JSON.parse(String((await pong)[0])).type, 'pong');
+  assert.equal(nextSettled, false);
+  assert.equal(bridge.broker.status.pendingRequests, 1);
+  assert.deepEqual(await bridge.store.get(project.id), project);
+
+  ws.send(JSON.stringify({ type: 'response', requestId: second.requestId, ok: true, result: { ...snapshot, id: 'current-capture' } }));
+  const completed = await next;
+  assert.equal(completed.isError, undefined);
+  assert.match(JSON.stringify(completed), /current-capture/);
+  const stored = await bridge.store.get(project.id);
+  assert.equal(stored.revision, project.revision + 1);
+  assert.equal(stored.snapshots.length, project.snapshots.length + 1);
+  assert.equal(stored.snapshots.some(item => item.id === 'late-cancelled-capture'), false);
+  assert.equal(stored.snapshots.some(item => item.id === 'current-capture'), true);
+});
+
+test('MCP API client cancels a response body that has already started streaming', { timeout: 5000 }, async t => {
+  let received!: () => void, disconnected!: () => void;
+  const started = new Promise<void>(resolve => { received = resolve; });
+  const closed = new Promise<void>(resolve => { disconnected = resolve; });
+  const originalFetch = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', async (...args: Parameters<typeof fetch>) => {
+    const response = await originalFetch(...args);
+    received();
+    return response;
+  });
+  const server = createServer((_request, response) => {
+    response.once('close', disconnected);
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.write('{"partial":');
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); });
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const api = new BridgeApi(`http://127.0.0.1:${address.port}`, 'synthetic-pairing-token-'.repeat(2));
+  const abort = new AbortController();
+  const pending = api.request('/api/projects', undefined, abort.signal);
+  const rejection = assert.rejects(pending, error => error instanceof BridgeApiError && error.code === 'CANCELLED');
+  await started;
+  // Headers reached fetch; let its caller begin reading the unfinished JSON body.
+  await new Promise<void>(resolve => setImmediate(resolve));
+  abort.abort();
+  await rejection;
+  await closed;
 });

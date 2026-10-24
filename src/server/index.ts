@@ -4,9 +4,11 @@ import { mkdir, open, readFile, realpath, stat } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { extname, join, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
+import { isDeepStrictEqual } from 'node:util';
 import { WebSocketServer } from 'ws';
 import { z } from 'zod';
-import { CaptureLimitsSchema, DraftSchema, IdSchema, MutationSchema, PluginCommandSchema, SnapshotSchema } from '../shared/contracts.js';
+import { CaptureLimitsSchema, DraftSchema, IdSchema, MutationSchema, PluginCommandSchema, SelectionSchema, SnapshotSchema, SourcePreviewInputSchema } from '../shared/contracts.js';
+import { ExportCaptureBundleInputSchema, ImportCaptureBundleInputSchema } from '../shared/capture-bundle.js';
 import { approvedContext, approvedRecords, DomainError } from '../core/index.js';
 import { AiError, aiStatus, generateDraft, readAiConfig, type AiConfig } from '../ai/index.js';
 import { createDemoProject } from '../demo/project.js';
@@ -14,6 +16,9 @@ import { PluginBroker, tokensEqual } from './broker.js';
 import { ProjectStore } from './store.js';
 import { ServiceError } from './errors.js';
 import { boundedPage, captureSummary, proposalSummary } from './responses.js';
+import { exportCaptureBundle, importCaptureBundle } from './capture-bundle.js';
+import { sourcePreview } from './source-preview.js';
+import { DATA_SCHEMA_VERSION, PRODUCT_VERSION, SERVICE_NAME } from '../shared/version.js';
 
 export { PluginBroker } from './broker.js';
 export { ProjectStore } from './store.js';
@@ -23,6 +28,7 @@ const MAX_BODY_BYTES=16_000_000;
 const RevisionSchema=z.object({expectedRevision:z.number().int().min(0)}).strict();
 const ProposalInputSchema=RevisionSchema.extend({draft:DraftSchema,warnings:z.array(z.string().max(2000)).max(100).default([])});
 const CaptureInputSchema=RevisionSchema.extend({limits:CaptureLimitsSchema.default({})});
+const SourceSelectionInputSchema=RevisionSchema.extend({annotationId:IdSchema,expectedSessionId:IdSchema});
 const CreateSchema=z.object({name:z.string().min(1).max(300)}).strict();
 const PageSchema=z.object({offset:z.coerce.number().int().min(0).max(100000).default(0),limit:z.coerce.number().int().min(1).max(50).default(20)}).strict();
 const SpecificationPageSchema=PageSchema.extend({annotationId:IdSchema.optional()});
@@ -115,20 +121,29 @@ export async function startServer(options:ServerOptions={}) {
         if(path.startsWith('/api/')){
           const header=request.headers.authorization??'';
           if(!header.startsWith('Bearer ')||!tokensEqual(header.slice(7),token))throw new ServiceError('UNAUTHORIZED','A valid local pairing token is required.',401);
-          if(request.method==='GET'&&path==='/api/health'){json(response,200,{ok:true,schemaVersion:'1.0.0'});return;}
+          if(request.method==='GET'&&path==='/api/health'){json(response,200,{ok:true,service:SERVICE_NAME,version:PRODUCT_VERSION,schemaVersion:DATA_SCHEMA_VERSION});return;}
           if(request.method==='GET'&&path==='/api/plugin/status'){json(response,200,broker.status);return;}
           if(request.method==='GET'&&path==='/api/ai/status'){json(response,200,{...aiStatus(aiConfig),...(aiConfigurationError?{configurationError:aiConfigurationError.message}:{})});return;}
           if(request.method==='POST'&&path==='/api/plugin/selection'){
             z.object({}).strict().parse(await body(request));
-            json(response,200,await broker.request({type:'get_selection'}));return;
+            const abort=new AbortController();const onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+            try {json(response,200,await broker.request({type:'get_selection'},{signal:abort.signal}));}
+            finally {response.off('close',onClose);}return;
           }
           if(request.method==='POST'&&path==='/api/plugin/highlight'){
             const value=z.object({fileKey:z.string().min(1).max(160),pageId:z.string().min(1).max(160),nodeIds:z.array(z.string().min(1).max(160)).min(1).max(100)}).strict().parse(await body(request));
-            json(response,200,await broker.request(PluginCommandSchema.parse({type:'highlight_nodes',...value})));return;
+            const abort=new AbortController();const onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+            try {json(response,200,await broker.request(PluginCommandSchema.parse({type:'highlight_nodes',...value}),{signal:abort.signal}));}
+            finally {response.off('close',onClose);}return;
           }
           if(path==='/api/projects'&&request.method==='GET'){json(response,200,{projects:await store.list()});return;}
           if(path==='/api/projects'&&request.method==='POST'){const input=CreateSchema.parse(await body(request));json(response,201,await store.create(input.name));return;}
           if(path==='/api/demo'&&request.method==='POST'){z.object({}).strict().parse(await body(request));json(response,201,await store.importProject(createDemoProject()));return;}
+          if(path==='/api/capture-bundles/import'&&request.method==='POST'){
+            const input=ImportCaptureBundleInputSchema.parse(await body(request));
+            const project=importCaptureBundle(input.bundle,input.name);
+            json(response,201,await store.importProject(project));return;
+          }
           const componentMatch=path.match(/^\/api\/projects\/([^/]+)\/components\/(.+)$/);
           if(componentMatch&&request.method==='GET'){
             const project=await store.get(componentMatch[1]!);
@@ -141,7 +156,7 @@ export async function startServer(options:ServerOptions={}) {
             if(Buffer.byteLength(JSON.stringify(result))>126_000)throw new ServiceError('RESPONSE_LIMIT','Component detail exceeds the tool budget; use component and specification list endpoints.',413);
             json(response,200,result);return;
           }
-          const match=path.match(/^\/api\/projects\/([^/]+)(?:\/(mutate|undo|redo|capture|export|proposals|nodes|components|specifications|generate-draft))?$/);
+          const match=path.match(/^\/api\/projects\/([^/]+)(?:\/(mutate|undo|redo|capture|capture-bundle|export|proposals|nodes|components|specifications|generate-draft|source-selection|source-preview))?$/);
           if(match){
             const id=match[1]!,action=match[2];
             if(!action&&request.method==='GET'){json(response,200,await store.get(id));return;}
@@ -167,6 +182,60 @@ export async function startServer(options:ServerOptions={}) {
             }
             if(request.method==='POST'){
               const input=await body(request);
+              if(action==='source-preview'){
+                const previewInput=SourcePreviewInputSchema.parse(input);
+                const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                try {
+                  const preview=await sourcePreview(store,broker,id,previewInput,{signal:abort.signal,timeoutMs:options.requestTimeoutMs??20000,
+                    isClosed:()=>response.destroyed||request.aborted});
+                  json(response,200,preview);
+                } finally {response.off('close',onClose);}return;
+              }
+              if(action==='capture-bundle'){
+                const selected=ExportCaptureBundleInputSchema.parse(input),project=await store.get(id);
+                if(project.revision!==selected.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed; reload before exporting captures.',409);
+                json(response,200,exportCaptureBundle(project,selected.snapshotIds));return;
+              }
+              if(action==='source-selection'){
+                const selectedInput=SourceSelectionInputSchema.parse(input);
+                const abort=new AbortController();const onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                const checkActive=()=>{
+                  if(response.destroyed||request.aborted)abort.abort();
+                  if(abort.signal.aborted)throw new ServiceError('CANCELLED','Source selection request cancelled.',499);
+                  const status=broker.status;
+                  if(!status.connected)throw new ServiceError('PLUGIN_DISCONNECTED','Figma plugin is disconnected.',503);
+                  if(status.sessionId!==selectedInput.expectedSessionId)throw new ServiceError('PLUGIN_SESSION_CHANGED','Figma plugin session changed. Reconnect the review to the current session.',409);
+                };
+                try {
+                  checkActive();
+                  const project=await store.get(id);
+                  checkActive();
+                  if(project.revision!==selectedInput.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed; reload before adding a source selection.',409);
+                  const annotation=project.annotations.find(item=>item.id===selectedInput.annotationId);
+                  if(!annotation)throw new ServiceError('NOT_FOUND','Annotation not found.',404);
+                  const snapshot=project.snapshots.find(item=>item.id===annotation.snapshotId)!;
+                  if(!snapshot.source.fileKey)throw new ServiceError('FILE_IDENTITY_UNAVAILABLE','Captured source file identity is unavailable. Capture a new scope with host-provided identity.',409);
+                  const selection=SelectionSchema.parse(await broker.request({type:'get_selection'},{signal:abort.signal,timeoutMs:options.requestTimeoutMs??20000}));
+                  checkActive();
+                  if(selection.nodes.length!==1)throw new ServiceError('INVALID_SELECTION','Select exactly one Figma node to add to the review.',400);
+                  if(!selection.fileKey)throw new ServiceError('FILE_IDENTITY_UNAVAILABLE','Figma did not expose the selected file identity.',409);
+                  if(selection.fileKey!==snapshot.source.fileKey)throw new ServiceError('WRONG_FILE','The selected node belongs to a different source file.',409);
+                  if(selection.pageId!==snapshot.source.pageId)throw new ServiceError('WRONG_PAGE','The selected node belongs to a different source page.',409);
+                  const selected=selection.nodes[0]!;
+                  const captured=snapshot.nodes.find(node=>node.id===selected.id);
+                  if(!captured)throw new ServiceError('SOURCE_OUTSIDE_CAPTURE','The selected node is outside this captured scope. Capture that scope separately before reviewing it.',409);
+                  if(selected.name!==captured.name||selected.type!==captured.type||!isDeepStrictEqual(selected.bbox,captured.bbox))throw new ServiceError('SOURCE_METADATA_CHANGED','Selected node metadata changed since capture. Capture a new scope before adding it.',409);
+                  const latest=await store.get(id);
+                  checkActive();
+                  if(latest.revision!==selectedInput.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed while reading the Figma selection. Reload before adding it.',409);
+                  // This validates selection identity/name/type/BBox only, not live text or a
+                  // Figma document revision. The caller stages this reference in its draft;
+                  // this read endpoint never mutates captures, annotations or approvals.
+                  json(response,200,{projectId:id,revision:latest.revision,annotationId:annotation.id,
+                    snapshotId:snapshot.id,sessionId:selectedInput.expectedSessionId,selected,
+                    sourceRef:{snapshotId:snapshot.id,nodeId:selected.id,matchType:'partial'}});
+                } finally {response.off('close',onClose);}return;
+              }
               if(action==='nodes'){
                 const selected=z.object({snapshotId:z.string().min(1).max(160),nodeIds:z.array(z.string().min(1).max(160)).min(1).max(100)}).strict().parse(input);
                 const snapshot=(await store.get(id)).snapshots.find(s=>s.id===selected.snapshotId);
@@ -202,9 +271,13 @@ export async function startServer(options:ServerOptions={}) {
               if(action==='capture'){
                 const summary=SummarySchema.parse(Object.fromEntries(url.searchParams)).summary==='1';
                 const capture=CaptureInputSchema.parse(input);
-                const project=await store.get(id);if(project.revision!==capture.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed; reload before capture.',409);
                 const abort=new AbortController();const onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
                 try {
+                  if(response.destroyed||request.aborted)abort.abort();
+                  if(abort.signal.aborted)throw new ServiceError('CANCELLED','Plugin request cancelled.',499);
+                  const project=await store.get(id);
+                  if(abort.signal.aborted)throw new ServiceError('CANCELLED','Plugin request cancelled.',499);
+                  if(project.revision!==capture.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed; reload before capture.',409);
                   const snapshot=SnapshotSchema.parse(await broker.request({type:'capture_selection',limits:capture.limits},{signal:abort.signal,timeoutMs:options.requestTimeoutMs??20000}));
                   const updated=await store.mutate(id,capture.expectedRevision,{type:'add_snapshot',snapshot},'human');
                   json(response,200,summary?captureSummary(updated,snapshot):updated);
@@ -221,7 +294,7 @@ export async function startServer(options:ServerOptions={}) {
       if(error instanceof ServiceError)json(response,error.status,{error:{code:error.code,message:error.message}});
       else if(error instanceof AiError){const status=error.code==='AI_CONSENT_REQUIRED'?403:error.code==='AI_TIMEOUT'?504:error.code==='AI_CANCELLED'?499:['AI_PROVIDER_ERROR','AI_RESPONSE_TOO_LARGE','AI_INVALID_RESPONSE'].includes(error.code)?502:400;json(response,status,{error:{code:error.code,message:error.message}});}
       else if(error instanceof z.ZodError)json(response,400,{error:{code:'INVALID_INPUT',message:'Request does not match the validated data contract.'}});
-      else if(error instanceof DomainError){const status=error.code==='NOT_FOUND'?404:error.code.includes('STALE')||error.code.includes('CONFLICT')?409:error.code==='FORBIDDEN'?403:400;json(response,status,{error:{code:error.code,message:error.message}});}
+      else if(error instanceof DomainError){const status=error.code==='NOT_FOUND'?404:error.code==='CAPTURE_BUNDLE_LIMIT'?413:error.code.includes('STALE')||error.code.includes('CONFLICT')?409:error.code==='FORBIDDEN'?403:400;json(response,status,{error:{code:error.code,message:error.message}});}
       else json(response,500,{error:{code:'INTERNAL_ERROR',message:'Local operation failed; reload the project to check its latest revision.'}});
     }
   });

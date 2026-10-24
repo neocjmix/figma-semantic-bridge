@@ -8,6 +8,13 @@ runner has executed successfully in Figma Desktop.
 
 ## Figma Desktop procedure
 
+The analyzer supports Dev Mode inspection as well as Design mode. For the
+product permission gate, use a Dev-only account with view access to a permitted
+source file; see [the separate acceptance procedure](desktop-verification.md#dev-seat-and-view-access-acceptance).
+Running against a duplicate that you own is useful for fixture analysis but
+cannot establish Dev-only access. Do not ask the author for edit permission just
+because the remote Plugin API execution service rejects a read request.
+
 1. Run `npm ci` and `npm run build:fixture-plugin` from the repository root.
 2. Verify the source file's duplication and test-use terms. For Community files,
    obtain a permitted copy through **Open in Figma**. Record the original URL,
@@ -53,6 +60,32 @@ setting, not a canvas edit. If a runtime does not expose the flag, the report's
 `hiddenInstanceChildren` coverage is `not measured`; do not treat it as proven
 complete hidden-layer coverage. Native children handles are visited branch by branch; the plugin does
 not request `loadAllPagesAsync`, `findAll`, REST document JSON, or image exports.
+
+## Recorded Desktop execution
+
+On 2026-10-24, Figma Desktop 126.10.11 on macOS 26.6.2 completed four native
+**Analyze selection** runs: a 21-node synthetic geometry scope and three permitted
+Community-copy scopes containing 270, 21 and 2 nodes. All extraction and spatial
+passes completed within the default budgets. The Community Auto Layout counts
+were respectively 58/74, 7/7 and 1/1 eligible nodes. The nested two-node Frame is
+already included in the 21-node Section; these are not disjoint file totals.
+See the content-free [native analyzer aggregate](evaluation/native-fixture-analyzer.json)
+and [completion record](completion-status.md#completed-native-aggregate-analysis).
+
+An observed Desktop relay initially left the UI waiting after analysis. The UI
+now accepts its immediate parent or the top window only when the latter has the
+exact origin `https://www.figma.com` or `https://figma.com`. Focused
+[built-UI tests](../tests/fixture-plugin-build.test.ts) cover those accepted paths,
+unrelated-sender rejection, result display and button recovery. The native
+result/download observations are separate from those simulated-window tests.
+
+The original reports retained null file keys and measured hidden-instance-child
+traversal as included; identities were not backfilled. Only the chosen subtrees
+were analyzed, without page-wide traversal or source edits. SECTION structural
+analysis is supported; it does not establish a mapped Section PNG for the product.
+These are single native observations, not a cold/warm analyzer benchmark, whole-file
+coverage, Dev-only permission acceptance, independent semantic labels or a
+representative ten-screen corpus. Fixture adoption status is unchanged.
 
 ## Figma MCP procedure
 

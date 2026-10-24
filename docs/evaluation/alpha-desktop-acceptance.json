@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-24",
+  "version": "0.1.0",
+  "evidenceKind": "Installed AppKit/WKWebView application, bundled runtime/MCP and actual Figma Desktop observations.",
+  "environment": {
+    "architecture": "arm64",
+    "macOsVersion": "26.6.2",
+    "macOsBuild": "25G83",
+    "figmaDesktopVersion": "126.10.11",
+    "bundledNodeVersion": "22.23.4",
+    "deploymentTarget": "macOS 13 or later; execution on macOS 13 was not tested"
+  },
+  "nativeGui": {
+    "automaticWorkspacePairing": true,
+    "syntheticAnnotationSave": true,
+    "jsonNativeSaveDialog": true,
+    "markdownNativeSaveDialog": true,
+    "captureBundleNativeSave": true,
+    "captureBundleNativeFileOpenImport": true,
+    "importedCaptureCount": 2,
+    "offlineGuideWindowOpened": true,
+    "pairingTokenCopiedThroughAppMenu": true,
+    "guideFormatting": "Final structured-guide rendering is reviewed separately from this earlier window-open observation."
+  },
+  "figma": {
+    "manifestImportedFromInstalledApp": true,
+    "access": "Dev Mode on an owned synthetic fixture",
+    "complete": true,
+    "capturedNodeCount": 21,
+    "pngDimensions": {
+      "width": 800,
+      "height": 600
+    },
+    "sourceEdited": false
+  },
+  "bundledMcp": {
+    "executable": "Node bundled inside the installed app",
+    "listProjects": true,
+    "getApprovedContext": true
+  },
+  "lifecycle": {
+    "incompatibleExistingCheckoutServiceRejected": true,
+    "migration": "The task-owned earlier LaunchAgent was stopped and backed up explicitly; the app did not terminate it automatically.",
+    "protectedExistingProjectsUnchanged": 6,
+    "quitRemovedOwnedPort4177Listener": true,
+    "restartAutomaticPairing": true,
+    "restartTokenUnchanged": true,
+    "restartProjectHashesUnchanged": true,
+    "savedAnnotationReopened": true,
+    "observationSource": "Native verification operator observations alongside the installed acceptance report; no private hashes or process IDs are reproduced."
+  },
+  "publication": {
+    "status": "Not published; repository license choice is pending",
+    "developerIdSigned": false,
+    "appleNotarized": false,
+    "signatureType": "ad-hoc",
+    "figmaDistribution": "Prebuilt local development plugin; not a Community listing",
+    "finalReleaseCommitAndArtifactHashes": "Not recorded until the final release candidate is frozen"
+  },
+  "limitations": [
+    "This records actual local installed-app execution, not a fresh external download or Gatekeeper-quarantined installation on another Mac.",
+    "The tested Mac already has developer tools; this run used the app-bundled Node and production assets, not a developer server. A wholly clean-machine installation is not claimed.",
+    "The exact oldest supported macOS version and an effective Dev-only account on another owner's can-view file remain unverified.",
+    "Native operator actions on synthetic data are not independent human semantic-accuracy or productivity evaluation.",
+    "No source text, node/file/project/session identifiers, personal paths, tokens, private hashes or images are included.",
+    "The installed-app run is distinct from earlier HTTP/browser/native sample matrices and from final immutable release provenance checks."
+  ]
+}

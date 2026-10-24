@@ -72,6 +72,12 @@ summary { cursor: pointer; font-size: 11px; font-weight: 600; color: #526a86; pa
 .snapshot-number { display: grid; place-items: center; height: 28px; width: 24px; flex-shrink: 0; border: 1px solid #dce5ed; border-radius: 4px; color: #7a8da3; background: white; font-size: 9px; }
 .snapshot-item strong { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 11px; color: #39536c; line-height: 1.5; }
 .snapshot-item small { display: block; font-weight: 400; font-size: 9px; color: #8b9aad; margin-top: 3px; }
+.capture-transfer { border-top: 1px solid var(--line); margin-top: 14px; }
+.capture-transfer-scopes { max-height: 180px; overflow-y: auto; }
+.capture-transfer .checkbox { align-items: flex-start; overflow-wrap: anywhere; }
+.capture-transfer .checkbox input { margin-top: 2px; }
+.capture-transfer input[type=file] { font-size: 10px; padding: 8px 5px; }
+.capture-transfer-warning { color: #8a641e; }
 .components-section { flex: 1; }
 .component-list { margin: 0 -6px 13px; }
 .component-row { display: flex; align-items: center; gap: 7px; border-radius: 5px; margin-bottom: 3px; }
@@ -139,6 +145,57 @@ summary { cursor: pointer; font-size: 11px; font-weight: 600; color: #526a86; pa
 .source-references button { margin-left: auto; font-size: 9px; }
 .manual-sources { max-height: 240px; overflow-y: auto; }
 .manual-sources label { font-size: 10px; align-items: flex-start; }
+.source-review .source-references > div { display: block; overflow-wrap: anywhere; }
+.source-review .source-references strong { display: block; font-size: 11px; margin-bottom: 4px; }
+.source-review .source-references code { margin-right: 6px; }
+.source-row-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.source-row-actions button { margin-left: 0; white-space: normal; text-align: left; }
+.source-crop { margin: 12px 0; border: 1px solid var(--line); border-radius: 5px; background: #f4f6f9; overflow: hidden; }
+.source-crop svg { display: block; width: 100%; height: 150px; background: #e9eef3; }
+.source-crop figcaption { padding: 8px; color: #687d92; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.current-node-preview { margin: 14px 0; padding: 10px; border: 1px solid var(--line); border-radius: 5px; overflow-wrap: anywhere; }
+.current-node-preview > strong { font-size: 11px; }
+.node-preview-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.node-preview-comparison h3 { margin: 0 0 5px; font-size: 11px; }
+.node-preview-comparison time { display: block; color: #687d92; font-size: 9px; line-height: 1.5; }
+.node-preview-comparison .source-crop, .node-export-image { margin: 8px 0; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.node-preview-comparison .source-crop svg, .node-export-image img { display: block; width: 100%; height: 130px; object-fit: contain; }
+.node-export-image img { background: repeating-conic-gradient(#e5e9ed 0% 25%, #fff 0% 50%) 0 0 / 16px 16px; }
+.node-export-image figcaption { padding: 8px; font-size: 10px; color: #687d92; line-height: 1.5; }
+.current-node-preview ul { padding-left: 17px; }
+.current-node-preview .node-preview-error { color: #9b3e33; }
+.node-comparison-dialog { width: min(90vw, 1400px); max-width: none; max-height: 90vh; margin: auto; padding: 24px; border: 1px solid var(--line); border-radius: 10px; color: #263b53; background: #fff; overflow-y: auto; box-shadow: 0 20px 80px #14263b40; }
+.node-comparison-dialog::backdrop { background: #14263b99; }
+.node-comparison-dialog-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.node-comparison-dialog-header h2 { margin: 0 0 5px; font-size: 18px; }
+.node-comparison-dialog-header button { flex-shrink: 0; }
+.node-comparison-dialog .node-preview-comparison { gap: 20px; margin: 20px 0; }
+.node-comparison-dialog .node-preview-comparison h3 { font-size: 14px; }
+.node-comparison-dialog .node-preview-comparison time { font-size: 12px; }
+.node-comparison-dialog .source-crop svg, .node-comparison-dialog .node-export-image img { height: min(50vh, 500px); }
+.node-comparison-dialog .small, .node-comparison-dialog figcaption { font-size: 12px; }
+@media (max-width: 700px) {
+  .node-comparison-dialog { padding: 16px; }
+  .node-comparison-dialog .node-preview-comparison { grid-template-columns: 1fr; }
+  .node-comparison-dialog .source-crop svg, .node-comparison-dialog .node-export-image img { height: 30vh; }
+}
+.manual-source { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.manual-source > .text-button { font-size: 10px; }
+.source-review-state { background: #f1f6fa; border: 1px solid #dce6ee; border-radius: 5px; padding: 10px; margin: 12px 0; font-size: 11px; line-height: 1.5; }
+.source-review-state.needs-review { background: #fff8e8; border-color: #ecd6a8; }
+.source-review-state ul { padding-left: 17px; margin: 8px 0 0; }
+.source-review-state li { margin-top: 6px; }
+.source-candidate { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.source-candidate .checkbox { margin: 0 0 5px; align-items: flex-start; }
+.source-candidate p { margin-bottom: 3px; }
+.source-pagination { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 10px; }
+.source-pagination button { padding: 6px; font-size: 10px; }
+.source-confirmation-required { color: #8b5b21; }
+.source-review .rendering-evidence { display: block; margin: 7px 0; padding: 6px 8px; border-left: 2px solid #bccbd8; background: #f4f7fa; line-height: 1.5; overflow-wrap: anywhere; }
+.source-review .rendering-evidence .rendering-state { display: block; color: #526a80; font-size: 10px; font-weight: 600; }
+.source-review .rendering-evidence .rendering-reason, .source-review .rendering-evidence small { display: block; color: #697b8e; font-size: 10px; margin-top: 3px; font-weight: 400; }
+.source-review .rendering-hidden, .source-review .rendering-transparent { border-left-color: #bf954b; background: #fff8eb; }
+.source-review .rendering-unknown { border-left-style: dashed; }
 .advanced { margin-top: 18px; }
 .advanced .two-fields button { font-size: 9px; }
 .spec-list button { display: flex; flex-wrap: wrap; gap: 6px; align-items: start; justify-content: space-between; white-space: normal; text-align: left; width: 100%; padding: 11px; margin-bottom: 7px; line-height: 1.6; }

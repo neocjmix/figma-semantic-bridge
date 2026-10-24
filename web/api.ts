@@ -2,11 +2,12 @@ export class ApiError extends Error {
   constructor(public readonly code: string, message: string, public readonly status: number) { super(message); }
 }
 
-export async function request<T>(token: string, path: string, body?: unknown): Promise<T> {
+export async function request<T>(token: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(signal ? { signal } : {}),
   });
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {

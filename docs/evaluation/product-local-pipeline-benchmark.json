@@ -1,0 +1,1358 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "synthetic-local-http-websocket-disk-pipeline-benchmark",
+  "measuredAt": "2026-10-23T05:58:25.222Z",
+  "command": "npm run benchmark:local-pipeline",
+  "generator": "scripts/benchmark-local-pipeline.ts",
+  "runtime": {
+    "node": "v22.22.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "method": {
+    "warmupRunsPerCase": 1,
+    "measuredRunsPerCase": 5,
+    "captureLimits": {
+      "maxBytes": 4000000,
+      "maxDurationMs": 15000,
+      "maxImageDimension": 2048
+    },
+    "setup": "One loopback server on port 0 and a temporary data directory; fresh project and synthetic WebSocket connection per run; no active user service or data is used.",
+    "timing": "HTTP timings include body consumption and JSON parsing. Adapter timing is nested inside captureHttp. Pipeline includes capture, one annotation creation, deterministic match, simulated approval, read, direct disk read, approved export, and consistency assertions, excluding setup.",
+    "distributions": "Five sequential measured runs after one warmup per case. p95 uses nearest rank and is the maximum for five samples; it is not a stable tail-latency estimate.",
+    "bytes": "Serialized UTF-8 application JSON body/payload sizes and actual project-envelope file bytes; excludes HTTP/WebSocket framing, headers and TCP overhead. Not wire-byte measurements."
+  },
+  "limitations": [
+    "Synthetic generated scalar nodes only. No Figma Desktop, Dev seat enforcement, public fixture, native page loading, exportAsync, PNG or browser rendering is measured.",
+    "Server, client and synthetic plugin share one Node.js process and event loop; real Figma process isolation and scheduling are not represented.",
+    "A synthetic text-node BBox is annotated, matched and approved through the local API by the benchmark. This simulated approval tests persistence/export and is not evidence of human review accuracy or productivity. The approved export contains one annotation and one source record, not a large approved context.",
+    "Capture uses the real bounded adapter; HTTP, WebSocket, schema validation and atomic disk persistence are real local operations.",
+    "No performance pass threshold, forced GC, CPU isolation, peak-memory measurement, cold-filesystem claim or inference about native Figma latency."
+  ],
+  "results": [
+    {
+      "knownGeneratedScopeNodeCount": 100,
+      "maxNodes": 2000,
+      "measuredRuns": 5,
+      "timingsMs": {
+        "pipelineIncludingAssertions": {
+          "samples": [
+            30.828,
+            26.029,
+            24.687,
+            24.061,
+            24.795
+          ],
+          "min": 24.061,
+          "median": 24.795,
+          "p95": 30.828,
+          "max": 30.828,
+          "mean": 26.08
+        },
+        "captureHttp": {
+          "samples": [
+            8.553,
+            6.572,
+            7.212,
+            6.398,
+            5.477
+          ],
+          "min": 5.477,
+          "median": 6.572,
+          "p95": 8.553,
+          "max": 8.553,
+          "mean": 6.842
+        },
+        "captureAdapter": {
+          "samples": [
+            0.548,
+            0.487,
+            0.493,
+            0.505,
+            0.521
+          ],
+          "min": 0.487,
+          "median": 0.505,
+          "p95": 0.548,
+          "max": 0.548,
+          "mean": 0.511
+        },
+        "annotationCreateHttp": {
+          "samples": [
+            6.993,
+            6.187,
+            3.972,
+            4.026,
+            4.502
+          ],
+          "min": 3.972,
+          "median": 4.502,
+          "p95": 6.993,
+          "max": 6.993,
+          "mean": 5.136
+        },
+        "matchHttp": {
+          "samples": [
+            5.846,
+            5.645,
+            5.564,
+            4.59,
+            5.863
+          ],
+          "min": 4.59,
+          "median": 5.645,
+          "p95": 5.863,
+          "max": 5.863,
+          "mean": 5.502
+        },
+        "approveHttp": {
+          "samples": [
+            6.128,
+            5.207,
+            5.131,
+            6.514,
+            6.049
+          ],
+          "min": 5.131,
+          "median": 6.049,
+          "p95": 6.514,
+          "max": 6.514,
+          "mean": 5.806
+        },
+        "readHttp": {
+          "samples": [
+            1.031,
+            0.883,
+            0.962,
+            0.984,
+            0.946
+          ],
+          "min": 0.883,
+          "median": 0.962,
+          "p95": 1.031,
+          "max": 1.031,
+          "mean": 0.961
+        },
+        "diskReadAndParse": {
+          "samples": [
+            0.263,
+            0.147,
+            0.139,
+            0.135,
+            0.135
+          ],
+          "min": 0.135,
+          "median": 0.139,
+          "p95": 0.263,
+          "max": 0.263,
+          "mean": 0.164
+        },
+        "approvedExportHttp": {
+          "samples": [
+            1.319,
+            0.945,
+            1.238,
+            1.007,
+            1.402
+          ],
+          "min": 0.945,
+          "median": 1.238,
+          "p95": 1.402,
+          "max": 1.402,
+          "mean": 1.182
+        }
+      },
+      "sizesBytes": {
+        "captureHttpRequestJson": {
+          "samples": [
+            115,
+            115,
+            115,
+            115,
+            115
+          ],
+          "min": 115,
+          "median": 115,
+          "p95": 115,
+          "max": 115,
+          "mean": 115
+        },
+        "captureHttpResponseJson": {
+          "samples": [
+            26133,
+            26133,
+            26133,
+            26133,
+            26133
+          ],
+          "min": 26133,
+          "median": 26133,
+          "p95": 26133,
+          "max": 26133,
+          "mean": 26133
+        },
+        "captureWebSocketRequestJson": {
+          "samples": [
+            201,
+            201,
+            201,
+            201,
+            201
+          ],
+          "min": 201,
+          "median": 201,
+          "p95": 201,
+          "max": 201,
+          "mean": 201
+        },
+        "captureWebSocketResponseJson": {
+          "samples": [
+            26002,
+            26002,
+            26002,
+            26002,
+            26002
+          ],
+          "min": 26002,
+          "median": 26002,
+          "p95": 26002,
+          "max": 26002,
+          "mean": 26002
+        },
+        "annotationCreateHttpRequestJson": {
+          "samples": [
+            333,
+            333,
+            333,
+            333,
+            333
+          ],
+          "min": 333,
+          "median": 333,
+          "p95": 333,
+          "max": 333,
+          "mean": 333
+        },
+        "annotationCreateHttpResponseJson": {
+          "samples": [
+            26389,
+            26389,
+            26389,
+            26389,
+            26389
+          ],
+          "min": 26389,
+          "median": 26389,
+          "p95": 26389,
+          "max": 26389,
+          "mean": 26389
+        },
+        "matchHttpRequestJson": {
+          "samples": [
+            104,
+            104,
+            104,
+            104,
+            104
+          ],
+          "min": 104,
+          "median": 104,
+          "p95": 104,
+          "max": 104,
+          "mean": 104
+        },
+        "matchHttpResponseJson": {
+          "samples": [
+            26488,
+            26488,
+            26488,
+            26488,
+            26488
+          ],
+          "min": 26488,
+          "median": 26488,
+          "p95": 26488,
+          "max": 26488,
+          "mean": 26488
+        },
+        "approveHttpRequestJson": {
+          "samples": [
+            111,
+            111,
+            111,
+            111,
+            111
+          ],
+          "min": 111,
+          "median": 111,
+          "p95": 111,
+          "max": 111,
+          "mean": 111
+        },
+        "approveHttpResponseJson": {
+          "samples": [
+            26488,
+            26488,
+            26488,
+            26488,
+            26488
+          ],
+          "min": 26488,
+          "median": 26488,
+          "p95": 26488,
+          "max": 26488,
+          "mean": 26488
+        },
+        "readHttpResponseJson": {
+          "samples": [
+            26488,
+            26488,
+            26488,
+            26488,
+            26488
+          ],
+          "min": 26488,
+          "median": 26488,
+          "p95": 26488,
+          "max": 26488,
+          "mean": 26488
+        },
+        "storedProjectEnvelopeJson": {
+          "samples": [
+            27393,
+            27393,
+            27393,
+            27393,
+            27393
+          ],
+          "min": 27393,
+          "median": 27393,
+          "p95": 27393,
+          "max": 27393,
+          "mean": 27393
+        },
+        "approvedExportHttpResponseJson": {
+          "samples": [
+            1634,
+            1634,
+            1634,
+            1634,
+            1634
+          ],
+          "min": 1634,
+          "median": 1634,
+          "p95": 1634,
+          "max": 1634,
+          "mean": 1634
+        }
+      },
+      "checks": {
+        "capturedNodes": 100,
+        "materializedNodeHandles": 100,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "httpReadEqualsApprovedProject": true,
+        "diskEqualsApprovedProject": true,
+        "deterministicExactMatch": true,
+        "approvedExportMatchesDiskProjection": true,
+        "exactSourceTextAndProvenancePreserved": true,
+        "restoredTraversalFlag": true
+      }
+    },
+    {
+      "knownGeneratedScopeNodeCount": 1000,
+      "maxNodes": 2000,
+      "measuredRuns": 5,
+      "timingsMs": {
+        "pipelineIncludingAssertions": {
+          "samples": [
+            83.439,
+            78.193,
+            82.162,
+            80.133,
+            79.321
+          ],
+          "min": 78.193,
+          "median": 80.133,
+          "p95": 83.439,
+          "max": 83.439,
+          "mean": 80.65
+        },
+        "captureHttp": {
+          "samples": [
+            21.789,
+            19.935,
+            19.082,
+            19.444,
+            19.457
+          ],
+          "min": 19.082,
+          "median": 19.457,
+          "p95": 21.789,
+          "max": 21.789,
+          "mean": 19.941
+        },
+        "captureAdapter": {
+          "samples": [
+            4.578,
+            4.899,
+            4.148,
+            4.22,
+            4.177
+          ],
+          "min": 4.148,
+          "median": 4.22,
+          "p95": 4.899,
+          "max": 4.899,
+          "mean": 4.404
+        },
+        "annotationCreateHttp": {
+          "samples": [
+            14.365,
+            15.002,
+            15.926,
+            15.004,
+            14.711
+          ],
+          "min": 14.365,
+          "median": 15.002,
+          "p95": 15.926,
+          "max": 15.926,
+          "mean": 15.002
+        },
+        "matchHttp": {
+          "samples": [
+            16.717,
+            15.056,
+            16.828,
+            15.927,
+            15.72
+          ],
+          "min": 15.056,
+          "median": 15.927,
+          "p95": 16.828,
+          "max": 16.828,
+          "mean": 16.05
+        },
+        "approveHttp": {
+          "samples": [
+            15.904,
+            13.608,
+            15.391,
+            14.819,
+            14.902
+          ],
+          "min": 13.608,
+          "median": 14.902,
+          "p95": 15.904,
+          "max": 15.904,
+          "mean": 14.925
+        },
+        "readHttp": {
+          "samples": [
+            5.593,
+            5.57,
+            5.681,
+            5.498,
+            5.544
+          ],
+          "min": 5.498,
+          "median": 5.57,
+          "p95": 5.681,
+          "max": 5.681,
+          "mean": 5.577
+        },
+        "diskReadAndParse": {
+          "samples": [
+            0.664,
+            0.678,
+            0.666,
+            0.674,
+            0.657
+          ],
+          "min": 0.657,
+          "median": 0.666,
+          "p95": 0.678,
+          "max": 0.678,
+          "mean": 0.668
+        },
+        "approvedExportHttp": {
+          "samples": [
+            5.647,
+            5.686,
+            5.949,
+            6.102,
+            5.727
+          ],
+          "min": 5.647,
+          "median": 5.727,
+          "p95": 6.102,
+          "max": 6.102,
+          "mean": 5.822
+        }
+      },
+      "sizesBytes": {
+        "captureHttpRequestJson": {
+          "samples": [
+            115,
+            115,
+            115,
+            115,
+            115
+          ],
+          "min": 115,
+          "median": 115,
+          "p95": 115,
+          "max": 115,
+          "mean": 115
+        },
+        "captureHttpResponseJson": {
+          "samples": [
+            256034,
+            256034,
+            256034,
+            256034,
+            256034
+          ],
+          "min": 256034,
+          "median": 256034,
+          "p95": 256034,
+          "max": 256034,
+          "mean": 256034
+        },
+        "captureWebSocketRequestJson": {
+          "samples": [
+            201,
+            201,
+            201,
+            201,
+            201
+          ],
+          "min": 201,
+          "median": 201,
+          "p95": 201,
+          "max": 201,
+          "mean": 201
+        },
+        "captureWebSocketResponseJson": {
+          "samples": [
+            255902,
+            255902,
+            255902,
+            255902,
+            255902
+          ],
+          "min": 255902,
+          "median": 255902,
+          "p95": 255902,
+          "max": 255902,
+          "mean": 255902
+        },
+        "annotationCreateHttpRequestJson": {
+          "samples": [
+            334,
+            334,
+            334,
+            334,
+            334
+          ],
+          "min": 334,
+          "median": 334,
+          "p95": 334,
+          "max": 334,
+          "mean": 334
+        },
+        "annotationCreateHttpResponseJson": {
+          "samples": [
+            256291,
+            256291,
+            256291,
+            256291,
+            256291
+          ],
+          "min": 256291,
+          "median": 256291,
+          "p95": 256291,
+          "max": 256291,
+          "mean": 256291
+        },
+        "matchHttpRequestJson": {
+          "samples": [
+            104,
+            104,
+            104,
+            104,
+            104
+          ],
+          "min": 104,
+          "median": 104,
+          "p95": 104,
+          "max": 104,
+          "mean": 104
+        },
+        "matchHttpResponseJson": {
+          "samples": [
+            256392,
+            256392,
+            256392,
+            256392,
+            256392
+          ],
+          "min": 256392,
+          "median": 256392,
+          "p95": 256392,
+          "max": 256392,
+          "mean": 256392
+        },
+        "approveHttpRequestJson": {
+          "samples": [
+            111,
+            111,
+            111,
+            111,
+            111
+          ],
+          "min": 111,
+          "median": 111,
+          "p95": 111,
+          "max": 111,
+          "mean": 111
+        },
+        "approveHttpResponseJson": {
+          "samples": [
+            256392,
+            256392,
+            256392,
+            256392,
+            256392
+          ],
+          "min": 256392,
+          "median": 256392,
+          "p95": 256392,
+          "max": 256392,
+          "mean": 256392
+        },
+        "readHttpResponseJson": {
+          "samples": [
+            256392,
+            256392,
+            256392,
+            256392,
+            256392
+          ],
+          "min": 256392,
+          "median": 256392,
+          "p95": 256392,
+          "max": 256392,
+          "mean": 256392
+        },
+        "storedProjectEnvelopeJson": {
+          "samples": [
+            257304,
+            257304,
+            257304,
+            257304,
+            257304
+          ],
+          "min": 257304,
+          "median": 257304,
+          "p95": 257304,
+          "max": 257304,
+          "mean": 257304
+        },
+        "approvedExportHttpResponseJson": {
+          "samples": [
+            1644,
+            1644,
+            1644,
+            1644,
+            1644
+          ],
+          "min": 1644,
+          "median": 1644,
+          "p95": 1644,
+          "max": 1644,
+          "mean": 1644
+        }
+      },
+      "checks": {
+        "capturedNodes": 1000,
+        "materializedNodeHandles": 1000,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "httpReadEqualsApprovedProject": true,
+        "diskEqualsApprovedProject": true,
+        "deterministicExactMatch": true,
+        "approvedExportMatchesDiskProjection": true,
+        "exactSourceTextAndProvenancePreserved": true,
+        "restoredTraversalFlag": true
+      }
+    },
+    {
+      "knownGeneratedScopeNodeCount": 10000,
+      "maxNodes": 2000,
+      "measuredRuns": 5,
+      "timingsMs": {
+        "pipelineIncludingAssertions": {
+          "samples": [
+            145.488,
+            141.608,
+            156.141,
+            143.486,
+            144.025
+          ],
+          "min": 141.608,
+          "median": 144.025,
+          "p95": 156.141,
+          "max": 156.141,
+          "mean": 146.15
+        },
+        "captureHttp": {
+          "samples": [
+            37.62,
+            36.002,
+            36.82,
+            36.405,
+            35.243
+          ],
+          "min": 35.243,
+          "median": 36.405,
+          "p95": 37.62,
+          "max": 37.62,
+          "mean": 36.418
+        },
+        "captureAdapter": {
+          "samples": [
+            8.604,
+            8.053,
+            8.385,
+            8.135,
+            8.051
+          ],
+          "min": 8.051,
+          "median": 8.135,
+          "p95": 8.604,
+          "max": 8.604,
+          "mean": 8.246
+        },
+        "annotationCreateHttp": {
+          "samples": [
+            25.914,
+            24.335,
+            37.214,
+            25.584,
+            26.102
+          ],
+          "min": 24.335,
+          "median": 25.914,
+          "p95": 37.214,
+          "max": 37.214,
+          "mean": 27.83
+        },
+        "matchHttp": {
+          "samples": [
+            27.621,
+            26.321,
+            28.23,
+            26.82,
+            27.659
+          ],
+          "min": 26.321,
+          "median": 27.621,
+          "p95": 28.23,
+          "max": 28.23,
+          "mean": 27.33
+        },
+        "approveHttp": {
+          "samples": [
+            25.639,
+            26.393,
+            25.692,
+            25.701,
+            25.9
+          ],
+          "min": 25.639,
+          "median": 25.701,
+          "p95": 26.393,
+          "max": 26.393,
+          "mean": 25.865
+        },
+        "readHttp": {
+          "samples": [
+            11.283,
+            11.271,
+            10.933,
+            11.372,
+            11.307
+          ],
+          "min": 10.933,
+          "median": 11.283,
+          "p95": 11.372,
+          "max": 11.372,
+          "mean": 11.233
+        },
+        "diskReadAndParse": {
+          "samples": [
+            1.262,
+            1.243,
+            1.278,
+            1.29,
+            1.249
+          ],
+          "min": 1.243,
+          "median": 1.262,
+          "p95": 1.29,
+          "max": 1.29,
+          "mean": 1.264
+        },
+        "approvedExportHttp": {
+          "samples": [
+            10.863,
+            10.959,
+            10.852,
+            11.12,
+            11.303
+          ],
+          "min": 10.852,
+          "median": 10.959,
+          "p95": 11.303,
+          "max": 11.303,
+          "mean": 11.019
+        }
+      },
+      "sizesBytes": {
+        "captureHttpRequestJson": {
+          "samples": [
+            115,
+            115,
+            115,
+            115,
+            115
+          ],
+          "min": 115,
+          "median": 115,
+          "p95": 115,
+          "max": 115,
+          "mean": 115
+        },
+        "captureHttpResponseJson": {
+          "samples": [
+            518012,
+            518012,
+            518012,
+            518012,
+            518012
+          ],
+          "min": 518012,
+          "median": 518012,
+          "p95": 518012,
+          "max": 518012,
+          "mean": 518012
+        },
+        "captureWebSocketRequestJson": {
+          "samples": [
+            201,
+            201,
+            201,
+            201,
+            201
+          ],
+          "min": 201,
+          "median": 201,
+          "p95": 201,
+          "max": 201,
+          "mean": 201
+        },
+        "captureWebSocketResponseJson": {
+          "samples": [
+            517879,
+            517879,
+            517879,
+            517879,
+            517879
+          ],
+          "min": 517879,
+          "median": 517879,
+          "p95": 517879,
+          "max": 517879,
+          "mean": 517879
+        },
+        "annotationCreateHttpRequestJson": {
+          "samples": [
+            335,
+            335,
+            335,
+            335,
+            335
+          ],
+          "min": 335,
+          "median": 335,
+          "p95": 335,
+          "max": 335,
+          "mean": 335
+        },
+        "annotationCreateHttpResponseJson": {
+          "samples": [
+            518270,
+            518270,
+            518270,
+            518270,
+            518270
+          ],
+          "min": 518270,
+          "median": 518270,
+          "p95": 518270,
+          "max": 518270,
+          "mean": 518270
+        },
+        "matchHttpRequestJson": {
+          "samples": [
+            104,
+            104,
+            104,
+            104,
+            104
+          ],
+          "min": 104,
+          "median": 104,
+          "p95": 104,
+          "max": 104,
+          "mean": 104
+        },
+        "matchHttpResponseJson": {
+          "samples": [
+            518373,
+            518373,
+            518373,
+            518373,
+            518373
+          ],
+          "min": 518373,
+          "median": 518373,
+          "p95": 518373,
+          "max": 518373,
+          "mean": 518373
+        },
+        "approveHttpRequestJson": {
+          "samples": [
+            111,
+            111,
+            111,
+            111,
+            111
+          ],
+          "min": 111,
+          "median": 111,
+          "p95": 111,
+          "max": 111,
+          "mean": 111
+        },
+        "approveHttpResponseJson": {
+          "samples": [
+            518373,
+            518373,
+            518373,
+            518373,
+            518373
+          ],
+          "min": 518373,
+          "median": 518373,
+          "p95": 518373,
+          "max": 518373,
+          "mean": 518373
+        },
+        "readHttpResponseJson": {
+          "samples": [
+            518373,
+            518373,
+            518373,
+            518373,
+            518373
+          ],
+          "min": 518373,
+          "median": 518373,
+          "p95": 518373,
+          "max": 518373,
+          "mean": 518373
+        },
+        "storedProjectEnvelopeJson": {
+          "samples": [
+            519292,
+            519292,
+            519292,
+            519292,
+            519292
+          ],
+          "min": 519292,
+          "median": 519292,
+          "p95": 519292,
+          "max": 519292,
+          "mean": 519292
+        },
+        "approvedExportHttpResponseJson": {
+          "samples": [
+            1761,
+            1761,
+            1761,
+            1761,
+            1761
+          ],
+          "min": 1761,
+          "median": 1761,
+          "p95": 1761,
+          "max": 1761,
+          "mean": 1761
+        }
+      },
+      "checks": {
+        "capturedNodes": 2000,
+        "materializedNodeHandles": 2000,
+        "completeness": {
+          "complete": false,
+          "reason": "Node budget reached; this is an observed prefix only."
+        },
+        "httpReadEqualsApprovedProject": true,
+        "diskEqualsApprovedProject": true,
+        "deterministicExactMatch": true,
+        "approvedExportMatchesDiskProjection": true,
+        "exactSourceTextAndProvenancePreserved": true,
+        "restoredTraversalFlag": true
+      }
+    },
+    {
+      "knownGeneratedScopeNodeCount": 10000,
+      "maxNodes": 10000,
+      "measuredRuns": 5,
+      "timingsMs": {
+        "pipelineIncludingAssertions": {
+          "samples": [
+            688.163,
+            820.372,
+            818.321,
+            742.132,
+            719.045
+          ],
+          "min": 688.163,
+          "median": 742.132,
+          "p95": 820.372,
+          "max": 820.372,
+          "mean": 757.607
+        },
+        "captureHttp": {
+          "samples": [
+            163.654,
+            186.703,
+            200.37,
+            193.804,
+            168.86
+          ],
+          "min": 163.654,
+          "median": 186.703,
+          "p95": 200.37,
+          "max": 200.37,
+          "mean": 182.678
+        },
+        "captureAdapter": {
+          "samples": [
+            41.82,
+            49.066,
+            45.095,
+            55.574,
+            43.52
+          ],
+          "min": 41.82,
+          "median": 45.095,
+          "p95": 55.574,
+          "max": 55.574,
+          "mean": 47.015
+        },
+        "annotationCreateHttp": {
+          "samples": [
+            110.236,
+            133.362,
+            146.674,
+            126.245,
+            146.659
+          ],
+          "min": 110.236,
+          "median": 133.362,
+          "p95": 146.674,
+          "max": 146.674,
+          "mean": 132.635
+        },
+        "matchHttp": {
+          "samples": [
+            121.938,
+            179.722,
+            155.066,
+            160.42,
+            123.273
+          ],
+          "min": 121.938,
+          "median": 155.066,
+          "p95": 179.722,
+          "max": 179.722,
+          "mean": 148.084
+        },
+        "approveHttp": {
+          "samples": [
+            145.989,
+            148.59,
+            140.288,
+            114.416,
+            113.956
+          ],
+          "min": 113.956,
+          "median": 140.288,
+          "p95": 148.59,
+          "max": 148.59,
+          "mean": 132.648
+        },
+        "readHttp": {
+          "samples": [
+            54.368,
+            68.704,
+            66.442,
+            57.716,
+            54.32
+          ],
+          "min": 54.32,
+          "median": 57.716,
+          "p95": 68.704,
+          "max": 68.704,
+          "mean": 60.31
+        },
+        "diskReadAndParse": {
+          "samples": [
+            6.249,
+            8.545,
+            8.153,
+            6.891,
+            6.306
+          ],
+          "min": 6.249,
+          "median": 6.891,
+          "p95": 8.545,
+          "max": 8.545,
+          "mean": 7.229
+        },
+        "approvedExportHttp": {
+          "samples": [
+            57.037,
+            64.137,
+            71.198,
+            55.776,
+            77.791
+          ],
+          "min": 55.776,
+          "median": 64.137,
+          "p95": 77.791,
+          "max": 77.791,
+          "mean": 65.188
+        }
+      },
+      "sizesBytes": {
+        "captureHttpRequestJson": {
+          "samples": [
+            116,
+            116,
+            116,
+            116,
+            116
+          ],
+          "min": 116,
+          "median": 116,
+          "p95": 116,
+          "max": 116,
+          "mean": 116
+        },
+        "captureHttpResponseJson": {
+          "samples": [
+            2591835,
+            2591835,
+            2591835,
+            2591835,
+            2591835
+          ],
+          "min": 2591835,
+          "median": 2591835,
+          "p95": 2591835,
+          "max": 2591835,
+          "mean": 2591835
+        },
+        "captureWebSocketRequestJson": {
+          "samples": [
+            202,
+            202,
+            202,
+            202,
+            202
+          ],
+          "min": 202,
+          "median": 202,
+          "p95": 202,
+          "max": 202,
+          "mean": 202
+        },
+        "captureWebSocketResponseJson": {
+          "samples": [
+            2591701,
+            2591701,
+            2591701,
+            2591701,
+            2591701
+          ],
+          "min": 2591701,
+          "median": 2591701,
+          "p95": 2591701,
+          "max": 2591701,
+          "mean": 2591701
+        },
+        "annotationCreateHttpRequestJson": {
+          "samples": [
+            336,
+            336,
+            336,
+            336,
+            336
+          ],
+          "min": 336,
+          "median": 336,
+          "p95": 336,
+          "max": 336,
+          "mean": 336
+        },
+        "annotationCreateHttpResponseJson": {
+          "samples": [
+            2592094,
+            2592094,
+            2592094,
+            2592094,
+            2592094
+          ],
+          "min": 2592094,
+          "median": 2592094,
+          "p95": 2592094,
+          "max": 2592094,
+          "mean": 2592094
+        },
+        "matchHttpRequestJson": {
+          "samples": [
+            104,
+            104,
+            104,
+            104,
+            104
+          ],
+          "min": 104,
+          "median": 104,
+          "p95": 104,
+          "max": 104,
+          "mean": 104
+        },
+        "matchHttpResponseJson": {
+          "samples": [
+            2592198,
+            2592198,
+            2592198,
+            2592198,
+            2592198
+          ],
+          "min": 2592198,
+          "median": 2592198,
+          "p95": 2592198,
+          "max": 2592198,
+          "mean": 2592198
+        },
+        "approveHttpRequestJson": {
+          "samples": [
+            111,
+            111,
+            111,
+            111,
+            111
+          ],
+          "min": 111,
+          "median": 111,
+          "p95": 111,
+          "max": 111,
+          "mean": 111
+        },
+        "approveHttpResponseJson": {
+          "samples": [
+            2592198,
+            2592198,
+            2592198,
+            2592198,
+            2592198
+          ],
+          "min": 2592198,
+          "median": 2592198,
+          "p95": 2592198,
+          "max": 2592198,
+          "mean": 2592198
+        },
+        "readHttpResponseJson": {
+          "samples": [
+            2592198,
+            2592198,
+            2592198,
+            2592198,
+            2592198
+          ],
+          "min": 2592198,
+          "median": 2592198,
+          "p95": 2592198,
+          "max": 2592198,
+          "mean": 2592198
+        },
+        "storedProjectEnvelopeJson": {
+          "samples": [
+            2593123,
+            2593123,
+            2593123,
+            2593123,
+            2593123
+          ],
+          "min": 2593123,
+          "median": 2593123,
+          "p95": 2593123,
+          "max": 2593123,
+          "mean": 2593123
+        },
+        "approvedExportHttpResponseJson": {
+          "samples": [
+            1660,
+            1660,
+            1660,
+            1660,
+            1660
+          ],
+          "min": 1660,
+          "median": 1660,
+          "p95": 1660,
+          "max": 1660,
+          "mean": 1660
+        }
+      },
+      "checks": {
+        "capturedNodes": 10000,
+        "materializedNodeHandles": 10000,
+        "completeness": {
+          "complete": true,
+          "reason": null
+        },
+        "httpReadEqualsApprovedProject": true,
+        "diskEqualsApprovedProject": true,
+        "deterministicExactMatch": true,
+        "approvedExportMatchesDiskProjection": true,
+        "exactSourceTextAndProvenancePreserved": true,
+        "restoredTraversalFlag": true
+      }
+    }
+  ]
+}

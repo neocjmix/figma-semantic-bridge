@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
-import { createServer, request as httpRequest } from 'node:http';
+import { createServer, request as httpRequest, ServerResponse } from 'node:http';
 import WebSocket from 'ws';
 import { startServer, type ServerOptions } from '../src/server/index.js';
 import { createDemoProject } from '../src/demo/project.js';
@@ -87,6 +87,45 @@ test('real WebSocket broker pairs, responds, times out, cancels, disconnects and
   assert.equal(broker.status.pendingRequests,0);
 });
 
+for(const scenario of [
+  {name:'selection',body:{},command:'get_selection',
+    lateResult:{fileKey:'fixture-key',pageId:'old-page',nodes:[]},result:{fileKey:'fixture-key',pageId:'current-page',nodes:[]}},
+  {name:'highlight',body:{fileKey:'fixture-key',pageId:'fixture-page',nodeIds:['requested-node']},command:'highlight_nodes',
+    lateResult:{highlightedNodeIds:['late-node']},result:{highlightedNodeIds:['requested-node']}},
+]) {
+  test(`closing a ${scenario.name} HTTP request cancels plugin work and ignores late responses`,{timeout:5000},async t=>{
+    const {url,api,broker}=await harness(t);
+    const ws=await connect(url);t.after(()=>ws.terminate());
+    const abort=new AbortController();t.after(()=>abort.abort());
+    const requested=once(ws,'message');
+    const pending=fetch(`${url}/api/plugin/${scenario.name}`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(scenario.body),signal:abort.signal});
+    const rejection=assert.rejects(pending,/abort/i);
+    const first=JSON.parse((await requested)[0].toString()) as {type:string;requestId:string;command:{type:string}};
+    assert.equal(first.type,'request');assert.equal(first.command.type,scenario.command);
+    assert.equal(broker.status.pendingRequests,1);
+    const cancelled=once(ws,'message',{signal:AbortSignal.timeout(1000)});
+    abort.abort();await rejection;
+    assert.deepEqual(JSON.parse((await cancelled)[0].toString()),{type:'cancel',requestId:first.requestId});
+    assert.equal(broker.status.pendingRequests,0);assert.equal(broker.status.connected,true);
+
+    const nextRequested=once(ws,'message');
+    const next=api(`/api/plugin/${scenario.name}`,'POST',scenario.body);
+    const second=JSON.parse((await nextRequested)[0].toString()) as {requestId:string};
+    assert.notEqual(second.requestId,first.requestId);
+    // A pong is an ordered barrier: the broker has consumed the stale frame
+    // before we assert that it did not resolve the newer request.
+    const pong=once(ws,'message');
+    ws.send(JSON.stringify({type:'response',requestId:first.requestId,ok:true,result:scenario.lateResult}));
+    ws.send(JSON.stringify({type:'ping'}));
+    assert.deepEqual(JSON.parse((await pong)[0].toString()),{type:'pong'});
+    assert.equal(broker.status.pendingRequests,1);
+    ws.send(JSON.stringify({type:'response',requestId:second.requestId,ok:true,result:scenario.result}));
+    const response=await next;assert.equal(response.status,200);
+    assert.deepEqual(await response.json(),scenario.result);
+    assert.equal(broker.status.pendingRequests,0);
+  });
+}
+
 test('WebSocket rejects missing origin and invalid authentication; malformed responses fail pending work',async t=>{
   const {url,broker}=await harness(t);
   const badOrigin=new WebSocket(url.replace('http:','ws:')+'/bridge');
@@ -117,6 +156,39 @@ test('capture selection persists only validated snapshots and bounded source loo
   const invalid=await api(`/api/projects/${project.id}/capture`,'POST',{expectedRevision:1,limits:{}});
   assert.equal(invalid.status,502);
   assert.equal((await (await api(`/api/projects/${project.id}`)).json() as Project).revision,1);
+});
+
+test('capture cancelled during a project read never dispatches or persists source work',{timeout:5000},async t=>{
+  const {url,store,broker}=await harness(t);
+  const project=await store.create('Cancelled before dispatch');
+  const path=`/api/projects/${project.id}/capture`;
+  const ws=await connect(url);t.after(()=>ws.terminate());
+  ws.on('message',raw=>{const message=JSON.parse(raw.toString());if(message.type==='request')ws.send(JSON.stringify({type:'response',requestId:message.requestId,ok:true,result:createDemoProject().snapshots[0]}));});
+  const dispatch=t.mock.method(broker,'request');
+  const read=store.get.bind(store);
+  let entered!:()=>void,release!:()=>void,closed!:()=>void;
+  const reading=new Promise<void>(resolve=>{entered=resolve;});
+  const gate=new Promise<void>(resolve=>{release=resolve;});
+  const disconnected=new Promise<void>(resolve=>{closed=resolve;});
+  t.after(()=>release());
+  t.mock.method(store,'get',async(id:string)=>{assert.equal(id,project.id);entered();await gate;return project;},{times:1});
+  const emit=ServerResponse.prototype.emit;
+  t.mock.method(ServerResponse.prototype,'emit',function(this:ServerResponse,event:string|symbol,...args:unknown[]){
+    const result=emit.call(this,event,...args);
+    if(event==='close'&&this.req.url===path)closed();
+    return result;
+  });
+  const abort=new AbortController();t.after(()=>abort.abort());
+  const pending=fetch(url+path,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({expectedRevision:project.revision,limits:{}}),signal:abort.signal});
+  const rejection=assert.rejects(pending,/abort/i);
+  await reading;
+  abort.abort();await rejection;await disconnected;
+  release();
+  // The gated read resolves in microtasks before the next event-loop turn.
+  await new Promise<void>(resolve=>setImmediate(resolve));
+  assert.equal(dispatch.mock.callCount(),0);
+  assert.equal(broker.status.pendingRequests,0);
+  assert.deepEqual(await read(project.id),project);
 });
 
 test('proposal endpoint cannot overwrite approved human data and source text remains verbatim',async t=>{

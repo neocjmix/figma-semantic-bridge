@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-24",
+  "version": "0.1.0",
+  "locales": ["ko", "en"],
+  "environment": "macOS 26.6.2 arm64; installed AppKit/WKWebView app; Figma Desktop 126.10.11",
+  "automated": {
+    "nodeTestsPassed": 196,
+    "browserTestsPassed": 27,
+    "typecheckAndProductionBuild": true,
+    "nativePolicyAndLocaleSelfTests": true,
+    "catalogKeysAndInterpolationChecked": true,
+    "unsavedAnnotationAndOriginalTextPreserved": true,
+    "localizedRoleSavesUnchangedProtocolValue": true,
+    "browserStorageUnavailableFallback": true,
+    "nativeMessageOriginValidation": true,
+    "pluginPendingRequestAndConnectionPreserved": true
+  },
+  "installedApp": {
+    "automaticPairing": true,
+    "webChoiceUpdatesNativeMenus": true,
+    "nativeChoiceUpdatesWebWithoutReload": true,
+    "mixedLanguageUnsavedInputPreserved": true,
+    "englishChoiceSurvivesRestartOnKoreanSystem": true,
+    "offlineUserGuidesOpened": ["ko", "en"],
+    "offlineSetupGuidesOpened": ["ko", "en"],
+    "koreanWorkspaceAndUserGuideVisuallyInspected": true,
+    "quitRemovedOwnedListener": true,
+    "restartAutomaticPairingAndPluginReconnect": true
+  },
+  "installedPlugin": {
+    "manifestImportedFromApplicationResources": true,
+    "englishChoiceSurvivesPluginCloseAndReopen": true,
+    "koreanAndEnglishConnectionMessagesObserved": true,
+    "languageSwitchKeepsSameLiveSession": true,
+    "liveSelectionReadThroughBundledMcp": true,
+    "access": "Dev Mode on an owned synthetic fixture",
+    "sourceEdited": false
+  },
+  "preservation": {
+    "existingProjectFilesUnchanged": 15,
+    "pairingTokenUnchanged": true,
+    "sourceAndHumanContentTranslated": false
+  },
+  "distribution": {
+    "appAndPluginContainBothMarkdownGuides": true,
+    "offlineHtmlMatchesExactMarkdown": true,
+    "dmgAndZipGuideContentsMatch": true,
+    "immutableFinalArtifactHashes": "Recorded separately by release:verify after the release commit is frozen"
+  },
+  "limitations": [
+    "This is an installed local alpha candidate test, not a clean-machine download or a new OS compatibility matrix.",
+    "Language selection affects product presentation. Original Figma text, user content, protocol values and raw diagnostics remain unchanged.",
+    "macOS-owned dialog controls follow the operating system language; the app provides translated titles and prompts.",
+    "The plugin has its own saved preference, independent of the app. No account-wide language sync is claimed.",
+    "No public release, Apple notarization, Figma Community listing or Dev-only access on another owner's file is established by this test.",
+    "No tokens, private paths, project identifiers, Figma file keys, source images or original text are included."
+  ]
+}

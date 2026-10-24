@@ -82,7 +82,7 @@ function tableAt(lines, index) {
 const startsBlock = (lines, index) => heading(lines[index]) || fence(lines[index]) || item(lines[index])
   || /^ {0,3}>/.test(lines[index]) || rule(lines[index]) || tableAt(lines, index);
 
-function blocks(lines, depth = 0) {
+function blocks(lines, depth = 0, locale = 'ko') {
   if (depth > 32) return `<p>${escape(lines.join('\n'))}</p>`;
   const output = [];
   for (let index = 0; index < lines.length;) {
@@ -101,7 +101,7 @@ function blocks(lines, depth = 0) {
     if (/^ {0,3}>/.test(line)) {
       const quote = [];
       while (index < lines.length && /^ {0,3}>/.test(lines[index])) quote.push(lines[index++].replace(/^ {0,3}> ?/, ''));
-      output.push(`<blockquote>${blocks(quote, depth + 1)}</blockquote>`); continue;
+      output.push(`<blockquote>${blocks(quote, depth + 1, locale)}</blockquote>`); continue;
     }
     if (tableAt(lines, index)) {
       const headers = cells(line), rows = [];
@@ -134,9 +134,11 @@ function blocks(lines, depth = 0) {
         let marker = '';
         if (task) {
           content[0] = content[0].slice(task[0].length);
-          marker = task[1] === ' ' ? '<span class="checkmark" aria-label="미완료">☐</span>' : '<span class="checkmark" aria-label="완료">☑</span>';
+          const complete = task[1] !== ' ';
+          const label = locale === 'en' ? (complete ? 'Complete' : 'Incomplete') : (complete ? '완료' : '미완료');
+          marker = `<span class="checkmark" aria-label="${label}">${complete ? '☑' : '☐'}</span>`;
         }
-        items.push(`<li${task ? ' class="task-item"' : ''}>${marker}${blocks(content, depth + 1)}</li>`);
+        items.push(`<li${task ? ' class="task-item"' : ''}>${marker}${blocks(content, depth + 1, locale)}</li>`);
       }
       output.push(`<${tag}${start}>${items.join('')}</${tag}>`); continue;
     }
@@ -148,11 +150,15 @@ function blocks(lines, depth = 0) {
 }
 
 /** Render the guide's Markdown subset to a fully escaped, self-contained HTML document. */
-export function renderOfflineGuide(title, markdown) {
+export function renderOfflineGuide(title, markdown, { locale = 'ko', kind = 'setup' } = {}) {
   if (typeof title !== 'string' || typeof markdown !== 'string') throw new TypeError('Guide title and Markdown must be strings.');
-  const content = blocks(markdown.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n'));
+  if (!['ko', 'en'].includes(locale)) throw new TypeError('Unsupported guide locale.');
+  if (!['setup', 'user'].includes(kind)) throw new TypeError('Unsupported guide kind.');
+  const eyebrow = locale === 'en' ? (kind === 'user' ? 'Offline user guide' : 'Offline setup guide') : (kind === 'user' ? '오프라인 사용 가이드' : '오프라인 설치 안내');
+  const footer = locale === 'en' ? 'Links are shown as reference text. This window does not open external sites or fetch external content.' : '링크 주소는 참고용 텍스트입니다. 이 창에서는 외부 사이트로 이동하거나 외부 자료를 불러오지 않습니다.';
+  const content = blocks(markdown.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n'), 0, locale);
   return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>${escape(title)}</title><style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:#202533;background:#f4f6fa;font-size:16px;line-height:1.8}
@@ -164,6 +170,6 @@ code{font: .88em/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:#f0f
 .table-scroll{overflow-x:auto;margin:20px 0;border:1px solid #dfe5ee;border-radius:8px}table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}th,td{text-align:left;vertical-align:top;padding:12px 16px;border-bottom:1px solid #e4e9f0;overflow-wrap:anywhere}th{background:#f1f4f9;font-weight:700}td:first-child{min-width:9rem}tr:last-child td{border-bottom:0}.reference-url{font-size:.88em;color:#536783;overflow-wrap:anywhere}hr{border:0;border-top:1px solid #e4e9f0;margin:28px 0}.offline-note{max-width:960px;margin:20px auto;color:#667085;font-size:.85rem}
 @media(max-width:640px){body{padding:16px 10px 32px}main{padding:26px 20px;border-radius:10px}h1{font-size:1.55rem}h2{font-size:1.25rem}pre{padding:14px}th,td{padding:10px 12px}}
 @media print{body{padding:0;background:#fff}main{padding:0;border:0;max-width:none}h2{break-after:avoid}.table-scroll{overflow:visible}pre,blockquote{break-inside:avoid}}
-</style></head><body><main><div class="eyebrow">오프라인 설치 안내</div>${content}</main>
-<p class="offline-note">링크 주소는 참고용 텍스트입니다. 이 창에서는 외부 사이트로 이동하거나 외부 자료를 불러오지 않습니다.</p></body></html>`;
+</style></head><body><main><div class="eyebrow">${eyebrow}</div>${content}</main>
+<p class="offline-note">${footer}</p></body></html>`;
 }

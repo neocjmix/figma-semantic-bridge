@@ -57,12 +57,27 @@ run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], 
 await mkdir(join(resources, 'plugins/semantic-bridge'), { recursive: true });
 for (const name of ['manifest.json', 'code.js']) await cp(join('plugins/semantic-bridge', name), join(resources, 'plugins/semantic-bridge', name));
 await cp('docs/alpha-installation.md', join(resources, 'INSTALLATION.md'));
+await cp('docs/alpha-installation.en.md', join(resources, 'INSTALLATION.en.md'));
 await cp('README.md', join(resources, 'README.md'));
+await cp('README.en.md', join(resources, 'README.en.md'));
 await cp('docs/releases/0.1.0.md', join(resources, 'RELEASE-NOTES.md'));
 if (await exists('LICENSE')) await cp('LICENSE', join(resources, 'LICENSE'));
 
-const guide = await readFile('docs/alpha-installation.md', 'utf8');
-await writeFile(join(resources, 'setup-guide.html'), renderOfflineGuide(`Figma Semantic Bridge ${version} 설치 안내`, guide));
+await mkdir(join(resources, 'docs'), { recursive: true });
+for (const locale of ['ko', 'en']) {
+  const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
+  const userFile = `user-guide.${locale}.md`;
+  for (const file of [setupFile, userFile]) await cp(join('docs', file), join(resources, 'docs', file));
+  await cp(join('docs', userFile), join(resources, `USER-GUIDE.${locale}.md`));
+  for (const [kind, file] of [['setup', setupFile], ['user', userFile]]) {
+    const title = `Figma Semantic Bridge ${version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
+    const html = renderOfflineGuide(title, await readFile(join('docs', file), 'utf8'), { locale, kind });
+    await writeFile(join(resources, `${kind}-guide-${locale}.html`), html);
+  }
+}
+// Retain the old setup filename for an earlier host's fallback without removing
+// the explicit language-specific guides used by the bilingual application.
+await cp(join(resources, 'setup-guide-ko.html'), join(resources, 'setup-guide.html'));
 
 const dependencies = [];
 async function packagesAt(directory) {
@@ -94,9 +109,12 @@ await writeFile(join(app, 'Contents/Info.plist'), `<?xml version="1.0" encoding=
 
 const plist = join(app, 'Contents/Info.plist');
 run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleIconFile string AppIcon.icns', plist]);
+run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleDevelopmentRegion string en', plist]);
+run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleLocalizations array', plist]);
+for (const [index, locale] of ['en', 'ko'].entries()) run('/usr/libexec/PlistBuddy', ['-c', `Add :CFBundleLocalizations:${index} string ${locale}`, plist]);
 const revision = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const dirty = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
-const manifest = { product: 'figma-semantic-bridge', version, channel: 'alpha', platform: 'darwin', arch: 'arm64', minimumMacOS: '13.0', node: { version: nodeVersion, archive: nodeArchive, sha256: nodeSha256, source: `https://nodejs.org/dist/v${nodeVersion}/` }, sourceRevision: revision, sourceDirty: dirty, signing: 'ad-hoc', notarized: false, pluginDistribution: 'Figma Desktop local development import', builtAt: new Date().toISOString() };
+const manifest = { product: 'figma-semantic-bridge', version, channel: 'alpha', locales: ['ko', 'en'], platform: 'darwin', arch: 'arm64', minimumMacOS: '13.0', node: { version: nodeVersion, archive: nodeArchive, sha256: nodeSha256, source: `https://nodejs.org/dist/v${nodeVersion}/` }, sourceRevision: revision, sourceDirty: dirty, signing: 'ad-hoc', notarized: false, pluginDistribution: 'Figma Desktop local development import', builtAt: new Date().toISOString() };
 await writeFile(join(resources, 'release.json'), JSON.stringify(manifest, null, 2) + '\n');
 run('/usr/bin/codesign', ['--force', '--sign', '-', join(resources, 'runtime/node')]);
 run('/usr/bin/codesign', ['--force', '--sign', '-', app]);
@@ -110,9 +128,15 @@ await cp(app, join(disk, 'Figma Semantic Bridge.app'), { recursive: true, preser
 run('/usr/bin/codesign', ['--verify', '--deep', '--strict', join(disk, 'Figma Semantic Bridge.app')]);
 run('/bin/ln', ['-s', '/Applications', join(disk, 'Applications')]);
 await cp('docs/alpha-installation.md', join(disk, 'INSTALLATION.md'));
+await cp('docs/alpha-installation.en.md', join(disk, 'INSTALLATION.en.md'));
+for (const locale of ['ko', 'en']) await cp(`docs/user-guide.${locale}.md`, join(disk, `USER-GUIDE.${locale}.md`));
 run('/usr/bin/hdiutil', ['create', '-volname', `Figma Semantic Bridge ${version}`, '-srcfolder', disk, '-ov', '-format', 'UDZO', dmg]);
 await writeFile(join(releases, `figma-semantic-bridge-${version}-release.json`), JSON.stringify(manifest, null, 2) + '\n');
 await cp('docs/alpha-installation.md', join(releases, `figma-semantic-bridge-${version}-INSTALLATION.md`));
 const assets = [zip, dmg, join(releases, `figma-semantic-bridge-plugin-${version}.zip`), join(releases, `figma-semantic-bridge-${version}-release.json`), join(releases, `figma-semantic-bridge-${version}-INSTALLATION.md`)];
+for (const [source, suffix] of [['docs/alpha-installation.en.md', 'INSTALLATION.en.md'], ['docs/user-guide.ko.md', 'USER-GUIDE.ko.md'], ['docs/user-guide.en.md', 'USER-GUIDE.en.md']]) {
+  const target = join(releases, `figma-semantic-bridge-${version}-${suffix}`);
+  await cp(source, target); assets.push(target);
+}
 await writeFile(join(releases, 'SHA256SUMS'), (await Promise.all(assets.map(async path => `${sha(await readFile(path))}  ${path.split('/').at(-1)}`))).join('\n') + '\n');
 console.log(`Packaged ${version} alpha: ${releases}. Ad-hoc signed; not notarized. Publication requires a clean, verified release commit and owner license decision.`);

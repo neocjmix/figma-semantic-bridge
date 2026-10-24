@@ -10,6 +10,7 @@ import { parseArgs } from 'node:util';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { releaseWebAssets } from './release-web-assets.mjs';
+import { renderOfflineGuide } from './render-offline-guide.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'); process.chdir(root);
 const { values } = parseArgs({ options: { 'require-clean': { type: 'boolean', default: false } } });
@@ -29,6 +30,9 @@ try {
     `figma-semantic-bridge-plugin-${pkg.version}.zip`,
     `figma-semantic-bridge-${pkg.version}-release.json`,
     `figma-semantic-bridge-${pkg.version}-INSTALLATION.md`,
+    `figma-semantic-bridge-${pkg.version}-INSTALLATION.en.md`,
+    `figma-semantic-bridge-${pkg.version}-USER-GUIDE.ko.md`,
+    `figma-semantic-bridge-${pkg.version}-USER-GUIDE.en.md`,
   ];
   const assetSha256 = {};
   for (const line of sums) {
@@ -59,6 +63,27 @@ try {
   assert.deepEqual(release, publishedRelease, 'Public release metadata must match the packaged application.');
   assert.equal(release.version, pkg.version); assert.equal(release.channel, 'alpha');
   assert.equal(release.platform, 'darwin'); assert.equal(release.arch, 'arm64');
+  assert.deepEqual(release.locales, ['ko', 'en']);
+  const guideAssets = new Map();
+  for (const locale of release.locales) {
+    const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
+    for (const [kind, file] of [['setup', setupFile], ['user', `user-guide.${locale}.md`]]) {
+      const html = await readFile(join(resources, `${kind}-guide-${locale}.html`), 'utf8');
+      assert.ok(Buffer.byteLength(html) <= 256_000, 'Offline guide exceeds native host limit.');
+      assert.ok(html.includes(`<html lang="${locale}">`));
+      assert.ok(!/<(?:script|iframe|img|a|link|object)\b/i.test(html), 'Offline guides must not fetch resources or execute scripts.');
+      const markdown = await readFile(join(resources, 'docs', file), 'utf8');
+      assert.equal(sha(markdown), sha(await readFile(join('docs', file))));
+      const title = `Figma Semantic Bridge ${pkg.version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
+      assert.equal(html, renderOfflineGuide(title, markdown, { locale, kind }), 'Offline HTML must render the exact packaged Markdown.');
+      const alias = kind === 'user' ? `USER-GUIDE.${locale}.md` : locale === 'ko' ? 'INSTALLATION.md' : 'INSTALLATION.en.md';
+      assert.equal(sha(await readFile(join(resources, alias))), sha(markdown));
+      assert.equal(sha(await readFile(join(releaseDir, `figma-semantic-bridge-${pkg.version}-${alias}`))), sha(markdown));
+      guideAssets.set(`${kind}-guide-${locale}.html`, sha(html));
+      guideAssets.set(`docs/${file}`, sha(markdown));
+      guideAssets.set(alias, sha(markdown));
+    }
+  }
   assert.equal(run(node, ['--version']).trim(), `v${release.node.version}`);
   run('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]);
   await mkdir(mountpoint);
@@ -67,6 +92,10 @@ try {
   const diskApp = join(mountpoint, 'Figma Semantic Bridge.app');
   run('/usr/bin/codesign', ['--verify', '--deep', '--strict', diskApp]);
   assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources/release.json'))), sha(await readFile(join(resources, 'release.json'))));
+  for (const [name, hash] of guideAssets) assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources', name))), hash, `DMG guide differs from ZIP: ${name}`);
+  for (const alias of ['INSTALLATION.md', 'INSTALLATION.en.md', 'USER-GUIDE.ko.md', 'USER-GUIDE.en.md']) {
+    assert.equal(sha(await readFile(join(mountpoint, alias))), guideAssets.get(alias), `DMG root guide differs from app: ${alias}`);
+  }
   assert.equal(run(join(diskApp, 'Contents/Resources/runtime/node'), ['--version']).trim(), `v${release.node.version}`);
   // No repository-local or user-owned sources may enter the application archive.
   const forbidden = new Set(['.bridge-local', '.fixture-local', '.git', 'pairing-token', 'projects', '.env', '.npmrc']);
@@ -142,7 +171,7 @@ try {
   const report = { version: pkg.version, checkedAt: new Date().toISOString(), requireClean: values['require-clean'],
     sourceRevision: release.sourceRevision, sourceDirty: release.sourceDirty, currentSourceRevision, currentSourceDirty,
     assetSha256, checksumsFileSha256: sha(checksumBytes), artifactChecksums: sums.length,
-    extractionOutsideCheckout: true, bundledNode: release.node.version, adHocSignatureVerified: true, mountedDmgVerified: true, noAbsoluteAppSymlinks: true, noKnownPrivatePaths: true, webAssetAllowlistVerified: true, authenticatedHealth: true, untrustedOriginRejected: true, webAssetsServed: webAssets.length, demoPersistence: true, captureTransfer: true, bundledMcp: true, secretOutput: false, aiEnabled: false, nativeGuiAndFigma: 'Separate manual acceptance required' };
+    extractionOutsideCheckout: true, bundledNode: release.node.version, bilingualOfflineGuides: true, locales: release.locales, adHocSignatureVerified: true, mountedDmgVerified: true, noAbsoluteAppSymlinks: true, noKnownPrivatePaths: true, webAssetAllowlistVerified: true, authenticatedHealth: true, untrustedOriginRejected: true, webAssetsServed: webAssets.length, demoPersistence: true, captureTransfer: true, bundledMcp: true, secretOutput: false, aiEnabled: false, nativeGuiAndFigma: 'Separate manual acceptance required' };
   const reportName = `figma-semantic-bridge-${pkg.version}-verification.json`;
   const reportBytes = Buffer.from(JSON.stringify(report, null, 2) + '\n');
   await writeFile(join(releaseDir, reportName), reportBytes);

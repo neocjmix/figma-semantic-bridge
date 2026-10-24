@@ -1,5 +1,7 @@
 # 0.1.0 알파 설치와 운영 — macOS Apple Silicon
 
+[English](alpha-installation.en.md) · [한국어 사용자 가이드](user-guide.ko.md) · [English user guide](user-guide.en.md)
+
 설치된 독립 앱의 실행·저장·Figma 연동·MCP·재시작 검증을 완료했다.
 **공개 릴리스는 아직 게시되지 않았으며 LICENSE 선택을 기다린다.** 다운로드 URL은
 게시 예정이고, 공개 후 README에 실제 링크를 추가한다. 이 문서는 검증된 앱 경로와
@@ -25,7 +27,8 @@ Node 설치, `npm ci` 또는 플러그인 컴파일을 요구하지 않는다.
 | 앱 실행파일 / bundle ID | `FigmaSemanticBridge` / `com.neocjmix.figma-semantic-bridge.desktop` |
 
 앱에는 공식 Node.js 22.23.4 arm64 런타임과 빌드된 서버·웹·MCP, 로컬 Figma 플러그인,
-오프라인 `setup-guide.html`이 포함된다. Node/MCP의 정확한 경로는 6절에 있다.
+한국어·영어 오프라인 설치/사용 가이드 HTML과 Markdown이 포함된다.
+Node/MCP의 정확한 경로는 6절에 있다.
 플러그인 ZIP은 별도 설치할 때의 같은 코드 배포본이다. 대응하는 SHA-256 값을
 실제 받은 파일과 대조한다. Community 검색 설치가 가능한 공개 플러그인으로
 소개하지 않는다.
@@ -35,7 +38,7 @@ Node 설치, `npm ci` 또는 플러그인 컴파일을 요구하지 않는다.
 - [x] 실제 앱과 DMG/ZIP, prebuilt 플러그인, 체크섬·런타임 고지 생성.
 - [x] 설치 앱에서 자동 페어링·저장·파일 가져오기/내보내기·Figma 캡처·번들 MCP 확인.
 - [x] 종료·재시작과 기존 6개 프로젝트·토큰 보존 확인.
-- [x] 187개 Node 테스트, 타입 검사·빌드, 23개 브라우저 테스트 통과.
+- [x] 196개 Node 테스트, 타입 검사·빌드, 27개 브라우저 테스트 통과.
 - [ ] 소유자의 LICENSE 선택을 반영한다. 공개 게시를 기다리는 외부 결정이다.
 - [ ] 라이선스 반영 후 최종 게시 커밋·태그·공개 다운로드 링크를 고정한다.
 
@@ -99,9 +102,24 @@ macOS가 잠겨 있다면 파일/패키지 문서 확인 같은 작업까지만 
 배포 앱은 `FSB_DESKTOP=1`로 개발용 CLI의 토큰 stdout 출력을 억제하고,
 `FSB_WEB_DIR`로 번들의 웹 assets를 지정한다. 사용자가 환경 변수를 설정할 필요는 없다.
 정확한 메뉴는 **Copy Pairing Token**, **Clear Copied Token**, **Reveal Figma Plugin**,
-**Reveal Local Data**, **Copy MCP Configuration**, **Setup Guide**,
-**Reload Workspace**, **Quit Figma Semantic Bridge**다.
-**Setup Guide**는 별도의 앱 창에서 번들 HTML을 보여 주며 네트워크 연결이 필요 없다.
+**Reveal Local Data**, **Copy MCP Configuration**, **Setup Guide**, **User Guide**,
+**Reload Workspace**, **Quit Figma Semantic Bridge**다. 한국어를 선택하면 메뉴 이름도 번역된다.
+**설치 가이드(Setup Guide)**와 **사용 가이드(User Guide)**는 별도의 앱 창에서
+선택한 언어의 번들 HTML을 보여 주며 네트워크 연결이 필요 없다.
+
+### 화면 언어와 사용자 가이드
+
+앱 상단 **Language / 언어** 또는 macOS **언어(Language)** 메뉴에서 한국어/영어를
+선택한다. 앱 메뉴와 내장 편집기는 동기화되고 선택은 재실행 후에도 유지된다.
+최초 실행은 macOS의 첫 번째 선호 언어를 따른다. 별도 브라우저는 브라우저 언어를
+기본으로 하고 자신의 선택을 저장하며, Figma 플러그인은 독립적으로 선택을 저장한다.
+언어 전환은 화면 안내만 바꾸며, 작성 중인 내용·Figma 원문·저장된 승인을 바꾸지 않는다.
+
+설치 후 기본 작업 순서와 상황별 선택지는 **사용 가이드**를 읽는다.
+Markdown은 앱 Resources의 `docs/user-guide.ko.md` / `docs/user-guide.en.md`와
+플러그인 ZIP의 `docs/`에 포함된다. DMG에는 `USER-GUIDE.ko.md`와
+`USER-GUIDE.en.md`도 있다. 문서의 저장소 README·평가·릴리스 기록 링크는
+원본 저장소용 참고 링크여서 단독 배포 파일에서는 열리지 않을 수 있다.
 
 ## 3. 앱 연결과 플러그인용 토큰
 

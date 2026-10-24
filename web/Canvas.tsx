@@ -1,3 +1,4 @@
+import { useLocale } from './i18n.js';
 import { useRef, useState, type PointerEvent } from 'react';
 import type { Annotation, Rect, Snapshot } from '../src/shared/contracts.js';
 
@@ -22,6 +23,7 @@ interface Gesture {
 }
 
 export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onDraft, onCreate }: Props) {
+  const { t, formatNumber } = useLocale();
   const svgRef = useRef<SVGSVGElement>(null);
   const gesture = useRef<Gesture | null>(null);
   const [mode, setMode] = useState<Mode>('select');
@@ -93,25 +95,25 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
   if (draft?.snapshotId === snapshot.id && !visible.some(a => a.id === draft.id)) visible.push(draft);
   return <div className="canvas-shell">
     <div className="canvas-toolbar">
-      <div className="segmented" aria-label="Canvas tools">
-        <button aria-pressed={mode === 'select'} onClick={() => setMode('select')}>Select</button>
-        <button aria-pressed={mode === 'draw'} onClick={() => setMode('draw')}>Draw region</button>
-        <button aria-pressed={mode === 'pan'} onClick={() => setMode('pan')}>Pan</button>
+      <div className="segmented" aria-label={t("Canvas tools")}>
+        <button aria-pressed={mode === 'select'} onClick={() => setMode('select')}>{t("Select")}</button>
+        <button aria-pressed={mode === 'draw'} onClick={() => setMode('draw')}>{t("Draw region")}</button>
+        <button aria-pressed={mode === 'pan'} onClick={() => setMode('pan')}>{t("Pan")}</button>
       </div>
-      <label className="checkbox small"><input type="checkbox" checked={showSources} onChange={e => setShowSources(e.target.checked)} /> Source bounds</label>
+      <label className="checkbox small"><input type="checkbox" checked={showSources} onChange={e => setShowSources(e.target.checked)} /> {t("Source bounds")}</label>
       <div className="zoom-controls">
-        <button aria-label="Zoom out" onClick={() => setZoom(z => Math.max(0.2, z / 1.25))}>−</button>
+        <button aria-label={t("Zoom out")} onClick={() => setZoom(z => Math.max(0.2, z / 1.25))}>−</button>
         <span>{Math.round(zoom * 100)}%</span>
-        <button aria-label="Zoom in" onClick={() => setZoom(z => Math.min(8, z * 1.25))}>+</button>
-        <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Fit</button>
+        <button aria-label={t("Zoom in")} onClick={() => setZoom(z => Math.min(8, z * 1.25))}>+</button>
+        <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>{t("Fit")}</button>
       </div>
     </div>
-    <svg ref={svgRef} className={`design-canvas mode-${mode}`} aria-label="Design canvas" role="img"
+    <svg ref={svgRef} className={`design-canvas mode-${mode}`} aria-label={t("Design canvas")} role="img"
       viewBox={`${viewX} ${viewY} ${viewWidth} ${viewHeight}`} onPointerDown={pointerDown} onPointerMove={pointerMove}
       onPointerUp={pointerUp} onPointerCancel={() => { gesture.current = null; setDrawing(null); }}>
       <rect x={b.x} y={b.y} width={b.width} height={b.height} fill="white" />
       {snapshot.preview ? <image href={`data:image/png;base64,${snapshot.preview.base64}`} x={b.x} y={b.y} width={b.width} height={b.height} preserveAspectRatio="none" />
-        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>Preview unavailable · metadata remains editable</text></g>}
+        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>{t("Preview unavailable · metadata remains editable")}</text></g>}
       {showSources && snapshot.nodes.filter(n => n.bbox && n.visible).slice(0, 2000).map(n => <rect key={n.id} {...n.bbox!} fill="none" stroke="#8b5cf6" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.35} pointerEvents="none" />)}
       {visible.map(a => <g key={a.id} data-annotation-id={a.id} className={`region ${a.id === selectedId ? 'selected' : ''} status-${a.reviewStatus}`}>
         <rect {...a.bbox} fill={a.id === selectedId ? '#00a89925' : '#126ad316'} stroke={a.reviewStatus === 'approved' ? '#14846b' : '#2876c8'} strokeWidth={a.id === selectedId ? 2.5 : 1.5} vectorEffect="non-scaling-stroke" />
@@ -120,6 +122,6 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
       </g>)}
       {drawing && <rect {...drawing} fill="#00a89922" stroke="#009b8d" strokeDasharray="5 3" strokeWidth={1.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
     </svg>
-    <div className="canvas-footer"><span>{snapshot.nodes.length.toLocaleString()} source nodes · {annotations.length} regions</span><span>{mode === 'draw' ? 'Drag to mark a component. Save it in the inspector.' : 'Drag a selected region to move · corner handle to resize · Alt + drag to pan'}</span></div>
+    <div className="canvas-footer"><span>{t('{nodes} source nodes · {regions} regions', { nodes: formatNumber(snapshot.nodes.length), regions: formatNumber(annotations.length) })}</span><span>{mode === 'draw' ? t("Drag to mark a component. Save it in the inspector.") : t("Drag a selected region to move · corner handle to resize · Alt + drag to pan")}</span></div>
   </div>;
 }

@@ -40,8 +40,8 @@ under a five-minute step limit. The initial hosted run passed code checks but
 stalled in OS/browser dependency installation, so using the runner's existing
 browser avoids making package-mirror availability a mandatory test dependency.
 
-Latest full check on **2026-10-24: 187 Node tests passed, TypeScript passed, and
-both plugins/web/server/MCP builds passed**. **23 browser tests passed** using the
+Latest full check on **2026-10-24: 196 Node tests passed, TypeScript passed, and
+both plugins/web/server/MCP builds passed**. **27 browser tests passed** using the
 installed Chrome in an isolated headless profile. Three rendering-review browser
 cases cover manual hidden/transparent selection, new versus legacy unknown
 evidence, and legacy pending hidden references without a stored rendering flag.
@@ -52,6 +52,17 @@ schema/provenance validation in this final run. No standalone lint command is
 configured; TypeScript, build and diff checks passed. Separately, normal Chrome was used for the demo,
 live-capture and real capture-transfer workflows below. Hosted CI results belong
 to the PR; this log records local runs.
+
+The bilingual interface adds four browser cases for preference persistence,
+unsaved annotation preservation, unchanged enum wire values, native language
+messages and unavailable browser storage. Native installed-app checks separately
+confirmed both menu/editor directions, mixed-language draft input, all four offline
+guides, and an English choice surviving restart on a Korean system. The installed
+Figma plugin retained its English choice after reopening; switching a connected
+plugin back to Korean kept the same live session. The bundled MCP read the actual
+selection, and all 15 pre-update project files plus the token remained unchanged.
+See the sanitized [bilingual acceptance record](evaluation/bilingual-interface-acceptance.json).
+The final clean commit and asset hashes are recorded separately by `release:verify`.
 
 Covered cases include disconnect/reconnect/replacement/cancellation, exact and
 aggregate matching, equal/overlapping BBoxes and tolerance boundaries, coordinate
@@ -107,7 +118,7 @@ notarization. Its plugin uses local development import, not a Community listing.
 These are declared alpha limits. Public release assets have not been posted;
 license choice is pending. The final clean commit and artifact hashes are recorded
 only after full repackaging and `release:verify -- --require-clean`; the current
-187-test/23-browser results are executed evidence, not guessed future commit checks.
+Earlier 187-test/23-browser results are executed evidence, not guessed future commit checks.
 
 ## Autonomous native acceptance, 2026-10-24
 
@@ -466,8 +477,8 @@ content remains local and is excluded from the public repository.
 
 ### Earlier remote Plugin API probe
 
-The previously verified synthetic file is
-`https://www.figma.com/design/4dKjnCZ8lTY8fVXUugJGxP`. A new read-only remote Plugin
+The previously verified synthetic file is identified only in private local
+evidence. A new read-only remote Plugin
 API probe used the product's PNG export options (`contentsOnly: true`,
 `useAbsoluteBounds: true`, scale capped at 2,048 px). No document content or
 selection was changed. The three known scopes were traversed separately under a

@@ -3,6 +3,15 @@ import WebKit
 import UniformTypeIdentifiers
 
 @MainActor
+private final class LocaleMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var host: AppHost?
+    init(host: AppHost) { self.host = host }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        host?.receiveLocale(message)
+    }
+}
+
+@MainActor
 private final class GuideNavigation: NSObject, WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         decisionHandler(action.request.url?.absoluteString == "about:blank" && action.targetFrame?.isMainFrame == true ? .allow : .cancel)
@@ -33,10 +42,16 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     private var terminating = false
     private var copiedTokenChangeCount: Int?
     private var guideWindow: NSWindow?
+    private var guideKind = "setup"
+    private var guideRequest = UUID()
+    private var locale = DesktopLocale.load()
+    private var statusMessage: (message: String, retry: Bool)?
     private let guideDelegate = GuideNavigation()
     private var pendingBlobDownloads = Set<String>()
     private var transfers: [ObjectIdentifier: ExportTransfer] = [:]
     private var savePanelPending = false
+
+    private func text(_ english: String) -> String { locale.text(english) }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let resources = Bundle.main.resourceURL else { NSApp.terminate(nil); return }
@@ -54,21 +69,68 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         let bar = NSMenu()
         let app = NSMenuItem(); bar.addItem(app)
         let appMenu = NSMenu(); app.submenu = appMenu
-        appMenu.addItem(withTitle: "About Figma Semantic Bridge", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: text("About Figma Semantic Bridge"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Figma Semantic Bridge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        let edit = NSMenuItem(); bar.addItem(edit); edit.submenu = NSMenu(title: "Edit")
+        appMenu.addItem(withTitle: text("Quit Figma Semantic Bridge"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let edit = NSMenuItem(); bar.addItem(edit); edit.submenu = NSMenu(title: text("Edit"))
         for (title, selector, key) in [("Undo", "undo:", "z"), ("Cut", "cut:", "x"), ("Copy", "copy:", "c"), ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")] {
-            edit.submenu?.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
+            edit.submenu?.addItem(withTitle: text(title), action: Selector(selector), keyEquivalent: key)
         }
-        let bridge = NSMenuItem(); bar.addItem(bridge); let menu = NSMenu(title: "Bridge"); bridge.submenu = menu
+        let bridge = NSMenuItem(); bar.addItem(bridge); let menu = NSMenu(title: text("Bridge")); bridge.submenu = menu
         for (title, action) in [("Copy Pairing Token", #selector(copyPairingToken)), ("Clear Copied Token", #selector(clearCopiedToken)),
                                 ("Reveal Figma Plugin", #selector(revealPlugin)), ("Reveal Local Data", #selector(revealData)),
-                                ("Copy MCP Configuration", #selector(copyMCPConfiguration)), ("Setup Guide", #selector(showGuide)),
+                                ("Copy MCP Configuration", #selector(copyMCPConfiguration)), ("Setup Guide", #selector(showGuide)), ("User Guide", #selector(showUserGuide)),
                                 ("Reload Workspace", #selector(reloadWorkspace))] {
-            let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
+            let item = NSMenuItem(title: text(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
+        }
+        let language = NSMenuItem(); bar.addItem(language); language.submenu = NSMenu(title: text("Language"))
+        for (title, value) in [("한국어", DesktopLocale.ko), ("English", DesktopLocale.en)] {
+            let item = NSMenuItem(title: title, action: #selector(changeLanguage(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = value.rawValue; item.state = value == locale ? .on : .off
+            language.submenu?.addItem(item)
         }
         NSApp.mainMenu = bar
+    }
+
+    @objc private func changeLanguage(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let next = DesktopLocale(rawValue: raw) else { return }
+        setLocale(next, notifyWeb: true)
+    }
+
+    fileprivate func receiveLocale(_ message: WKScriptMessage) {
+        guard !terminating, message.name == "fsbLocale", let current = webView, message.webView === current else { return }
+        let frame = message.frameInfo, origin = frame.securityOrigin
+        guard let next = DesktopLocale.validatedMessage(message.body, isMainFrame: frame.isMainFrame,
+            frameURL: frame.request.url, currentURL: current.url, originProtocol: origin.protocol, originHost: origin.host, originPort: origin.port) else { return }
+        setLocale(next, notifyWeb: false)
+    }
+
+    private func setLocale(_ next: DesktopLocale, notifyWeb: Bool) {
+        UserDefaults.standard.set(next.rawValue, forKey: DesktopLocale.preferenceKey)
+        guard next != locale else { return }
+        locale = next; installMenus(); updateWindowTitle()
+        if let view = webView {
+            if let bootstrap = try? workspaceBootstrap() {
+                view.configuration.userContentController.removeAllUserScripts()
+                view.configuration.userContentController.addUserScript(WKUserScript(source: bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            }
+            if let url = view.url, DesktopPolicy.isApplicationPage(url) {
+                let notification = notifyWeb ? "window.dispatchEvent(new CustomEvent('fsb-locale-change',{detail:'\(locale.rawValue)'}));" : ""
+                let script = "if(window.top===window&&location.origin==='\(DesktopPolicy.origin)'&&(location.pathname==='/'||location.pathname==='/index.html')&&!location.search){window.__FSB_DESKTOP_LOCALE__='\(locale.rawValue)';\(notification)}"
+                view.evaluateJavaScript(script, completionHandler: nil)
+            }
+        } else if let statusMessage { showStatus(statusMessage.message, retry: statusMessage.retry) }
+        if guideWindow?.isVisible == true { openGuide(guideKind) }
+    }
+
+    private func updateWindowTitle() {
+        window?.title = runtime?.reusedService == true ? text("Figma Semantic Bridge — Connected to Local Service") : "Figma Semantic Bridge"
+    }
+
+    private func workspaceBootstrap() throws -> String {
+        guard let token = runtime.token else { throw HostFailure("The local pairing token is unavailable.") }
+        let encoded = String(data: try JSONEncoder().encode(token), encoding: .utf8)!
+        return "if(window.top===window&&location.origin==='\(DesktopPolicy.origin)'&&(location.pathname==='/'||location.pathname==='/index.html')&&!location.search){window.__FSB_DESKTOP_LOCALE__='\(locale.rawValue)';sessionStorage.setItem('fsb-token',\(encoded));}"
     }
 
     @objc private func retry() {
@@ -93,14 +155,15 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     }
 
     private func showStatus(_ message: String, retry: Bool) {
+        statusMessage = (message, retry)
         webView?.stopLoading(); webView = nil
         let title = NSTextField(labelWithString: "Figma Semantic Bridge")
         title.font = .systemFont(ofSize: 26, weight: .semibold)
-        let text = NSTextField(wrappingLabelWithString: message); text.font = .systemFont(ofSize: 15)
-        text.maximumNumberOfLines = 10
-        let stack = NSStackView(views: [title, text]); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 20
-        if retry { stack.addArrangedSubview(NSButton(title: "Retry", target: self, action: #selector(self.retry))) }
-        stack.addArrangedSubview(NSButton(title: "Setup Guide", target: self, action: #selector(showGuide)))
+        let description = NSTextField(wrappingLabelWithString: text(message)); description.font = .systemFont(ofSize: 15)
+        description.maximumNumberOfLines = 10
+        let stack = NSStackView(views: [title, description]); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 20
+        if retry { stack.addArrangedSubview(NSButton(title: text("Retry"), target: self, action: #selector(self.retry))) }
+        stack.addArrangedSubview(NSButton(title: text("Setup Guide"), target: self, action: #selector(showGuide)))
         let view = NSView(); stack.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(stack)
         NSLayoutConstraint.activate([stack.centerXAnchor.constraint(equalTo: view.centerXAnchor), stack.centerYAnchor.constraint(equalTo: view.centerYAnchor), stack.widthAnchor.constraint(equalToConstant: 660)])
         window.contentView = view
@@ -118,21 +181,20 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     }
 
     private func installWorkspace() async throws {
-        guard let token = runtime.token else { throw HostFailure("The local pairing token is unavailable.") }
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent(); config.preferences.javaScriptCanOpenWindowsAutomatically = false
         config.applicationNameForUserAgent = "FigmaSemanticBridge/0.1.0"
         let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^data:image/png[;,]"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^blob:http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}}]"#
         config.userContentController.add(try await contentRules(rules, name: "fsb-local-only-0.1.0"))
         guard !terminating else { return }
-        let encoded = String(data: try JSONEncoder().encode(token), encoding: .utf8)!
-        let bootstrap = "if(window.top===window&&location.origin==='\(DesktopPolicy.origin)'&&(location.pathname==='/'||location.pathname==='/index.html')&&!location.search){sessionStorage.setItem('fsb-token',\(encoded));}"
+        let bootstrap = try workspaceBootstrap()
         config.userContentController.addUserScript(WKUserScript(source: bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        config.userContentController.add(LocaleMessageHandler(host: self), name: "fsbLocale")
         let view = WKWebView(frame: window.contentView?.bounds ?? .zero, configuration: config)
         view.navigationDelegate = self; view.uiDelegate = self
         view.allowsBackForwardNavigationGestures = false
-        webView = view; window.contentView = view
-        window.title = runtime.reusedService ? "Figma Semantic Bridge — Connected to Local Service" : "Figma Semantic Bridge"
+        webView = view; window.contentView = view; statusMessage = nil
+        updateWindowTitle()
         view.load(URLRequest(url: DesktopPolicy.home))
     }
 
@@ -177,7 +239,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
 
     func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
         guard trustedFrame(frame), webView === self.webView else { completionHandler(nil); return }
-        let panel = NSOpenPanel(); panel.title = "Import Capture Bundle"; panel.allowedContentTypes = [.json]
+        let panel = NSOpenPanel(); panel.title = text("Import Capture Bundle"); panel.prompt = text("Import"); panel.allowedContentTypes = [.json]
         panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url, url.pathExtension.lowercased() == "json",
@@ -205,7 +267,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
               DesktopPolicy.isExportMime(response.mimeType, extension: (name as NSString).pathExtension.lowercased()) else { completionHandler(nil); return }
         savePanelPending = true
         let ext = (name as NSString).pathExtension.lowercased(), panel = NSSavePanel()
-        panel.title = "Save Export"; panel.nameFieldStringValue = name
+        panel.title = text("Save Export"); panel.prompt = text("Save"); panel.nameFieldStringValue = name
         panel.allowedContentTypes = [ext == "json" ? .json : (UTType(filenameExtension: "md") ?? .plainText)]
         panel.allowsOtherFileTypes = false
         panel.beginSheetModal(for: window) { [weak self] result in
@@ -273,28 +335,41 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     }
     @objc private func reloadWorkspace() { webView?.reload() }
 
-    @objc private func showGuide() {
-        if let guideWindow { guideWindow.makeKeyAndOrderFront(nil); return }
+    @objc private func showGuide() { openGuide("setup") }
+    @objc private func showUserGuide() { openGuide("user") }
+
+    private func openGuide(_ kind: String) {
+        guideKind = kind; guideRequest = UUID()
+        let request = guideRequest, requestedLocale = locale
         Task { @MainActor in
             do {
-                let guide = runtime.resources.appendingPathComponent("setup-guide.html")
+                var names = ["\(kind)-guide-\(requestedLocale.rawValue).html", "\(kind)-guide-en.html"]
+                if kind == "setup" { names.append("setup-guide.html") }
+                guard let guide = names.map({ runtime.resources.appendingPathComponent($0) }).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else { throw HostFailure("Missing offline guide.") }
                 let data = try Data(contentsOf: guide)
                 guard data.count <= 256_000, let html = String(data: data, encoding: .utf8) else { throw HostFailure("Invalid setup guide.") }
                 let config = WKWebViewConfiguration(); config.websiteDataStore = .nonPersistent()
                 config.defaultWebpagePreferences.allowsContentJavaScript = false; config.preferences.javaScriptCanOpenWindowsAutomatically = false
                 config.userContentController.add(try await contentRules(#"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}}]"#, name: "fsb-guide-no-network"))
+                guard !terminating, guideRequest == request else { return }
                 let view = WKWebView(frame: .zero, configuration: config); view.navigationDelegate = guideDelegate; view.uiDelegate = guideDelegate
-                let guideWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 700), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-                guideWindow.title = "Figma Semantic Bridge Setup Guide"; guideWindow.isReleasedWhenClosed = false
-                guideWindow.contentView = view; guideWindow.center(); self.guideWindow = guideWindow
+                let guideWindow = self.guideWindow ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 700), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+                guideWindow.title = text(kind == "setup" ? "Figma Semantic Bridge Setup Guide" : "Figma Semantic Bridge User Guide"); guideWindow.isReleasedWhenClosed = false
+                guideWindow.contentView = view
+                if self.guideWindow == nil { guideWindow.center() }
+                self.guideWindow = guideWindow
                 view.loadHTMLString(html, baseURL: nil); guideWindow.makeKeyAndOrderFront(nil)
-            } catch { alert("The offline setup guide is missing or could not be loaded. Reinstall the complete application archive.") }
+            } catch {
+                guard guideRequest == request else { return }
+                alert(kind == "setup" ? "The offline setup guide is missing or could not be loaded. Reinstall the complete application archive." : "The offline user guide is missing or could not be loaded. Reinstall the complete application archive.")
+            }
         }
     }
 
     private func alert(_ message: String) {
         guard !terminating else { return }
-        let alert = NSAlert(); alert.messageText = "Figma Semantic Bridge"; alert.informativeText = message
+        let alert = NSAlert(); alert.messageText = "Figma Semantic Bridge"; alert.informativeText = text(message)
+        alert.addButton(withTitle: text("OK"))
         alert.beginSheetModal(for: window)
     }
 

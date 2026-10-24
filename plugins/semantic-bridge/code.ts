@@ -1,5 +1,6 @@
 import { PluginRequestSchema } from '../../src/shared/contracts.js';
 import { executePluginCommand, PluginCommandError, type CaptureHost, type FigmaReadableNode } from '../../src/figma/capture.js';
+import { isPluginLocale } from './locale.js';
 
 const host:CaptureHost={
   get fileKey(){return figma.fileKey;},
@@ -11,11 +12,30 @@ const host:CaptureHost={
   selectNodes:nodes=>{figma.currentPage.selection=nodes as readonly SceneNode[];},
   scrollAndZoomIntoView:nodes=>figma.viewport.scrollAndZoomIntoView(nodes as readonly SceneNode[]),
 };
-figma.showUI(__html__,{width:380,height:360,themeColors:true});
+figma.showUI(__html__,{width:380,height:430,themeColors:true});
 const active=new Map<string,{cancelled:boolean}>();
 let busy=false;
+let localeWrite=Promise.resolve();
 figma.ui.onmessage=async (message:unknown)=>{
   if(!message||typeof message!=='object'||!('type' in message))return;
+  if(message.type==='locale-read') {
+    try {
+      const saved:unknown=await figma.clientStorage.getAsync('fsb-locale');
+      figma.ui.postMessage({type:'locale',locale:isPluginLocale(saved)?saved:null});
+    } catch {figma.ui.postMessage({type:'locale-read-failed'});}
+    return;
+  }
+  if(message.type==='locale-set') {
+    if(!('locale' in message)||!isPluginLocale(message.locale)||!('requestId' in message)||typeof message.requestId!=='number'||!Number.isSafeInteger(message.requestId)||message.requestId<1)return;
+    const locale=message.locale,requestId=message.requestId;
+    // Serialize preference writes so a slower earlier choice cannot replace the
+    // latest choice. This stores no token and never writes to a Figma document.
+    localeWrite=localeWrite.then(async()=>{
+      try {await figma.clientStorage.setAsync('fsb-locale',locale);figma.ui.postMessage({type:'locale-saved',requestId,ok:true});}
+      catch {figma.ui.postMessage({type:'locale-saved',requestId,ok:false});}
+    });
+    await localeWrite;return;
+  }
   if(message.type==='cancel'&&'requestId' in message&&typeof message.requestId==='string') {
     const request=active.get(message.requestId);if(request)request.cancelled=true;return;
   }

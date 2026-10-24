@@ -3,9 +3,27 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const { renderOfflineGuide } = await import(new URL('../scripts/render-offline-guide.mjs', import.meta.url).href) as {
-  renderOfflineGuide(title: string, markdown: string): string;
+  renderOfflineGuide(title: string, markdown: string, options?: { locale?: string; kind?: string }): string;
 };
 const body = (markdown: string) => renderOfflineGuide('설치 <안내> & 도움말', markdown);
+
+test('English user guide has matching document language and accessible chrome', () => {
+  const html = renderOfflineGuide('User guide', '# Workflow\n\n- [ ] Review\n- [x] Capture', { locale: 'en', kind: 'user' });
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /Offline user guide/);
+  assert.match(html, /aria-label="Incomplete"/);
+  assert.match(html, /aria-label="Complete"/);
+  assert.match(html, /Links are shown as reference text/);
+  assert.doesNotMatch(html, /[가-힣]/);
+});
+
+test('guide locales and document kinds are bounded while source text stays verbatim', () => {
+  const html = renderOfflineGuide('사용 가이드', '# Product label: 고객센터', { locale: 'ko', kind: 'user' });
+  assert.match(html, /오프라인 사용 가이드/);
+  assert.match(html, /Product label: 고객센터/);
+  assert.throws(() => renderOfflineGuide('Guide', '# text', { locale: 'fr' }), /locale/);
+  assert.throws(() => renderOfflineGuide('Guide', '# text', { locale: 'en', kind: '<script>' }), /kind/);
+});
 
 test('offline guide renders Korean headings, wrapped prose and inline emphasis without losing code', () => {
   const html = body('# 설치 안내\n\n첫 번째 줄의 **중요한\n안내**와 `npm ci`를 읽는다.\n\n## 다음 단계');

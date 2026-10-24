@@ -1,7 +1,7 @@
 import AppKit
 
 if CommandLine.arguments.contains("--self-test") {
-    do { try DesktopPolicy.runSelfTests() }
+    do { try DesktopPolicy.runSelfTests(); try DesktopLocale.runSelfTests() }
     catch { fputs("Desktop policy self-test failed.\n", stderr); exit(1) }
 } else {
     MainActor.assumeIsolated {

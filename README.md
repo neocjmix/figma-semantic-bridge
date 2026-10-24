@@ -1,5 +1,7 @@
 # Figma Semantic Bridge 0.1.0 Alpha
 
+[English](README.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md) · [User guide — English](docs/user-guide.en.md)
+
 **Figma 화면에 사람이 의미와 요구사항을 정리하고, 승인한 내용을 코딩 AI에게 전달하는 로컬 앱입니다.**
 
 macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니다. 공식 Node.js
@@ -11,6 +13,7 @@ macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니
 설치 파일을 공개합니다. 다운로드 URL은 게시 예정이며 아직 사용할 공개 릴리스 링크는 없습니다.
 
 [상세 설치·세팅 가이드](docs/alpha-installation.md)
+· [Installation — English](docs/alpha-installation.en.md)
 · [릴리즈 노트](docs/releases/0.1.0.md)
 · [설치 앱 검증 집계](docs/evaluation/alpha-desktop-acceptance.json)
 
@@ -26,6 +29,18 @@ macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니
 원본 Figma 디자인은 수정하지 않습니다. 모호한 영역을 자동으로 정답이라 판단하거나,
 AI가 사람의 승인을 덮어쓰지 않습니다. 이 앱 자체가 완성 코드를 생성하지는 않습니다.
 
+## 화면 언어
+
+앱 상단 오른쪽 **Language / 언어**에서 **한국어** 또는 **English**를 선택합니다.
+브라우저는 명시한 선택을 저장하며 첫 기본값은 `navigator` 언어를 따릅니다.
+저장을 사용할 수 없으면 현재 세션 동안 유지합니다. macOS 앱은 OS의 첫 번째 선호
+언어로 시작하고 앱 메뉴와 내장 편집기의 언어를 동기화합니다. Figma 플러그인은
+자신의 언어 선택을 별도로 저장합니다.
+
+**언어 선택은 UI에만 적용됩니다. 프로젝트 이름, 사람이 쓴 주석, Figma 노드 이름과
+원문, 명세와 승인 콘텐츠는 번역하거나 변경하지 않습니다.** 전체 검토 순서는
+[한국어](docs/user-guide.ko.md) 또는 [영어](docs/user-guide.en.md) 사용자 가이드를 따르세요.
+
 ## 설치 파일
 
 | 파일 | 용도 |
@@ -34,6 +49,8 @@ AI가 사람의 승인을 덮어쓰지 않습니다. 이 앱 자체가 완성 �
 | `figma-semantic-bridge-0.1.0-macos-arm64.zip` | 같은 앱의 ZIP 배포본 |
 | `figma-semantic-bridge-plugin-0.1.0.zip` | Figma Desktop에 가져올 플러그인: 컴파일된 코드 포함 |
 | `figma-semantic-bridge-0.1.0-INSTALLATION.md` | AI 에이전트와 사용자를 위한 오프라인 설치 가이드 |
+| `figma-semantic-bridge-0.1.0-INSTALLATION.en.md` | 영어 설치·MCP 설정 가이드 |
+| `figma-semantic-bridge-0.1.0-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.0-USER-GUIDE.en.md` | 한국어·영어 작업 순서와 상황별 사용자 가이드 |
 | `SHA256SUMS` | 다운로드한 파일의 SHA-256 확인 값 |
 | `figma-semantic-bridge-0.1.0-release.json` | 버전, 플랫폼, 런타임과 서명 상태 |
 
@@ -142,7 +159,9 @@ Figma에 등록하여 Dev Mode의 소유 합성 파일에서 21개 노드와 800
 중지·백업하여 전환했고 기존 6개 프로젝트는 보존했습니다. 앱 종료 후 자신이 시작한
 4177 listener가 없어졌으며, 재실행 후 토큰·프로젝트·저장 주석이 유지됐습니다.
 이는 실제 설치 앱 검증이며 독립 사용자 의미 평가나 다른 Mac의 최초 다운로드 검증은 아닙니다.
-최신 전체 검사는 **187개 Node 테스트·타입 검사·빌드, 23개 브라우저 테스트 통과**입니다.
+최신 전체 검사는 **196개 Node 테스트·타입 검사·빌드, 27개 브라우저 테스트 통과**입니다.
+한국어/영어 메뉴·화면 동기화, 미저장 입력 보존, 오프라인 가이드 네 개, 앱/플러그인
+재실행 후 언어 유지도 확인했습니다. [다국어 검증 기록](docs/evaluation/bilingual-interface-acceptance.json)에 실제 관측과 한계를 기록했습니다.
 최종 게시 커밋·artifact checksum은 게시 절차에서 별도로 고정합니다.
 
 ## 소스에서 개발·패키징하기

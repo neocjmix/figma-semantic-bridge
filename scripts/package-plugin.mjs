@@ -27,7 +27,7 @@ function validateManifest(manifest) {
   }
 }
 
-// Store-only ZIP: six small allowlisted files, fixed timestamps, no platform
+// Store-only ZIP: explicit allowlisted files, fixed timestamps, no platform
 // archive tools, recursive traversal, symlinks, path metadata or hidden files.
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -63,27 +63,33 @@ function zip(entries) {
 function installationReadme(version) {
   return `# Figma Semantic Bridge ${version} — local alpha plugin
 
+[한국어 설치 안내](README.ko.md) · [English user guide](docs/user-guide.en.md) · [한국어 사용 가이드](docs/user-guide.ko.md)
+
 This prebuilt plugin connects Figma Desktop to the separately installed local
-Semantic Bridge server. It is a development-plugin import, not a Community
+Semantic Bridge application. It is a development-plugin import, not a Community
 listing or a standalone application. No source compilation is needed to import
 this folder. Keep the extracted folder in a stable location.
 
 ## Install
 
-1. Install and start the matching Semantic Bridge local server using its release
+1. Install and start the matching Semantic Bridge application using its release
    instructions. Keep its default port 4177; the plugin endpoint is fixed.
 2. Open Figma Desktop. From Plugins → Development choose **Import plugin from
    manifest**, then select this folder's **manifest.json**. Do not import the ZIP.
 3. Open a permitted Figma Design file and run **Figma Semantic Bridge — Local**.
    For Dev Mode, use its Inspect plugins surface with a seat and file context
    that enable Dev Mode. Development plugins must be permitted by your account
-   and organization. If Figma requires a generated development ID, create a
-   development plugin and replace only the local manifest's id with that assigned
-   ID; keep the reviewed network and capability fields unchanged.
-4. Paste the pairing token from your local server into the plugin and Connect.
-   Keep that token private. Open http://127.0.0.1:4177 and pair the local web app.
-5. Select one container in Figma and use Capture selection in the local web app.
-   Review source references before confirming and approving semantic annotations.
+   and organization. If import is blocked, record the permission/policy error;
+   do not bypass it by changing the reviewed manifest permissions.
+4. Choose Bridge → Copy Pairing Token in the application, paste into the plugin
+   and Connect. Keep that token private; use Clear Copied Token after pairing.
+5. Select one container in Figma and use Capture Figma selection in the app.
+  Review source references before confirming and approving semantic annotations.
+
+Choose English or 한국어 in the plugin's Language selector. The plugin remembers
+its own choice independently of the app. Only controls and messages change;
+Figma source text and stored annotations are never translated by this setting.
+The workflow and situation-specific options are in the bundled user guides.
 
 The plugin reads selected scopes and does not edit source design content. Show in
 Figma explicitly changes native selection/viewport. A running, paired server is
@@ -124,6 +130,42 @@ release's license; this plugin package does not introduce a separate license.
 `;
 }
 
+function installationReadmeKo(version) {
+  return `# Figma Semantic Bridge ${version} — 로컬 알파 플러그인
+
+[English](README.en.md) · [한국어 사용 가이드](docs/user-guide.ko.md) · [English user guide](docs/user-guide.en.md)
+
+이 ZIP에는 미리 빌드된 플러그인과 두 언어의 안내서가 들어 있습니다.
+별도로 설치한 Figma Semantic Bridge 앱과 함께 사용합니다. 플러그인 컴파일이나
+Node 설치는 필요하지 않습니다. Figma Community 등록 플러그인은 아닙니다.
+
+1. 같은 버전의 앱을 실행합니다. 포트 4177과 기존 데이터·토큰은 유지합니다.
+2. ZIP을 고정된 위치에 풀고 Figma Desktop의 Plugins → Development →
+   Import plugin from manifest에서 이 폴더의 manifest.json을 선택합니다.
+3. 읽기·내보내기가 허용된 파일에서 Figma Semantic Bridge — Local을 실행합니다.
+   계정·파일·조직 정책이 플러그인 실행을 허용해야 합니다.
+4. 앱의 Bridge → Copy Pairing Token으로 복사한 토큰을 플러그인에 붙여넣고
+   연결합니다. 토큰은 채팅이나 로그에 남기지 말고 연결 후 복사한 토큰을 지웁니다.
+5. 작은 Frame 하나를 선택하고 앱에서 Figma 선택 캡처를 실행합니다.
+   출처 확인과 의미 승인은 사람이 각각 검토해 수행합니다.
+
+플러그인의 언어 선택에서 한국어/English를 고릅니다. 선택은 플러그인에 별도로
+저장되며 앱 언어와 독립적입니다. 원본 텍스트·이름·승인 상태는 번역하거나 변경하지
+않습니다. 기본 작업 순서와 겹침·숨김·불명확한 출처 등의 대응은 사용 가이드를 읽으세요.
+
+원본 디자인 내용은 수정하지 않으며 명시적 Figma 탐색은 선택·뷰포트만 이동합니다.
+Dev 전용 계정과 다른 소유자의 읽기 전용 파일 조합은 별도 미검증 항목입니다.
+현재 manifest는 localhost 개발 연결과 private fileKey API를 사용합니다.
+권한이나 정책이 막으면 우회하지 마세요. 설치·권한·알파 제한의 자세한 설명은
+[설치 안내](docs/alpha-installation.md)에 있습니다.
+
+ZIP의 SHA-256을 인접한 .sha256 파일과 대조하세요. 내부 SHA256SUMS는 자신을
+제외한 파일을 검증합니다. 체크섬은 무결성 확인이며 작성자의 신원이나 사용 권한을
+증명하지 않습니다. THIRD_PARTY_NOTICES.txt는 포함된 의존성 라이선스이며,
+프로젝트 자체 라이선스는 주 릴리스의 정책을 따릅니다.
+`;
+}
+
 export async function packagePlugin({ version, outputDir = join(root, 'dist/releases'), pluginDir = join(root, 'plugins/semantic-bridge') } = {}) {
   if (version === undefined) version = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version;
   if (typeof version !== 'string' || version.length > 80 || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(version)) {
@@ -139,9 +181,13 @@ export async function packagePlugin({ version, outputDir = join(root, 'dist/rele
   const files = new Map([
     ['manifest.json', manifestBytes], ['code.js', code],
     ['README.md', Buffer.from(installationReadme(version))], ['THIRD_PARTY_NOTICES.txt', notices],
+    ['README.en.md', Buffer.from(installationReadme(version))], ['README.ko.md', Buffer.from(installationReadmeKo(version))],
   ]);
+  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md']) {
+    files.set(`docs/${file}`, await readRegular(join(root, 'docs', file), 200_000));
+  }
   files.set('release.json', encode({ formatVersion: 1, name: 'figma-semantic-bridge-plugin', version,
-    channel: 'alpha', distribution: 'figma-desktop-development-import',
+    channel: 'alpha', locales: ['ko', 'en'], distribution: 'figma-desktop-development-import',
     pluginEntry: 'manifest.json', serverPort: 4177,
     files: Object.fromEntries([...files].map(([name, bytes]) => [name, { bytes: bytes.length, sha256: sha256(bytes) }])) }));
   files.set('SHA256SUMS', Buffer.from([...files].map(([name, bytes]) => `${sha256(bytes)}  ${name}\n`).join('')));

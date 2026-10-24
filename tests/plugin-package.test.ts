@@ -53,7 +53,7 @@ test('plugin release ZIP contains only the approved prebuilt files and verifiabl
     const result = await packagePlugin({ version: '0.1.0', outputDir, pluginDir: source.pluginDir });
     const zip = await readFile(result.zipPath), files = entries(zip);
     const prefix = 'figma-semantic-bridge-plugin-0.1.0/';
-    assert.deepEqual([...files.keys()].sort(), ['README.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json'].map(name => prefix + name).sort());
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md', 'docs/alpha-installation.md', 'docs/alpha-installation.en.md'].map(name => prefix + name).sort());
     assert.deepEqual(files.get(prefix + 'manifest.json'), source.manifest);
     assert.deepEqual(files.get(prefix + 'code.js'), Buffer.from(source.code));
     assert.equal(zip.includes(Buffer.from('PRIVATE_SENTINEL')), false);
@@ -62,6 +62,10 @@ test('plugin release ZIP contains only the approved prebuilt files and verifiabl
     assert.equal(metadata.version, '0.1.0');
     assert.equal(metadata.distribution, 'figma-desktop-development-import');
     assert.equal(metadata.channel, 'alpha');
+    assert.deepEqual(metadata.locales, ['ko', 'en']);
+    for (const locale of ['ko', 'en']) {
+      assert.deepEqual(files.get(prefix + `docs/user-guide.${locale}.md`), await readFile(`docs/user-guide.${locale}.md`));
+    }
     for (const [name, info] of Object.entries(metadata.files) as [string, { sha256: string; bytes: number }][]) {
       assert.equal(sha(files.get(prefix + name)!), info.sha256);
       assert.equal(files.get(prefix + name)!.length, info.bytes);

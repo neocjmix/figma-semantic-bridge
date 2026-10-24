@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.1.0 alpha user guide
+# Figma Semantic Bridge 0.1.1 alpha user guide
 
 [한국어](user-guide.ko.md) · [Installation and MCP setup](alpha-installation.en.md) · [README](../README.en.md)
 
@@ -12,7 +12,7 @@ source nodes, review their meaning, then share approved context with coding agen
 The installed app pairs its embedded editor automatically. Use the app's
 **Copy Pairing Token** only when pairing the Figma plugin.
 
-**The 0.1.0 alpha public release has not been published; repository license choice
+**The 0.1.1 alpha public release has not been published; repository license choice
 is pending.** See the installation guide for artifacts and tested boundaries.
 This is a workflow guide, not evidence of independent semantic-expert accuracy
 or a completed human productivity study.

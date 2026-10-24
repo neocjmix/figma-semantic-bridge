@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-24",
+  "version": "0.1.1",
+  "locales": [
+    "ko",
+    "en"
+  ],
+  "environment": "macOS 26.6.2 arm64; installed AppKit/WKWebView app; Figma Desktop 126.10.11",
+  "automated": {
+    "nodeTestsPassed": 198,
+    "browserTestsPassed": 27,
+    "fixtureManifestsPassed": 2,
+    "typecheckAndProductionBuild": true,
+    "nativePolicyAndLocaleSelfTests": true,
+    "nativeServiceMcpVersionAgreement": true,
+    "pluginLicensePackagingRegression": true
+  },
+  "localUpgrade": {
+    "fromVersion": "0.1.0",
+    "normalQuitRemovedOwnedListener": true,
+    "fullDataBackupAndPreviousAppZipVerified": true,
+    "applicationAndPluginDirectoryIdentityPreserved": true,
+    "installedBundleMatchesGeneratedFiles": true,
+    "automaticPairing": true,
+    "koreanNativeAndPluginPreferencesPreserved": true,
+    "nativeLanguageChangeUpdatesEditorWithoutReload": true,
+    "mixedLanguageUnsavedInputPreserved": true,
+    "offlineSetupGuidesOpened": [
+      "ko",
+      "en"
+    ],
+    "offlineUserGuidesOpened": [
+      "ko",
+      "en"
+    ],
+    "englishUserGuideVisuallyInspected": true,
+    "existingFigmaRegistrationReusedFromApplications": true,
+    "pluginLanguageChangeKeepsSameConnectedSession": true,
+    "installedBundledMcpVersion": "0.1.1",
+    "liveSelectionReadThroughBundledMcp": true,
+    "sourceEdited": false,
+    "previousSavedSyntheticCaptureOpened": true
+  },
+  "preservation": {
+    "existingProjectFilesUnchanged": 15,
+    "pairingTokenUnchanged": true,
+    "sourceAndHumanContentTranslated": false
+  },
+  "distribution": {
+    "candidatePackageVerificationPassed": true,
+    "appZipAndMountedDmgVerified": true,
+    "nativeBinaryAndPlistVersionsVerified": true,
+    "pluginZipCrcAndEveryInternalChecksumVerified": true,
+    "standalonePluginMatchesBundledPlugin": true,
+    "offlineHtmlMatchesExactMarkdown": true,
+    "dmgAndZipGuideContentsMatch": true,
+    "finalArtifactEvidence": "The separately generated figma-semantic-bridge-0.1.1-verification.json binds final clean source revision and artifact hashes after these observations are committed."
+  },
+  "limitations": [
+    "Native observations were performed on the installed 0.1.1 candidate before the final documentation commit; the final package report separately identifies the rebuilt clean candidate.",
+    "This is a local update test, not a clean-machine download or a macOS compatibility matrix.",
+    "The Figma fixture is owned and synthetic; another owner's can-view file under an effective Dev-only seat remains unverified.",
+    "Public release awaits the owner's license choice. No GitHub publication, Apple notarization or Figma Community listing is established here.",
+    "Existing original alpha acceptance remains historical; annotation approval and source capture were not repeated merely to create new success records during this update.",
+    "No tokens, private paths, project identifiers, Figma file keys, screenshots or original text are included."
+  ]
+}

@@ -11,6 +11,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { releaseWebAssets } from './release-web-assets.mjs';
 import { renderOfflineGuide } from './render-offline-guide.mjs';
+import { readProjectLicense } from './package-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'); process.chdir(root);
 const { values } = parseArgs({ options: { 'require-clean': { type: 'boolean', default: false } } });
@@ -18,10 +19,45 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 const releaseDir = resolve('dist/releases');
 const staging = await mkdtemp(join(tmpdir(), 'fsb-release-acceptance-'));
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const run = (command, args) => execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+const run = (command, args, options = {}) => execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...options });
+const expectedNativeIdentity = { service: 'figma-semantic-bridge', version: pkg.version, schemaVersion: '1.0.0' };
+function verifyNativeIdentity(application) {
+  const plist = join(application, 'Contents/Info.plist');
+  for (const [key, expected] of Object.entries({
+    CFBundleIdentifier: 'com.neocjmix.figma-semantic-bridge.desktop',
+    CFBundleExecutable: 'FigmaSemanticBridge',
+    CFBundleShortVersionString: pkg.version,
+    CFBundleVersion: pkg.version,
+  })) {
+    assert.equal(run('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, plist]).trim(), expected, `Packaged ${key} does not match this release.`);
+  }
+  // --release-info exits before app state or networking. Retain --self-test as
+  // a fallback for a stale 0.1.0 host: it then exits without opening its GUI,
+  // and its non-JSON output fails this check. Current hosts prefer release-info.
+  const identity = JSON.parse(run(join(application, 'Contents/MacOS/FigmaSemanticBridge'), ['--release-info', '--self-test'], { timeout: 10_000 }));
+  assert.deepEqual(identity, expectedNativeIdentity, 'Packaged native host identity does not match this release.');
+  return identity;
+}
+function verifyLicenseMetadata(metadata, projectLicense) {
+  assert.equal(metadata.license, projectLicense.license, 'Packaged license metadata differs from package.json.');
+  assert.equal(Object.hasOwn(metadata, 'license'), projectLicense.license !== undefined, 'Unselected license metadata must be omitted.');
+}
+async function verifyApplicationLicense(resources, projectLicense) {
+  const bundled = await readProjectLicense(resources, pkg);
+  assert.deepEqual(bundled.bytes, projectLicense.bytes, 'Packaged project LICENSE differs from the source.');
+  const metadata = JSON.parse(await readFile(join(resources, 'app/package.json'), 'utf8'));
+  assert.equal(metadata.name, pkg.name);
+  assert.equal(metadata.version, pkg.version);
+  verifyLicenseMetadata(metadata, projectLicense);
+  const lock = JSON.parse(await readFile(join(resources, 'app/package-lock.json'), 'utf8'));
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages?.['']?.version, pkg.version);
+  verifyLicenseMetadata(lock.packages?.[''] ?? {}, projectLicense);
+}
 let child, exit, force, mounted = false;
 const mountpoint = join(staging, 'dmg');
 try {
+  const projectLicense = await readProjectLicense(root, pkg);
   const checksumBytes = await readFile(join(releaseDir, 'SHA256SUMS'));
   const sums = checksumBytes.toString().trim().split('\n');
   const expectedAssets = [
@@ -45,6 +81,7 @@ try {
   }
   assert.deepEqual(Object.keys(assetSha256).sort(), expectedAssets.sort(), 'Every required release asset needs a checksum.');
   const publishedRelease = JSON.parse(await readFile(join(releaseDir, `figma-semantic-bridge-${pkg.version}-release.json`), 'utf8'));
+  verifyLicenseMetadata(publishedRelease, projectLicense);
   assert.match(publishedRelease.sourceRevision, /^[a-f0-9]{40}$/);
   assert.equal(typeof publishedRelease.sourceDirty, 'boolean');
   const git = '/Library/Developer/CommandLineTools/usr/bin/git';
@@ -55,6 +92,43 @@ try {
     assert.equal(currentSourceDirty, false, 'Current source tree must be clean for final release verification.');
     assert.equal(publishedRelease.sourceRevision, currentSourceRevision, 'Release source revision must match the current Git HEAD.');
   }
+  const pluginName = `figma-semantic-bridge-plugin-${pkg.version}`;
+  const pluginZip = join(releaseDir, `${pluginName}.zip`);
+  const pluginChecksumBytes = await readFile(`${pluginZip}.sha256`);
+  assert.equal(pluginChecksumBytes.toString().trim(), `${assetSha256[`${pluginName}.zip`]}  ${pluginName}.zip`, 'Plugin ZIP checksum sidecar differs from the verified archive.');
+  const expectedPluginFiles = ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt',
+    'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md',
+    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', ...(projectLicense.bytes ? ['LICENSE'] : [])];
+  // List and read only allowlisted entries without extracting an archive path.
+  // unzip independently checks ZIP structure and CRC; SHA checks bind every byte.
+  assert.ok((await stat(pluginZip)).size <= 10_000_000, 'Plugin ZIP exceeds its bounded production package size.');
+  run('/usr/bin/unzip', ['-t', pluginZip], { timeout: 10_000 });
+  const pluginEntries = run('/usr/bin/unzip', ['-Z1', pluginZip], { timeout: 10_000 }).trim().split('\n');
+  assert.deepEqual(pluginEntries.slice().sort(), expectedPluginFiles.map(name => `${pluginName}/${name}`).sort(), 'Plugin ZIP differs from its file allowlist.');
+  const pluginFiles = new Map(expectedPluginFiles.map(name => [name, run('/usr/bin/unzip', ['-p', pluginZip, `${pluginName}/${name}`],
+    { encoding: 'buffer', maxBuffer: 8_000_000, timeout: 10_000 })]));
+  const pluginMetadata = JSON.parse(pluginFiles.get('release.json').toString());
+  assert.equal(pluginMetadata.name, 'figma-semantic-bridge-plugin');
+  assert.equal(pluginMetadata.version, pkg.version);
+  assert.equal(pluginMetadata.channel, 'alpha');
+  assert.equal(pluginMetadata.distribution, 'figma-desktop-development-import');
+  assert.deepEqual(pluginMetadata.locales, ['ko', 'en']);
+  verifyLicenseMetadata(pluginMetadata, projectLicense);
+  assert.deepEqual(pluginFiles.get('LICENSE'), projectLicense.bytes, 'Plugin project LICENSE differs from the source.');
+  const metadataFiles = expectedPluginFiles.filter(name => name !== 'release.json' && name !== 'SHA256SUMS');
+  assert.deepEqual(Object.keys(pluginMetadata.files).sort(), metadataFiles.slice().sort(), 'Plugin file metadata is incomplete.');
+  for (const name of metadataFiles) {
+    assert.deepEqual(pluginMetadata.files[name], { bytes: pluginFiles.get(name).length, sha256: sha(pluginFiles.get(name)) }, `Plugin metadata mismatch: ${name}`);
+  }
+  const pluginSums = new Map();
+  for (const line of pluginFiles.get('SHA256SUMS').toString().trim().split('\n')) {
+    const match = /^([a-f0-9]{64})  ([a-zA-Z0-9._/-]+)$/.exec(line);
+    assert.ok(match && expectedPluginFiles.includes(match[2]) && match[2] !== 'SHA256SUMS', 'Unexpected plugin checksum entry.');
+    assert.ok(!pluginSums.has(match[2]), 'Duplicate plugin checksum entry.');
+    assert.equal(sha(pluginFiles.get(match[2])), match[1], `Plugin checksum mismatch: ${match[2]}`);
+    pluginSums.set(match[2], match[1]);
+  }
+  assert.deepEqual([...pluginSums.keys()].sort(), expectedPluginFiles.filter(name => name !== 'SHA256SUMS').sort(), 'Every plugin file needs a checksum.');
   const zip = join(releaseDir, `figma-semantic-bridge-${pkg.version}-macos-arm64.zip`);
   run('/usr/bin/ditto', ['-x', '-k', zip, staging]);
   const app = join(staging, 'Figma Semantic Bridge.app'), resources = join(app, 'Contents/Resources');
@@ -64,6 +138,8 @@ try {
   assert.equal(release.version, pkg.version); assert.equal(release.channel, 'alpha');
   assert.equal(release.platform, 'darwin'); assert.equal(release.arch, 'arm64');
   assert.deepEqual(release.locales, ['ko', 'en']);
+  await verifyApplicationLicense(resources, projectLicense);
+  for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(resources, 'plugins/semantic-bridge', name)), `Plugin ZIP and app differ: ${name}`);
   const guideAssets = new Map();
   for (const locale of release.locales) {
     const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
@@ -74,6 +150,7 @@ try {
       assert.ok(!/<(?:script|iframe|img|a|link|object)\b/i.test(html), 'Offline guides must not fetch resources or execute scripts.');
       const markdown = await readFile(join(resources, 'docs', file), 'utf8');
       assert.equal(sha(markdown), sha(await readFile(join('docs', file))));
+      assert.equal(sha(pluginFiles.get(`docs/${file}`)), sha(markdown), 'Plugin and app guides differ.');
       const title = `Figma Semantic Bridge ${pkg.version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
       assert.equal(html, renderOfflineGuide(title, markdown, { locale, kind }), 'Offline HTML must render the exact packaged Markdown.');
       const alias = kind === 'user' ? `USER-GUIDE.${locale}.md` : locale === 'ko' ? 'INSTALLATION.md' : 'INSTALLATION.en.md';
@@ -86,11 +163,15 @@ try {
   }
   assert.equal(run(node, ['--version']).trim(), `v${release.node.version}`);
   run('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]);
+  const nativeIdentity = verifyNativeIdentity(app);
   await mkdir(mountpoint);
   run('/usr/bin/hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mountpoint, join(releaseDir, `figma-semantic-bridge-${pkg.version}-macos-arm64.dmg`)]);
   mounted = true;
   const diskApp = join(mountpoint, 'Figma Semantic Bridge.app');
   run('/usr/bin/codesign', ['--verify', '--deep', '--strict', diskApp]);
+  assert.deepEqual(verifyNativeIdentity(diskApp), nativeIdentity, 'DMG native host identity differs from the ZIP.');
+  await verifyApplicationLicense(join(diskApp, 'Contents/Resources'), projectLicense);
+  for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(diskApp, 'Contents/Resources/plugins/semantic-bridge', name)), `Plugin ZIP and DMG differ: ${name}`);
   assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources/release.json'))), sha(await readFile(join(resources, 'release.json'))));
   for (const [name, hash] of guideAssets) assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources', name))), hash, `DMG guide differs from ZIP: ${name}`);
   for (const alias of ['INSTALLATION.md', 'INSTALLATION.en.md', 'USER-GUIDE.ko.md', 'USER-GUIDE.en.md']) {
@@ -131,7 +212,9 @@ try {
     assert.equal(response.status, body === undefined ? 200 : path === '/api/demo' || path === '/api/capture-bundles/import' ? 201 : 200);
     return response.json();
   }
-  const health = await api('/api/health'); assert.equal(health.version, pkg.version); assert.equal(health.service, 'figma-semantic-bridge');
+  const health = await api('/api/health');
+  assert.equal(health.ok, true);
+  for (const [key, expected] of Object.entries(nativeIdentity)) assert.equal(health[key], expected, `Packaged service ${key} does not match the native host.`);
   assert.equal((await fetch(url + '/api/health')).status, 401);
   assert.equal((await fetch(url + '/api/health', { headers: { Authorization: `Bearer ${token}`, Origin: 'https://untrusted.invalid' } })).status, 403);
   const webAssets = await releaseWebAssets(join(resources, 'app/web'));
@@ -151,14 +234,20 @@ try {
   assert.deepEqual(imported.snapshots, project.snapshots.slice(0, 2)); assert.equal(imported.annotations.length, 0);
   const transport = new StdioClientTransport({ command: node, args: [join(resources, 'app/mcp.mjs')], env: { ...env, FSB_SERVER_URL: url }, stderr: 'pipe' });
   const client = new Client({ name: 'release-acceptance', version: pkg.version });
+  let mcpIdentity;
   try {
     await client.connect(transport);
+    const serverVersion = client.getServerVersion();
+    assert.equal(serverVersion?.name, 'figma-semantic-bridge', 'Packaged MCP server name does not match this release.');
+    assert.equal(serverVersion?.version, pkg.version, 'Packaged MCP server version does not match this release.');
+    mcpIdentity = { name: serverVersion.name, version: serverVersion.version };
     const tools = await client.listTools(); assert.ok(tools.tools.some(t => t.name === 'get_approved_context'));
     const result = await client.callTool({ name: 'list_projects', arguments: {} }); assert.ok(!result.isError);
     const approved = await client.callTool({ name: 'get_approved_context', arguments: { projectId: imported.id } }); assert.ok(!approved.isError);
   } finally { await client.close(); }
   // Do not attest to assets replaced while the runtime smoke check was running.
   assert.equal(sha(await readFile(join(releaseDir, 'SHA256SUMS'))), sha(checksumBytes), 'Release checksum list changed during verification.');
+  assert.equal(sha(await readFile(`${pluginZip}.sha256`)), sha(pluginChecksumBytes), 'Plugin checksum sidecar changed during verification.');
   for (const [name, digest] of Object.entries(assetSha256)) {
     assert.equal(sha(await readFile(join(releaseDir, name))), digest, `Release asset changed during verification: ${name}`);
   }
@@ -171,7 +260,9 @@ try {
   const report = { version: pkg.version, checkedAt: new Date().toISOString(), requireClean: values['require-clean'],
     sourceRevision: release.sourceRevision, sourceDirty: release.sourceDirty, currentSourceRevision, currentSourceDirty,
     assetSha256, checksumsFileSha256: sha(checksumBytes), artifactChecksums: sums.length,
-    extractionOutsideCheckout: true, bundledNode: release.node.version, bilingualOfflineGuides: true, locales: release.locales, adHocSignatureVerified: true, mountedDmgVerified: true, noAbsoluteAppSymlinks: true, noKnownPrivatePaths: true, webAssetAllowlistVerified: true, authenticatedHealth: true, untrustedOriginRejected: true, webAssetsServed: webAssets.length, demoPersistence: true, captureTransfer: true, bundledMcp: true, secretOutput: false, aiEnabled: false, nativeGuiAndFigma: 'Separate manual acceptance required' };
+    pluginArchiveFiles: pluginFiles.size, pluginChecksumFileSha256: sha(pluginChecksumBytes),
+    projectLicense: { identifier: projectLicense.license ?? null, included: projectLicense.bytes !== undefined, sha256: projectLicense.bytes ? sha(projectLicense.bytes) : null },
+    extractionOutsideCheckout: true, bundledNode: release.node.version, nativeIdentity, mcpIdentity, nativePlistVersionsVerified: true, bilingualOfflineGuides: true, locales: release.locales, adHocSignatureVerified: true, mountedDmgVerified: true, noAbsoluteAppSymlinks: true, noKnownPrivatePaths: true, webAssetAllowlistVerified: true, authenticatedHealth: true, untrustedOriginRejected: true, webAssetsServed: webAssets.length, demoPersistence: true, captureTransfer: true, bundledMcp: true, secretOutput: false, aiEnabled: false, nativeGuiAndFigma: 'Separate manual acceptance required' };
   const reportName = `figma-semantic-bridge-${pkg.version}-verification.json`;
   const reportBytes = Buffer.from(JSON.stringify(report, null, 2) + '\n');
   await writeFile(join(releaseDir, reportName), reportBytes);

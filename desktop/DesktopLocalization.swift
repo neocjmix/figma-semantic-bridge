@@ -50,7 +50,7 @@ enum DesktopLocale: String, CaseIterable {
         "The pairing-token file cannot be read safely. Check its owner and permissions in ~/.figma-semantic-bridge.": "페어링 토큰 파일을 안전하게 읽을 수 없습니다. ~/.figma-semantic-bridge에서 소유자와 권한을 확인하세요.",
         "The pairing-token file must be a private regular file owned by this account (mode 600).": "페어링 토큰은 이 계정 소유의 비공개 일반 파일이어야 합니다(권한 600).",
         "The local pairing-token file is invalid.": "로컬 페어링 토큰 파일이 유효하지 않습니다.",
-        "Port 4177 is occupied by an unrecognized or incompatible service. Quit or update its owning application or your earlier development service, then choose Retry. The desktop requires service version 0.1.0 and schema 1.0.0.": "알 수 없거나 호환되지 않는 서비스가 4177 포트를 사용 중입니다. 해당 앱이나 이전 개발 서비스를 종료하거나 업데이트한 뒤 다시 시도하세요. 데스크톱 앱에는 서비스 0.1.0과 스키마 1.0.0이 필요합니다.",
+        DesktopPolicy.incompatibleServiceMessage: "알 수 없거나 호환되지 않는 서비스가 4177 포트를 사용 중입니다. 해당 앱이나 이전 개발 서비스를 종료하거나 업데이트한 뒤 다시 시도하세요. 데스크톱 앱에는 서비스 \(DesktopPolicy.version)과 스키마 \(DesktopPolicy.schemaVersion)이 필요합니다.",
         "The application bundle is incomplete. Reinstall the complete macOS application archive.": "앱 번들이 완전하지 않습니다. 전체 macOS 앱 설치 파일로 다시 설치하세요.",
         "The bundled local service could not start. Another service may have taken port 4177. Check the earlier service, then choose Retry.": "내장 로컬 서비스를 시작하지 못했습니다. 다른 서비스가 4177 포트를 사용 중일 수 있습니다. 기존 서비스를 확인한 뒤 다시 시도하세요.",
         "The bundled service did not become ready within 12 seconds. Check access to ~/.figma-semantic-bridge, then choose Retry.": "내장 서비스가 12초 안에 준비되지 않았습니다. ~/.figma-semantic-bridge 접근 권한을 확인한 뒤 다시 시도하세요."
@@ -81,6 +81,8 @@ enum DesktopLocale: String, CaseIterable {
             try check(message(frame: URL(string: value)) == nil && message(current: URL(string: value)) == nil, "root boundary")
         }
         try check(DesktopLocale.ko.text("Retry") == "다시 시도" && DesktopLocale.en.text("Retry") == "Retry", "translated notice")
+        let conflict = DesktopLocale.ko.text(DesktopPolicy.incompatibleServiceMessage)
+        try check(conflict.contains("서비스 \(DesktopPolicy.version)") && conflict.contains("스키마 \(DesktopPolicy.schemaVersion)"), "current release in translated conflict")
         try check(DesktopLocale.ko.text("SOURCE_CHANGED: exact source text") == "SOURCE_CHANGED: exact source text", "unknown machine data preserved")
         print("Desktop locale self-tests passed. No UI, credentials, preferences or network accessed.")
     }

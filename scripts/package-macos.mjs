@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { releaseWebAssets } from './release-web-assets.mjs';
 import { renderOfflineGuide } from './render-offline-guide.mjs';
+import { readProjectLicense } from './package-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -12,6 +13,7 @@ if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 if (!/^\d+\.\d+\.\d+$/.test(pkg.version)) throw new Error('A numeric release version is required.');
 const version = pkg.version;
+const projectLicense = await readProjectLicense(root, pkg);
 const nodeVersion = '22.23.4';
 const nodeArchive = `node-v${nodeVersion}-darwin-arm64.tar.gz`;
 const nodeSha256 = 'c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428';
@@ -60,8 +62,8 @@ await cp('docs/alpha-installation.md', join(resources, 'INSTALLATION.md'));
 await cp('docs/alpha-installation.en.md', join(resources, 'INSTALLATION.en.md'));
 await cp('README.md', join(resources, 'README.md'));
 await cp('README.en.md', join(resources, 'README.en.md'));
-await cp('docs/releases/0.1.0.md', join(resources, 'RELEASE-NOTES.md'));
-if (await exists('LICENSE')) await cp('LICENSE', join(resources, 'LICENSE'));
+await cp(join('docs/releases', `${version}.md`), join(resources, 'RELEASE-NOTES.md'));
+if (projectLicense.bytes) await writeFile(join(resources, 'LICENSE'), projectLicense.bytes);
 
 await mkdir(join(resources, 'docs'), { recursive: true });
 for (const locale of ['ko', 'en']) {
@@ -114,7 +116,7 @@ run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleLocalizations array', plist]
 for (const [index, locale] of ['en', 'ko'].entries()) run('/usr/libexec/PlistBuddy', ['-c', `Add :CFBundleLocalizations:${index} string ${locale}`, plist]);
 const revision = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const dirty = execFileSync('/Library/Developer/CommandLineTools/usr/bin/git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
-const manifest = { product: 'figma-semantic-bridge', version, channel: 'alpha', locales: ['ko', 'en'], platform: 'darwin', arch: 'arm64', minimumMacOS: '13.0', node: { version: nodeVersion, archive: nodeArchive, sha256: nodeSha256, source: `https://nodejs.org/dist/v${nodeVersion}/` }, sourceRevision: revision, sourceDirty: dirty, signing: 'ad-hoc', notarized: false, pluginDistribution: 'Figma Desktop local development import', builtAt: new Date().toISOString() };
+const manifest = { product: 'figma-semantic-bridge', version, ...(projectLicense.license === undefined ? {} : { license: projectLicense.license }), channel: 'alpha', locales: ['ko', 'en'], platform: 'darwin', arch: 'arm64', minimumMacOS: '13.0', node: { version: nodeVersion, archive: nodeArchive, sha256: nodeSha256, source: `https://nodejs.org/dist/v${nodeVersion}/` }, sourceRevision: revision, sourceDirty: dirty, signing: 'ad-hoc', notarized: false, pluginDistribution: 'Figma Desktop local development import', builtAt: new Date().toISOString() };
 await writeFile(join(resources, 'release.json'), JSON.stringify(manifest, null, 2) + '\n');
 run('/usr/bin/codesign', ['--force', '--sign', '-', join(resources, 'runtime/node')]);
 run('/usr/bin/codesign', ['--force', '--sign', '-', app]);

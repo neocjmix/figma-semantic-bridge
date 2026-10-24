@@ -1,6 +1,12 @@
 import AppKit
 
-if CommandLine.arguments.contains("--self-test") {
+if CommandLine.arguments.contains("--release-info") {
+    do {
+        let data = try JSONSerialization.data(withJSONObject: DesktopPolicy.releaseInfo, options: [.sortedKeys])
+        FileHandle.standardOutput.write(data)
+        FileHandle.standardOutput.write(Data([0x0a]))
+    } catch { fputs("Desktop release identity could not be encoded.\n", stderr); exit(1) }
+} else if CommandLine.arguments.contains("--self-test") {
     do { try DesktopPolicy.runSelfTests(); try DesktopLocale.runSelfTests() }
     catch { fputs("Desktop policy self-test failed.\n", stderr); exit(1) }
 } else {

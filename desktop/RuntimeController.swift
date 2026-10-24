@@ -81,7 +81,7 @@ final class RuntimeController {
         } catch let error as URLError where error.code == .cannotConnectToHost { return false }
     }
 
-    private static let conflictMessage = "Port 4177 is occupied by an unrecognized or incompatible service. Quit or update its owning application or your earlier development service, then choose Retry. The desktop requires service version 0.1.0 and schema 1.0.0."
+    private static let conflictMessage = DesktopPolicy.incompatibleServiceMessage
 
     func start() async throws {
         stopping = false; ready = false

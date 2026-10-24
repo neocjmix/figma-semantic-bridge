@@ -14,6 +14,7 @@ import { createDemoProject } from '../src/demo/project.js';
 import { BridgeApi, BridgeApiError } from '../src/mcp/api-client.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import type { Annotation, Project, Specification } from '../src/shared/contracts.js';
+import { PRODUCT_VERSION, SERVICE_NAME } from '../src/shared/version.js';
 
 test('real MCP stdio -> authenticated HTTP -> plugin WS, persisted approval reads and proposal protection', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'fsb-mcp-'));
@@ -24,6 +25,7 @@ test('real MCP stdio -> authenticated HTTP -> plugin WS, persisted approval read
     env: { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), FSB_DATA_DIR: dataDir, FSB_SERVER_URL: server.url }, stderr: 'pipe' });
   t.after(async () => { await client.close(); await server.close(); await rm(dataDir, { recursive: true, force: true }); });
   await client.connect(transport);
+  assert.deepEqual(client.getServerVersion(), { name: SERVICE_NAME, version: PRODUCT_VERSION });
   const tools = await client.listTools();
   assert.ok(tools.tools.some(tool => tool.name === 'propose_changes'));
   assert.ok(!tools.tools.some(tool => /^(approve_|delete_|shell)/.test(tool.name)));

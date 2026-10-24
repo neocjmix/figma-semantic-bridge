@@ -1,4 +1,5 @@
-import { readFile, lstat, mkdir, writeFile, rename } from 'node:fs/promises';
+import { readFile, lstat, mkdir, writeFile, rename, open } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
@@ -13,6 +14,37 @@ async function readRegular(path, maxBytes) {
   const info = await lstat(path);
   if (!info.isFile() || info.isSymbolicLink() || info.size > maxBytes) throw new Error('Package input must be a bounded regular file.');
   return readFile(path);
+}
+
+export async function readProjectLicense(projectDir, packageMetadata) {
+  const license = packageMetadata.license;
+  if (license !== undefined && (typeof license !== 'string' || !license || license.length > 256 ||
+      license !== license.trim() || /[\u0000-\u001f\u007f]/.test(license))) {
+    throw new Error('package.json license must be a non-empty bounded license identifier or expression.');
+  }
+  const path = join(projectDir, 'LICENSE'), maxBytes = 100_000;
+  const info = await lstat(path).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+  if (!info) {
+    if (license !== undefined) throw new Error('Project LICENSE is required when package.json license is declared.');
+    return {};
+  }
+  if (!info.isFile() || info.isSymbolicLink() || info.size > maxBytes) throw new Error('Project LICENSE must be a bounded regular file.');
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  let bytes;
+  try {
+    const opened = await file.stat();
+    if (!opened.isFile() || opened.size > maxBytes) throw new Error('Project LICENSE must be a bounded regular file.');
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let count = 0;
+    while (count < buffer.length) {
+      const { bytesRead } = await file.read(buffer, count, buffer.length - count, count);
+      if (bytesRead === 0) break;
+      count += bytesRead;
+    }
+    if (count === 0 || count > maxBytes) throw new Error('Project LICENSE must be non-empty and at most 100000 bytes.');
+    bytes = buffer.subarray(0, count);
+  } finally { await file.close(); }
+  return { ...(license === undefined ? {} : { license }), bytes };
 }
 
 function validateManifest(manifest) {
@@ -60,7 +92,7 @@ function zip(entries) {
   return Buffer.concat([...local, directory, end]);
 }
 
-function installationReadme(version) {
+function installationReadme(version, hasLicense) {
   return `# Figma Semantic Bridge ${version} — local alpha plugin
 
 [한국어 설치 안내](README.ko.md) · [English user guide](docs/user-guide.en.md) · [한국어 사용 가이드](docs/user-guide.ko.md)
@@ -125,12 +157,12 @@ Compare the ZIP's SHA-256 with its adjacent .sha256 file before extraction.
 SHA256SUMS lists every bundled file except itself. release.json records the
 version, distribution type and hashes of the inputs. Checksums verify content
 integrity; they are not signatures or publisher authentication. THIRD_PARTY_NOTICES.txt
-contains the bundled dependency's license. Project licensing follows the main
-release's license; this plugin package does not introduce a separate license.
+contains the bundled dependency's license.
+${hasLicense ? 'Project license terms are included in [LICENSE](LICENSE). This plugin package does not introduce a separate license.' : 'Project licensing has not been selected. This local alpha package does not grant a project license.'}
 `;
 }
 
-function installationReadmeKo(version) {
+function installationReadmeKo(version, hasLicense) {
   return `# Figma Semantic Bridge ${version} — 로컬 알파 플러그인
 
 [English](README.en.md) · [한국어 사용 가이드](docs/user-guide.ko.md) · [English user guide](docs/user-guide.en.md)
@@ -162,12 +194,14 @@ Dev 전용 계정과 다른 소유자의 읽기 전용 파일 조합은 별도 �
 ZIP의 SHA-256을 인접한 .sha256 파일과 대조하세요. 내부 SHA256SUMS는 자신을
 제외한 파일을 검증합니다. 체크섬은 무결성 확인이며 작성자의 신원이나 사용 권한을
 증명하지 않습니다. THIRD_PARTY_NOTICES.txt는 포함된 의존성 라이선스이며,
-프로젝트 자체 라이선스는 주 릴리스의 정책을 따릅니다.
+${hasLicense ? '프로젝트 라이선스 조건은 [LICENSE](LICENSE)를 확인하세요. 플러그인에 별도 라이선스를 부여하지 않습니다.' : '프로젝트 라이선스는 아직 선택되지 않았습니다. 이 로컬 알파 패키지는 프로젝트 사용 라이선스를 부여하지 않습니다.'}
 `;
 }
 
-export async function packagePlugin({ version, outputDir = join(root, 'dist/releases'), pluginDir = join(root, 'plugins/semantic-bridge') } = {}) {
-  if (version === undefined) version = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version;
+export async function packagePlugin({ projectDir = root, version, outputDir = join(projectDir, 'dist/releases'), pluginDir = join(projectDir, 'plugins/semantic-bridge') } = {}) {
+  const pkg = JSON.parse(await readRegular(join(projectDir, 'package.json'), 64_000));
+  const projectLicense = await readProjectLicense(projectDir, pkg);
+  if (version === undefined) version = pkg.version;
   if (typeof version !== 'string' || version.length > 80 || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(version)) {
     throw new Error('A safe semantic release version is required.');
   }
@@ -176,19 +210,20 @@ export async function packagePlugin({ version, outputDir = join(root, 'dist/rele
   validateManifest(JSON.parse(manifestBytes.toString()));
   new vm.Script(code.toString(), { filename: 'code.js' });
   if (!code.includes(Buffer.from('ws://localhost:4177/bridge'))) throw new Error('Built production plugin endpoint is missing. Run npm run build:product-plugin first.');
-  const zod = JSON.parse(await readFile(join(root, 'node_modules/zod/package.json'), 'utf8'));
-  const notices = Buffer.from(`Bundled dependency: zod ${zod.version}\nhttps://github.com/colinhacks/zod\n\n${await readFile(join(root, 'node_modules/zod/LICENSE'), 'utf8')}`);
+  const zod = JSON.parse(await readFile(join(projectDir, 'node_modules/zod/package.json'), 'utf8'));
+  const notices = Buffer.from(`Bundled dependency: zod ${zod.version}\nhttps://github.com/colinhacks/zod\n\n${await readFile(join(projectDir, 'node_modules/zod/LICENSE'), 'utf8')}`);
   const files = new Map([
     ['manifest.json', manifestBytes], ['code.js', code],
-    ['README.md', Buffer.from(installationReadme(version))], ['THIRD_PARTY_NOTICES.txt', notices],
-    ['README.en.md', Buffer.from(installationReadme(version))], ['README.ko.md', Buffer.from(installationReadmeKo(version))],
+    ['README.md', Buffer.from(installationReadme(version, !!projectLicense.bytes))], ['THIRD_PARTY_NOTICES.txt', notices],
+    ['README.en.md', Buffer.from(installationReadme(version, !!projectLicense.bytes))], ['README.ko.md', Buffer.from(installationReadmeKo(version, !!projectLicense.bytes))],
   ]);
+  if (projectLicense.bytes) files.set('LICENSE', projectLicense.bytes);
   for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md']) {
-    files.set(`docs/${file}`, await readRegular(join(root, 'docs', file), 200_000));
+    files.set(`docs/${file}`, await readRegular(join(projectDir, 'docs', file), 200_000));
   }
   files.set('release.json', encode({ formatVersion: 1, name: 'figma-semantic-bridge-plugin', version,
     channel: 'alpha', locales: ['ko', 'en'], distribution: 'figma-desktop-development-import',
-    pluginEntry: 'manifest.json', serverPort: 4177,
+    pluginEntry: 'manifest.json', serverPort: 4177, ...(projectLicense.license === undefined ? {} : { license: projectLicense.license }),
     files: Object.fromEntries([...files].map(([name, bytes]) => [name, { bytes: bytes.length, sha256: sha256(bytes) }])) }));
   files.set('SHA256SUMS', Buffer.from([...files].map(([name, bytes]) => `${sha256(bytes)}  ${name}\n`).join('')));
   const name = `figma-semantic-bridge-plugin-${version}`, archive = zip(new Map([...files].map(([path, bytes]) => [`${name}/${path}`, bytes])));

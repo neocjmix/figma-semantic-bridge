@@ -183,9 +183,9 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     private func installWorkspace() async throws {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent(); config.preferences.javaScriptCanOpenWindowsAutomatically = false
-        config.applicationNameForUserAgent = "FigmaSemanticBridge/0.1.0"
+        config.applicationNameForUserAgent = "FigmaSemanticBridge/\(DesktopPolicy.version)"
         let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^data:image/png[;,]"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^blob:http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}}]"#
-        config.userContentController.add(try await contentRules(rules, name: "fsb-local-only-0.1.0"))
+        config.userContentController.add(try await contentRules(rules, name: "fsb-local-only-\(DesktopPolicy.version)"))
         guard !terminating else { return }
         let bootstrap = try workspaceBootstrap()
         config.userContentController.addUserScript(WKUserScript(source: bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))

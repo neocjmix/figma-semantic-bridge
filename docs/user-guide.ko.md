@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.1.0 알파 사용자 가이드
+# Figma Semantic Bridge 0.1.1 알파 사용자 가이드
 
 [English](user-guide.en.md) · [설치와 MCP 설정](alpha-installation.md) · [README](../README.md)
 
@@ -10,7 +10,7 @@
 코딩 에이전트에게 전달하세요. 설치한 앱은 내장 편집기에 자동 연결됩니다.
 Figma 플러그인에는 앱의 **페어링 토큰 복사(Copy Pairing Token)**으로 복사한 토큰을 붙여넣습니다.
 
-**0.1.0 알파의 공개 릴리스는 LICENSE 선택을 기다리며 아직 게시되지 않았습니다.**
+**0.1.1 알파의 공개 릴리스는 LICENSE 선택을 기다리며 아직 게시되지 않았습니다.**
 설치 파일과 실제 검증 범위는 설치 문서를 확인하세요. 이 가이드는 사용 절차이며
 독립된 의미 전문가의 정확도 평가나 생산성 검증 결과가 아닙니다.
 

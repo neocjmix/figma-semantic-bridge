@@ -1,9 +1,11 @@
-# 0.1.0 alpha installation and operations — macOS Apple Silicon
+# 0.1.1 alpha installation and operations — macOS Apple Silicon
 
 [한국어](alpha-installation.md) · [User guide](user-guide.en.md) · [README](../README.en.md)
 
-The installed standalone app has completed local startup, save, Figma, MCP and
-restart checks. **The public release has not been published; LICENSE selection
+The 0.1.1 candidate package and actual local update from 0.1.0 passed verification,
+preserving projects, the token, language choices and the existing Figma registration.
+Earlier 0.1.0 observations remain separate historical evidence.
+**The public release has not been published; LICENSE selection
 is pending.** Download URLs will be added to the README after publication.
 This guide describes verified paths and procedures without presenting a planned
 URL as an available download.
@@ -21,9 +23,9 @@ Figma plugin**. Users do not need a repository clone, Homebrew, system Node,
 | --- | --- |
 | Build target | macOS 13 or later, Apple Silicon (arm64) alpha |
 | Recommended app location | `/Applications/Figma Semantic Bridge.app` |
-| DMG | `figma-semantic-bridge-0.1.0-macos-arm64.dmg` |
-| Alternative app ZIP | `figma-semantic-bridge-0.1.0-macos-arm64.zip` |
-| Local Figma plugin ZIP | `figma-semantic-bridge-plugin-0.1.0.zip` |
+| DMG | `figma-semantic-bridge-0.1.1-macos-arm64.dmg` |
+| Alternative app ZIP | `figma-semantic-bridge-0.1.1-macos-arm64.zip` |
+| Local Figma plugin ZIP | `figma-semantic-bridge-plugin-0.1.1.zip` |
 | Default data | `~/.figma-semantic-bridge` |
 | Local address | `http://127.0.0.1:4177` |
 | App executable / bundle ID | `FigmaSemanticBridge` / `com.neocjmix.figma-semantic-bridge.desktop` |
@@ -37,15 +39,21 @@ This is not a plugin already listed in Figma Community.
 
 ### Preparation status
 
-- [x] App, DMG/ZIP, prebuilt plugin, checksums and runtime notices generated.
-- [x] Installed-app pairing, save, file import/export, Figma capture and bundled MCP exercised.
-- [x] Quit/restart and preservation of the token and six existing projects checked.
-- [x] Baseline automated checks recorded in the [validation log](product-validation.md).
+- [x] Preserve the 0.1.0 installation, restart, data preservation and bilingual baseline evidence.
+- [x] Passed 198 Node tests, 27 browser scenarios, two fixture manifests, typecheck/build and native self-tests.
+- [x] Verified the 0.1.1 candidate ZIP/DMG, plugin, versions, guides and checksums.
+- [x] Exercised the 0.1.0 → 0.1.1 update and preserved 15 projects, the token and language choices.
 - [ ] Include the owner's chosen LICENSE; publication is waiting for this decision.
 - [ ] After license inclusion, fix the final posting commit, tag and public download links.
 
-The [installed-app aggregate](evaluation/alpha-desktop-acceptance.json) records the
-observations. Developer tools were already present on the tested Mac, so this is
+The [installed-app aggregate](evaluation/alpha-desktop-acceptance.json) and
+[bilingual observations](evaluation/bilingual-interface-acceptance.json) record the
+previous 0.1.0 baseline. The [0.1.1 update observations](evaluation/release-0.1.1-acceptance.json)
+and [release notes](releases/0.1.1.md) describe the candidate installed before the final
+documentation commit. The final clean rebuild's revision and asset hashes are recorded
+separately in `figma-semantic-bridge-0.1.1-verification.json`; they do not reassign the
+candidate's native observations to another build.
+Developer tools were already present on the tested Mac, so this is
 not a claim of installation on a completely clean external machine. The observed
 process used the app's own Node and production assets.
 
@@ -78,6 +86,9 @@ operate or bypass the locked screen. The user handles unlocking and account logi
 
 ## 2. Install the app
 
+If 0.1.0 is already installed, use section 9 instead of repeating first-time setup.
+Do not reset existing projects, the token, language choices or a valid plugin registration.
+
 1. After publication, obtain the Apple Silicon DMG and checksums from the actual
    release linked by the README. Before publication, distinguish a provided local
    candidate from a publicly released build. Check filename, version and checksum.
@@ -98,7 +109,7 @@ operate or bypass the locked screen. The user handles unlocking and account logi
 
 The app starts the server with bundled Node. It reuses an existing listener only
 after token authentication and exact `service=figma-semantic-bridge`,
-`version=0.1.0` and `schemaVersion=1.0.0` checks. A mismatch produces an explanation;
+`version=0.1.1` and `schemaVersion=1.0.0` checks. A mismatch produces an explanation;
 the app does not kill that process. **Quit Figma Semantic Bridge** stops only a
 child server that the app itself started. Reused services and stored data remain.
 
@@ -151,9 +162,9 @@ web pairing form. Its token stays in that browser session's session storage.
 ## 4. Install the Figma plugin and check access
 
 1. Use **Reveal Figma Plugin** to open the app's bundled plugin directory.
-   Alternatively, verify `figma-semantic-bridge-plugin-0.1.0.zip` with its adjacent
+   Alternatively, verify `figma-semantic-bridge-plugin-0.1.1.zip` with its adjacent
    `.zip.sha256`, then extract it into a stable local directory. The extracted
-   folder is `figma-semantic-bridge-plugin-0.1.0`. Keep Figma's referenced path stable.
+   folder is `figma-semantic-bridge-plugin-0.1.1`. Keep Figma's referenced path stable.
 2. In Figma Desktop, use **Plugins → Development → Import plugin from manifest**
    and choose that folder's `manifest.json`, not the ZIP itself. Its code is already
    built; no development environment is required.
@@ -282,25 +293,59 @@ error codes instead of tokens, original text or private source identifiers.
 - [ ] Quit/restarted and checked preservation/reconnection. A reused external server
   was not stopped merely because the app quit.
 - [ ] Recorded installed filenames, version, checksum and tested environment.
+- [ ] For an update from 0.1.0, completed section 9's version, data, language and plugin-path checks.
 
 For capture-only consumers, the Figma steps are not applicable. Do not mark an
 untested Dev-only/can-view combination or organization approval as passed.
 
 ## 9. Backup, update and restore
 
-1. Save drafts, then quit the app and the server it owns. Stop any separate service
-   that is also writing the same data through its normal shutdown procedure.
-2. While stopped, copy all of `~/.figma-semantic-bridge` into a restricted backup
-   location. Project JSON alone is not a full token/settings backup. Backups contain
-   source text, PNGs, history and the token; keep them out of public Git and casual shares.
-3. Read the new release's format/compatibility notes and check checksums before
-   replacing the app. This alpha does not guarantee every future migration or downgrade.
-4. If the plugin changed, close its Figma window, update/register the package at
-   the intended stable path and reopen it. Do not accumulate duplicate registrations.
-5. Verify MCP paths and read back projects, approved output and warnings.
-6. To restore, stop every writer, preserve current data separately, then restore
-   a compatible app version and the backed-up folder together. Do not let two
-   versions write simultaneously or blindly overwrite current user data.
+### 0.1.0 → 0.1.1
+
+This update does not regenerate projects, captures, approval history or the pairing
+token. Preserve existing language choices in native app preferences, browser storage
+and Figma plugin storage. Apply the default language only when no choice is stored.
+A data-directory backup does not automatically include all these separate UI preferences.
+
+1. Record the current version, app/plugin registration paths, language choices and
+   project inventory. Compare locally without printing original text or tokens.
+2. Save drafts and close the Figma plugin. Quit the app normally and confirm its
+   child server stopped. Identify and normally stop any separate service writing
+   the same data; do not kill all Node processes.
+3. While stopped, **copy** the entire `~/.figma-semantic-bridge` folder and the
+   existing app to restricted backup locations. Do not move or rename the installed
+   `/Applications/Figma Semantic Bridge.app` for backup: Figma's file bookmark may
+   follow the old app to its new location.
+4. Verify the 0.1.1 candidate's version, checksum and signature, then replace its
+   contents while preserving the installed application's root directory identity.
+   Do not delete/recreate or swap the root directory. Verify the resulting bundle
+   and ensure outdated files are not retained alongside the new version.
+5. Launch the same installed path. A still-running 0.1.0 service may be rejected
+   as incompatible by 0.1.1; confirm normal shutdown of the old service rather
+   than regenerating the token.
+6. Reuse Figma's registration and confirm its manifest path resolves to the current
+   0.1.1 package. If using a separate plugin ZIP, update its stable folder too.
+   Re-import the actual current manifest only if registration follows a backup;
+   do not edit the source design or invent another plugin ID.
+7. Run the acceptance checks below. Preserve MCP paths and app/browser/plugin
+   language choices; do not alter existing annotations or approvals merely to test.
+
+### Update acceptance
+
+- [ ] Installed app, local service, plugin and MCP match the actual 0.1.1 bundle.
+- [ ] App root directory identity is preserved and Figma does not reference a backup.
+- [ ] Previous projects, captures, exact text, review history and token remain unchanged.
+- [ ] Existing Korean/English choices survive app and plugin restart.
+- [ ] Embedded editor pairs automatically and synchronizes language with native menus.
+- [ ] Both languages' installation and user guides open offline.
+- [ ] Bundled MCP lists projects and reads approved context; permitted synthetic Figma connection works.
+- [ ] Quit/restart retains data and connection; original Figma content remains unchanged.
+
+Backups contain source text, PNGs, review history and the token; keep them out of
+public Git and casual shares. For restoration, stop every writer, preserve the
+current state separately, and restore a compatible app/data combination while
+retaining the installed app root's identity and location. This procedure does not
+guarantee compatibility for every future schema migration or downgrade.
 
 When migrating from a development LaunchAgent, first establish its ownership and
 configuration. The observed migration rejected an incompatible service, then explicitly
@@ -341,4 +386,4 @@ LaunchAgent according to its own ownership and removal procedure.
 
 See the [user guide](user-guide.en.md), [product quickstart](product-quickstart.md),
 [validation log](product-validation.md), [completion status](completion-status.md)
-and [0.1.0 release note](releases/0.1.0.md) for product behavior and recorded boundaries.
+and [0.1.1 release note](releases/0.1.1.md) for product behavior and recorded boundaries.

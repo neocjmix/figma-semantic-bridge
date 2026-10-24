@@ -5,11 +5,20 @@ import { createServer } from 'node:net';
 import { mkdtemp, readFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { PRODUCT_VERSION } from '../src/shared/version.js';
+import { DATA_SCHEMA_VERSION, PRODUCT_VERSION, SERVICE_NAME } from '../src/shared/version.js';
 
-test('release identity agrees with package metadata', async () => {
-  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+test('release identity agrees across package metadata, lockfile and native compatibility policy', async () => {
+  const [pkg, lock, native] = await Promise.all([
+    readFile(new URL('../package.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../package-lock.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../desktop/DesktopPolicy.swift', import.meta.url), 'utf8'),
+  ]);
   assert.equal(PRODUCT_VERSION, pkg.version);
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[''].version, pkg.version);
+  for (const [field, expected] of Object.entries({ service: SERVICE_NAME, version: PRODUCT_VERSION, schemaVersion: DATA_SCHEMA_VERSION })) {
+    assert.equal(native.match(new RegExp(`static let ${field} = "([^"]+)"`))?.[1], expected, `native ${field} must match the local service`);
+  }
 });
 
 test('desktop runtime starts outside the checkout, serves packaged assets and never prints its token', async () => {

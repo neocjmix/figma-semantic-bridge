@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.1.0 Alpha
+# Figma Semantic Bridge 0.1.1 Alpha
 
 [한국어](README.md) · [User guide — English](docs/user-guide.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md)
 
@@ -8,17 +8,17 @@ then share approved context with coding agents.**
 The Apple Silicon (M1 or later) app targets macOS 13 or later and includes official
 Node.js 22.23.4, the production local server, web editor, MCP server and a prebuilt
 Figma plugin. Users do not need Node.js, npm, a source checkout or a separate
-development server. Installation and execution were exercised on macOS 26.6.2;
+development server. The actual 0.1.1 local update and execution were exercised on macOS 26.6.2;
 execution on macOS 13 has not been verified.
 
-**Local installation and execution verified; public release pending.** Publication
-awaits the owner's license choice. Public download URLs are planned and are not
-available yet.
+**0.1.1 bilingual alpha candidate package and local update verified; public release
+pending.** Publication awaits the owner's license choice and final publication artifacts.
+Public download URLs are planned and are not available yet.
 
 [Detailed installation and setup](docs/alpha-installation.en.md)
 · [한국어 설치 가이드](docs/alpha-installation.md)
-· [Release notes](docs/releases/0.1.0.md)
-· [Installed-app acceptance aggregate](docs/evaluation/alpha-desktop-acceptance.json)
+· [Release notes](docs/releases/0.1.1.md)
+· [0.1.1 update acceptance aggregate](docs/evaluation/release-0.1.1-acceptance.json)
 
 ## What the app does
 
@@ -46,24 +46,23 @@ node names, original text, specifications and approved content are never transla
 or changed by the language switch.** Follow the [English](docs/user-guide.en.md) or
 [Korean](docs/user-guide.ko.md) user guide for the complete review workflow.
 
-Validation passed 196 Node tests, TypeScript and production builds, and 27 browser
-scenarios. Installed-app and Figma checks covered language persistence, live
-switching, all four offline guides and preservation of existing data. See the
-[bilingual acceptance record](docs/evaluation/bilingual-interface-acceptance.json)
+The 0.1.1 installed-candidate checks covered language persistence, live switching,
+all four offline guides and preservation of existing data. See the
+[0.1.1 acceptance record](docs/evaluation/release-0.1.1-acceptance.json)
 for the actual observations and limitations.
 
 ## Installation files
 
 | File | Purpose |
 | --- | --- |
-| `figma-semantic-bridge-0.1.0-macos-arm64.dmg` | Installation image for copying the app to Applications |
-| `figma-semantic-bridge-0.1.0-macos-arm64.zip` | ZIP distribution of the same app |
-| `figma-semantic-bridge-plugin-0.1.0.zip` | Prebuilt plugin for local import into Figma Desktop |
-| `figma-semantic-bridge-0.1.0-INSTALLATION.md` | Offline installation guide for users and agents |
-| `figma-semantic-bridge-0.1.0-INSTALLATION.en.md` | English installation and MCP setup guide |
-| `figma-semantic-bridge-0.1.0-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.0-USER-GUIDE.en.md` | Korean and English workflow guides |
+| `figma-semantic-bridge-0.1.1-macos-arm64.dmg` | Installation image for copying the app to Applications |
+| `figma-semantic-bridge-0.1.1-macos-arm64.zip` | ZIP distribution of the same app |
+| `figma-semantic-bridge-plugin-0.1.1.zip` | Prebuilt plugin for local import into Figma Desktop |
+| `figma-semantic-bridge-0.1.1-INSTALLATION.md` | Offline installation guide for users and agents |
+| `figma-semantic-bridge-0.1.1-INSTALLATION.en.md` | English installation and MCP setup guide |
+| `figma-semantic-bridge-0.1.1-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.1-USER-GUIDE.en.md` | Korean and English workflow guides |
 | `SHA256SUMS` | SHA-256 values for the downloaded artifacts |
-| `figma-semantic-bridge-0.1.0-release.json` | Version, platform, runtime and signing metadata |
+| `figma-semantic-bridge-0.1.1-release.json` | Version, platform, runtime and signing metadata |
 
 GitHub's automatically generated **Source code** archive is not the end-user
 installer. Intel Mac, Windows and Linux desktop apps are outside this alpha.
@@ -74,6 +73,11 @@ agents must not disable Gatekeeper or remove quarantine attributes. A person mus
 perform any required OS confirmation; stop if organizational policy prohibits use.
 
 ## First use
+
+If 0.1.0 is already installed, skip repeated first-time setup and follow the
+[0.1.0 → 0.1.1 update procedure](docs/alpha-installation.en.md#9-backup-update-and-restore).
+Keep the existing application directory in place, quit normally before replacing
+its contents, and preserve projects, the token, language choices and Figma's plugin path.
 
 1. Once published, obtain the release artifacts and `SHA256SUMS`, then verify their
    checksums. A supplied local candidate can be checked before publication, but it
@@ -109,7 +113,7 @@ Organizational internal distribution requires separate registration and permissi
 
 Provide this request together with the repository or eventual release link:
 
-> Install Figma Semantic Bridge 0.1.0 Alpha and prepare it for use. Read README.en.md
+> Install Figma Semantic Bridge 0.1.1 Alpha and prepare it for use. Read README.en.md
 > and docs/alpha-installation.en.md first. Inspect my OS/CPU, existing installation,
 > data and port 4177 use. Verify the release artifact checksums, then install the app
 > and prebuilt Figma plugin. Preserve projects and existing MCP configuration, and
@@ -167,7 +171,28 @@ token from the default data directory. Start with `list_projects` and
 · [Completion status and external dependencies](docs/completion-status.md)
 · [Release boundaries and security notes](docs/release-readiness.md)
 
-## Observed installed-app behavior
+## Observed 0.1.1 candidate behavior
+
+**198 Node tests, TypeScript and production builds, 27 browser scenarios, two fixture
+manifests and native policy/locale self-tests passed.** Checks exercised the extracted
+app ZIP, mounted DMG, plugin ZIP, version agreement and offline guide contents.
+
+The update preserved application/plugin directory identity, 15 existing project
+files and the token. Native observations confirmed automatic pairing, retained Korean
+preferences, mixed-language unsaved input during switching, four offline guides and
+reuse of the existing Figma manifest registration. The plugin retained its connected
+session while changing language. The installed bundled MCP read an actual selected
+node; the original Figma source remained unchanged.
+The previous 0.1.0 saved synthetic capture with 21 nodes also opened read-only,
+with its project file unchanged.
+
+The [0.1.1 record](docs/evaluation/release-0.1.1-acceptance.json) describes the candidate
+installed before the final documentation commit. The separately generated
+`figma-semantic-bridge-0.1.1-verification.json` binds the final clean revision to the
+rebuilt artifacts' hashes. These native observations are not reassigned to a newly
+generated package.
+
+## Previous 0.1.0 installed-app observations
 
 The installed `/Applications/Figma Semantic Bridge.app` used its bundled Node to
 exercise embedded-editor pairing, synthetic annotation save, native JSON/Markdown
@@ -182,7 +207,9 @@ projects were preserved. Quitting removed the app-owned port-4177 listener, and
 restart preserved the token, projects and saved annotation. These are installed-app
 observations, not independent semantic evaluations or a first-download test on
 another Mac. See the validation record for the dated automated checks; final
-publication revision and artifact checksums are fixed separately.
+publication revision and artifact checksums are fixed separately. These observations
+remain historical; the independent 0.1.1 results appear above and in the
+[0.1.1 release notes](docs/releases/0.1.1.md).
 
 ## Develop and package from source
 

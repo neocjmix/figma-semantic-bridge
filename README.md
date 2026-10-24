@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.1.0 Alpha
+# Figma Semantic Bridge 0.1.1 Alpha
 
 [English](README.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md) · [User guide — English](docs/user-guide.en.md)
 
@@ -7,15 +7,16 @@
 macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니다. 공식 Node.js
 22.23.4, 제품용 로컬 서버·웹·MCP와 미리 빌드된 Figma 플러그인을 포함합니다.
 사용자가 Node.js, npm, 소스 체크아웃이나 별도 개발 서버를 준비할 필요가 없습니다.
-실제 설치·실행은 macOS 26.6.2에서 검증했으며 macOS 13 실행은 아직 확인하지 않았습니다.
+0.1.1의 실제 로컬 업데이트·실행은 macOS 26.6.2에서 검증했으며 macOS 13 실행은 아직 확인하지 않았습니다.
 
-**로컬 설치·실행 검증 완료 · 공개 릴리스 게시 대기.** 라이선스 선택 후 최종 커밋과
-설치 파일을 공개합니다. 다운로드 URL은 게시 예정이며 아직 사용할 공개 릴리스 링크는 없습니다.
+**0.1.1 다국어 알파 후보의 패키지·로컬 업데이트 검증 완료 · 공개 릴리스 게시 대기.**
+라이선스 선택 후 최종 게시 커밋과 설치 파일을 고정합니다.
+다운로드 URL은 게시 예정이며 아직 사용할 공개 릴리스 링크는 없습니다.
 
 [상세 설치·세팅 가이드](docs/alpha-installation.md)
 · [Installation — English](docs/alpha-installation.en.md)
-· [릴리즈 노트](docs/releases/0.1.0.md)
-· [설치 앱 검증 집계](docs/evaluation/alpha-desktop-acceptance.json)
+· [릴리즈 노트](docs/releases/0.1.1.md)
+· [0.1.1 업데이트 검증 집계](docs/evaluation/release-0.1.1-acceptance.json)
 
 ## 무엇을 하는 앱인가요?
 
@@ -45,14 +46,14 @@ AI가 사람의 승인을 덮어쓰지 않습니다. 이 앱 자체가 완성 �
 
 | 파일 | 용도 |
 | --- | --- |
-| `figma-semantic-bridge-0.1.0-macos-arm64.dmg` | 앱을 Applications로 복사하는 설치 이미지 |
-| `figma-semantic-bridge-0.1.0-macos-arm64.zip` | 같은 앱의 ZIP 배포본 |
-| `figma-semantic-bridge-plugin-0.1.0.zip` | Figma Desktop에 가져올 플러그인: 컴파일된 코드 포함 |
-| `figma-semantic-bridge-0.1.0-INSTALLATION.md` | AI 에이전트와 사용자를 위한 오프라인 설치 가이드 |
-| `figma-semantic-bridge-0.1.0-INSTALLATION.en.md` | 영어 설치·MCP 설정 가이드 |
-| `figma-semantic-bridge-0.1.0-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.0-USER-GUIDE.en.md` | 한국어·영어 작업 순서와 상황별 사용자 가이드 |
+| `figma-semantic-bridge-0.1.1-macos-arm64.dmg` | 앱을 Applications로 복사하는 설치 이미지 |
+| `figma-semantic-bridge-0.1.1-macos-arm64.zip` | 같은 앱의 ZIP 배포본 |
+| `figma-semantic-bridge-plugin-0.1.1.zip` | Figma Desktop에 가져올 플러그인: 컴파일된 코드 포함 |
+| `figma-semantic-bridge-0.1.1-INSTALLATION.md` | AI 에이전트와 사용자를 위한 오프라인 설치 가이드 |
+| `figma-semantic-bridge-0.1.1-INSTALLATION.en.md` | 영어 설치·MCP 설정 가이드 |
+| `figma-semantic-bridge-0.1.1-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.1-USER-GUIDE.en.md` | 한국어·영어 작업 순서와 상황별 사용자 가이드 |
 | `SHA256SUMS` | 다운로드한 파일의 SHA-256 확인 값 |
-| `figma-semantic-bridge-0.1.0-release.json` | 버전, 플랫폼, 런타임과 서명 상태 |
+| `figma-semantic-bridge-0.1.1-release.json` | 버전, 플랫폼, 런타임과 서명 상태 |
 
 GitHub가 자동 생성하는 **Source code** 압축 파일은 일반 사용자용 설치 파일이 아닙니다.
 Intel Mac, Windows, Linux용 데스크톱 앱은 이번 알파에 포함하지 않습니다.
@@ -63,6 +64,11 @@ Intel Mac, Windows, Linux용 데스크톱 앱은 이번 알파에 포함하지 �
 수행하고, 조직 정책으로 금지된 환경에서는 진행을 중단하세요.
 
 ## 처음 사용하는 순서
+
+0.1.0이 이미 설치되어 있다면 아래의 신규 설치를 반복하지 않고
+[0.1.0 → 0.1.1 업데이트](docs/alpha-installation.md#9-백업업데이트복원)를 따르세요.
+기존 앱 디렉터리는 그대로 두고 정상 종료 후 내부 파일을 교체하며,
+프로젝트·토큰·언어 선택과 Figma 플러그인의 등록 경로를 보존합니다.
 
 1. 공개된 후 릴리스의 설치 파일과 `SHA256SUMS`를 받고 체크섬을 확인합니다.
    게시 전에는 제공받은 로컬 후보 파일을 검증할 수 있지만 공개 다운로드로 간주하지 않습니다.
@@ -91,7 +97,7 @@ Figma private-plugin 기능에 의존하므로 Community 등록을 마친 플러
 
 아래 요청과 이 저장소/릴리즈 링크를 함께 전달하세요.
 
-> Figma Semantic Bridge 0.1.0 Alpha를 설치하고 실무 사용 준비를 해줘.
+> Figma Semantic Bridge 0.1.1 Alpha를 설치하고 실무 사용 준비를 해줘.
 > 먼저 README와 docs/alpha-installation.md를 읽고, 현재 OS/CPU와 기존 설치·데이터·
 > 4177 포트 사용 여부를 확인해. 릴리즈 설치 파일의 체크섬을 검증한 뒤 앱과
 > 미리 빌드된 Figma 플러그인을 설치해. 기존 프로젝트와 MCP 설정을 보존하고,
@@ -147,7 +153,25 @@ Figma private-plugin 기능에 의존하므로 Community 등록을 마친 플러
 · [완료 항목과 외부 의존](docs/completion-status.md)
 · [배포 경계와 보안 설명](docs/release-readiness.md)
 
-## 실제 설치 앱에서 확인한 것
+## 0.1.1 후보에서 확인한 것
+
+**198개 Node 테스트·타입 검사·빌드, 27개 브라우저 테스트, 2개 fixture manifest와
+native 정책·언어 자체 검사를 통과했습니다.** 앱 ZIP과 마운트한 DMG, 플러그인 ZIP,
+버전 일치와 오프라인 안내를 실제 검사했습니다.
+
+기존 앱과 플러그인 디렉터리를 유지하는 업데이트로 15개 프로젝트 파일과 토큰을
+그대로 보존했습니다. 자동 페어링, 기존 한국어 선택, 언어 전환 중 미저장 혼합 언어 입력,
+네 개 오프라인 가이드와 기존 Figma manifest 등록 재사용을 확인했습니다.
+플러그인의 언어 전환은 연결을 유지했고, 설치된 번들 MCP에서 실제 선택 노드를
+읽었습니다. 원본 Figma는 수정하지 않았습니다.
+이전 0.1.0의 21개 노드 합성 캡처도 읽기 전용으로 열었고 프로젝트 파일은 그대로 유지됐습니다.
+
+[0.1.1 관측 기록](docs/evaluation/release-0.1.1-acceptance.json)은 문서 최종 커밋 전
+설치한 후보의 결과입니다. 최종 clean commit에서 다시 생성한 패키지의 revision과
+asset SHA는 별도의 `figma-semantic-bridge-0.1.1-verification.json`으로 고정합니다.
+이 관측을 새로 생성할 패키지의 실행 결과로 대신하지 않습니다.
+
+## 이전 0.1.0 설치 앱에서 확인한 것
 
 `/Applications/Figma Semantic Bridge.app`의 번들 Node로 실행하여 내장 편집기의
 자동 페어링, 합성 주석 저장, native 저장 대화상자의 JSON/Markdown 내보내기,
@@ -159,10 +183,11 @@ Figma에 등록하여 Dev Mode의 소유 합성 파일에서 21개 노드와 800
 중지·백업하여 전환했고 기존 6개 프로젝트는 보존했습니다. 앱 종료 후 자신이 시작한
 4177 listener가 없어졌으며, 재실행 후 토큰·프로젝트·저장 주석이 유지됐습니다.
 이는 실제 설치 앱 검증이며 독립 사용자 의미 평가나 다른 Mac의 최초 다운로드 검증은 아닙니다.
-최신 전체 검사는 **196개 Node 테스트·타입 검사·빌드, 27개 브라우저 테스트 통과**입니다.
+이전 다국어 기준선 검사는 **196개 Node 테스트·타입 검사·빌드, 27개 브라우저 테스트 통과**입니다.
 한국어/영어 메뉴·화면 동기화, 미저장 입력 보존, 오프라인 가이드 네 개, 앱/플러그인
 재실행 후 언어 유지도 확인했습니다. [다국어 검증 기록](docs/evaluation/bilingual-interface-acceptance.json)에 실제 관측과 한계를 기록했습니다.
-최종 게시 커밋·artifact checksum은 게시 절차에서 별도로 고정합니다.
+이전 기록은 역사로 유지하며, 0.1.1의 별도 결과는 위의 관측과
+[릴리스 노트](docs/releases/0.1.1.md)에 구분합니다.
 
 ## 소스에서 개발·패키징하기
 

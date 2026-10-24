@@ -2,8 +2,10 @@ import Foundation
 
 enum DesktopPolicy {
     static let service = "figma-semantic-bridge"
-    static let version = "0.1.0"
+    static let version = "0.1.1"
     static let schemaVersion = "1.0.0"
+    static let releaseInfo = ["service": service, "version": version, "schemaVersion": schemaVersion]
+    static let incompatibleServiceMessage = "Port 4177 is occupied by an unrecognized or incompatible service. Quit or update its owning application or your earlier development service, then choose Retry. The desktop requires service version \(version) and schema \(schemaVersion)."
     static let bundleIdentifier = "com.neocjmix.figma-semantic-bridge.desktop"
     static let origin = "http://127.0.0.1:4177"
     static let home = URL(string: origin + "/")!

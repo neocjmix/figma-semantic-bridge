@@ -72,12 +72,82 @@ summary { cursor: pointer; font-size: 11px; font-weight: 600; color: #526a86; pa
 .snapshot-number { display: grid; place-items: center; height: 28px; width: 24px; flex-shrink: 0; border: 1px solid #dce5ed; border-radius: 4px; color: #7a8da3; background: white; font-size: 9px; }
 .snapshot-item strong { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 11px; color: #39536c; line-height: 1.5; }
 .snapshot-item small { display: block; font-weight: 400; font-size: 9px; color: #8b9aad; margin-top: 3px; }
+.acquisition-detail { margin-top: 12px; padding: 11px; border: 1px solid #dce8e7; border-radius: 7px; background: #f7fbfa; overflow-wrap: anywhere; }
+.acquisition-heading { display: flex; justify-content: space-between; gap: 6px; align-items: flex-start; font-size: 11px; color: #284d4b; }
+.acquisition-status { flex-shrink: 0; padding: 2px 5px; border-radius: 4px; background: #e5f0ed; color: #326459; font-size: 9px; }
+.acquisition-status.partial, .acquisition-status.failed, .acquisition-status.cancel_requested, .acquisition-status.interrupted { background: #fff2d9; color: #8c6427; }
+.acquisition-source { margin: 8px 0 3px; font-weight: 600; }
+.acquisition-source span { color: #6c8790; font-weight: 400; }
+.acquisition-detail p { margin-bottom: 7px; }
+.acquisition-warning { color: #8a641e; }
+.acquisition-budget { padding: 7px 8px; border-left: 2px solid #7aada6; background: #eff7f5; color: #43635f; }
+.acquisition-progress { margin-top: 10px; }
+.acquisition-progress progress { width: 100%; height: 8px; accent-color: var(--teal); }
+.acquisition-steps { margin: 8px 0; font-size: 10px; }
+.acquisition-steps div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid #e1eae9; }
+.acquisition-steps dt { color: #617a80; }
+.acquisition-steps dd { margin: 0; font-weight: 600; color: #385e5b; text-align: right; }
+.acquisition-preview { margin: 10px 0; border: 1px solid #d6e4e2; border-radius: 5px; background: white; overflow: hidden; }
+.acquisition-preview img { display: block; width: 100%; max-height: 160px; object-fit: contain; }
+.acquisition-preview figcaption { padding: 7px; font-size: 10px; line-height: 1.5; color: #647780; }
+.acquisition-preview figcaption button { display: block; margin-top: 6px; }
+.node-comparison-dialog.acquisition-overview-dialog { width: fit-content; max-width: min(90vw, 1400px); min-width: min(90vw, 420px); }
+.acquisition-overview-dialog img { display: block; max-width: 100%; max-height: calc(90vh - 115px); width: auto; height: auto; object-fit: contain; margin: 14px auto 0; }
+.acquisition-warnings { padding-left: 17px; margin: 7px 0; color: #846838; font-size: 10px; line-height: 1.5; }
+.acquisition-remove { color: #8c5550; white-space: normal; text-align: left; }
+.collection-panel > summary { padding: 0; color: var(--ink); font-size: 12px; }
+.collection-panel > summary span { display: block; margin: 5px 0 0 15px; color: var(--muted); font-size: 10px; font-weight: 400; line-height: 1.5; }
+.collection-panel > p { margin: 12px 0 7px; }
+.collection-detail { margin-top: 12px; padding: 10px; border: 1px solid #dce8e7; border-radius: 7px; background: #f7fbfa; overflow-wrap: anywhere; }
+.collection-detail > strong { display: block; color: #284d4b; font-size: 11px; }
+.collection-detail > strong span { color: #6c8790; font-weight: 400; }
+.collection-detail p { margin: 8px 0; }
+.collection-warning { color: #8a641e; }
+.collection-detail progress { width: 100%; height: 8px; margin: 5px 0; accent-color: var(--teal); }
+.collection-warnings { padding-left: 17px; font-size: 10px; line-height: 1.5; color: #846838; }
+.collection-inspection { border-top: 1px solid #dce8e7; margin-top: 12px; padding-top: 8px; }
+.collection-nodes { list-style: none; padding: 0; margin: 8px 0; max-height: 240px; overflow-y: auto; }
+.collection-nodes li { border-bottom: 1px solid #e1eae9; padding: 7px 0; font-size: 10px; }
+.collection-nodes li strong, .collection-nodes li small { display: block; overflow-wrap: anywhere; }
+.collection-nodes li small { margin-top: 3px; color: #718095; }
+.collection-page-actions { display: flex; gap: 6px; }
+.collection-page-actions button { flex: 1; min-width: 0; white-space: normal; }
+.collection-text { border-top: 1px solid #dce8e7; margin-top: 10px; padding-top: 10px; font-size: 10px; }
+.collection-text pre { max-height: 240px; overflow: auto; background: white; border: 1px solid #dce8e7; border-radius: 5px; padding: 8px; user-select: text; }
+.collection-remove { color: #8c5550; white-space: normal; text-align: left; }
+.collection-link-actions { border-top: 1px solid #dce8e7; padding-top: 7px; margin-top: 10px; }
+.collection-link-actions .wide + .wide { margin-top: 5px; }
+.evidence-warning { color: #8a641e; line-height: 1.55; }
+.evidence-scope-warning { padding: 9px 12px; }
+.evidence-scope-warning > strong { font-size: 11px; }
+.evidence-scope-warning > p { margin: 5px 0; }
+.evidence-scope-warning details { font-size: 10px; }
+.evidence-source-review .advanced form,
+.evidence-text-picker form { display: flex; align-items: end; gap: 7px; margin: 8px 0; }
+.evidence-source-review .advanced form label,
+.evidence-text-picker form label { flex: 1; min-width: 0; }
+.evidence-source-review .advanced form input,
+.evidence-text-picker form input { width: 100%; }
+.evidence-source-review .collection-nodes,
+.evidence-text-picker .collection-nodes { max-height: 300px; overflow-y: auto; }
+.evidence-source-review .collection-nodes li,
+.evidence-text-picker .collection-nodes li { display: flex; gap: 5px; align-items: flex-start; justify-content: space-between; }
+.evidence-source-review .collection-nodes li .checkbox,
+.evidence-text-picker .collection-nodes li > span { min-width: 0; flex: 1; }
+.evidence-source-review .collection-nodes li button,
+.evidence-text-picker .collection-nodes li button { flex-shrink: 0; max-width: 95px; white-space: normal; }
 .capture-transfer { border-top: 1px solid var(--line); margin-top: 14px; }
 .capture-transfer-scopes { max-height: 180px; overflow-y: auto; }
 .capture-transfer .checkbox { align-items: flex-start; overflow-wrap: anywhere; }
 .capture-transfer .checkbox input { margin-top: 2px; }
 .capture-transfer input[type=file] { font-size: 10px; padding: 8px 5px; }
 .capture-transfer-warning { color: #8a641e; }
+.source-transfer-panel > summary { padding: 0; color: var(--ink); font-size: 12px; }
+.source-transfer-panel > p { margin: 10px 0 7px; }
+.source-transfer-panel label { display: block; margin: 9px 0; }
+.source-transfer-panel input[type=file] { font-size: 10px; padding: 8px 5px; }
+.source-transfer-panel progress { width: 100%; height: 8px; margin: 5px 0; accent-color: var(--teal); }
+.source-transfer-warning { color: #8a641e; line-height: 1.55; }
 .components-section { flex: 1; }
 .component-list { margin: 0 -6px 13px; }
 .component-row { display: flex; align-items: center; gap: 7px; border-radius: 5px; margin-bottom: 3px; }

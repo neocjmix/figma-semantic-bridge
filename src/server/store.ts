@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { AnnotationSchema, ProjectSchema, ProposalSchema, SpecificationSchema, type Operation, type Project } from '../shared/contracts.js';
-import { applyOperation, createProject, validateProject } from '../core/index.js';
+import { applyOperation, createProject, validateProject, type OperationContext } from '../core/index.js';
 import { validatePreview } from './preview.js';
 import { ServiceError } from './errors.js';
 
@@ -20,6 +20,8 @@ const state=(p:Project):HistoryState=>({name:p.name,annotations:p.annotations,sp
 /** Atomic local JSON store. History retains annotation state, not copies of preview images. */
 export class ProjectStore {
   private queues=new Map<string,Promise<void>>();
+  private prepareEvidence:((project:Project,operation:Operation)=>Promise<Partial<OperationContext>>)|undefined;
+  setEvidenceResolver(resolve:(project:Project,operation:Operation)=>Promise<Partial<OperationContext>>):void{this.prepareEvidence=resolve;}
   constructor(readonly dataDir:string) {}
   async initialize():Promise<void> {
     await mkdir(this.dataDir,{recursive:true,mode:0o700});
@@ -42,7 +44,7 @@ export class ProjectStore {
       const envelope=EnvelopeSchema.parse(JSON.parse(await file.readFile('utf8')));
       if(envelope.project.id!==id)throw new ServiceError('INVALID_PROJECT','Stored project identity does not match its file.',500);
       envelope.project=validateProject(envelope.project);
-      for(const snapshot of envelope.project.snapshots)validatePreview(snapshot);
+      for(const snapshot of [...envelope.project.snapshots,...envelope.project.scopes??[]])validatePreview(snapshot);
       return envelope;
     } finally {await file.close();}
   }
@@ -80,6 +82,7 @@ export class ProjectStore {
     return this.importProject(createProject(randomUUID(),name));
   }
   async importProject(value:Project):Promise<Project> {
+    if(value.scopes?.length)throw new ServiceError('SOURCE_RESOLUTION_REQUIRED','Import backed source scopes through the verified source-transfer workflow.',409);
     const project=validateProject({...value,id:randomUUID()});
     for(const snapshot of project.snapshots)validatePreview(snapshot);
     await this.exclusive(project.id,()=>this.write({project,past:[],future:[]}));
@@ -92,19 +95,27 @@ export class ProjectStore {
     const summaries=[];
     for(const name of files){
       const p=await this.get(name.slice(0,-5));
-      summaries.push({id:p.id,name:p.name,revision:p.revision,updatedAt:p.updatedAt,snapshotCount:p.snapshots.length,annotationCount:p.annotations.length,specificationCount:p.specifications.length});
+      summaries.push({id:p.id,name:p.name,revision:p.revision,updatedAt:p.updatedAt,snapshotCount:p.snapshots.length+(p.scopes?.length??0),annotationCount:p.annotations.length,specificationCount:p.specifications.length});
     }
     return summaries.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||a.id.localeCompare(b.id));
   }
-  async mutate(id:string,expectedRevision:number,operation:Operation,actor:'human'|'ai'='human'):Promise<Project> {
+  async mutate(id:string,expectedRevision:number,operation:Operation,actor:'human'|'ai'='human',evidenceWrite=false,signal?:AbortSignal):Promise<Project> {
+    if(!evidenceWrite&&(operation.type==='add_evidence_scope'||operation.type==='attach_scope_collection'))throw new ServiceError('FORBIDDEN','Use a verified source attachment route.',403);
+    const active=()=>{if(signal?.aborted)throw new ServiceError('CANCELLED','Workspace mutation cancelled before its atomic commit.',499);};
     return this.exclusive(id,async()=>{
+      active();
       const envelope=await this.read(id);
       this.checkRevision(envelope.project,expectedRevision);
-      const project=applyOperation(envelope.project,operation,{actor});
-      for(const snapshot of project.snapshots)validatePreview(snapshot);
+      const evidence=this.prepareEvidence?await this.prepareEvidence(envelope.project,operation):{};
+      active();
+      const project=applyOperation(envelope.project,operation,{...evidence,actor,evidenceWrite});
+      for(const snapshot of [...project.snapshots,...project.scopes??[]])validatePreview(snapshot);
       // Captures remain cached sources even when annotation edits are undone.
       if(operation.type!=='add_snapshot')envelope.past=[...envelope.past,state(envelope.project)].slice(-MAX_HISTORY);
       envelope.future=[];envelope.project=project;
+      // Once the atomic write begins it may commit despite a later disconnect;
+      // callers must reload rather than claim that such a commit was cancelled.
+      active();
       await this.write(envelope);return structuredClone(project);
     });
   }
@@ -116,7 +127,14 @@ export class ProjectStore {
       const prior=source.pop();if(!prior)throw new ServiceError('NO_HISTORY',`Nothing to ${direction}.`,409);
       target.push(state(envelope.project));if(target.length>MAX_HISTORY)target.shift();
       // Revisions stay monotonic; stale HTTP/MCP writers cannot use a historical version.
-      envelope.project=validateProject({...envelope.project,...prior,revision:envelope.project.revision+1,updatedAt:new Date().toISOString()});
+      const restored=validateProject({...envelope.project,...prior,revision:envelope.project.revision+1,updatedAt:new Date().toISOString()});
+      // History restores semantic approvals, so it must resolve their current
+      // immutable backing under the same lock as an ordinary edit. Preparing a
+      // neutral name operation validates evidence without reapplying any edit.
+      const evidence=this.prepareEvidence?await this.prepareEvidence(restored,{type:'rename_project',name:restored.name}):{};
+      if(restored.scopes?.some(scope=>scope.kind==='collection')&&!evidence.sources)
+        throw new ServiceError('SOURCE_RESOLUTION_REQUIRED','Resolve bound source collections before restoring workspace history.',409);
+      envelope.project=validateProject(restored,evidence.sources);
       await this.write(envelope);return structuredClone(envelope.project);
     });
   }

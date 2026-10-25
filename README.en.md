@@ -1,5 +1,7 @@
 # Figma Semantic Bridge 0.1.1 Alpha
 
+**Unreleased development changes (2026-10-26):** Image-first drafts, selective node/branch reads, chunked-source review and approval, and large source transfers are implemented in the working tree. The 0.1.1 downloads do not contain these changes. See the [acquisition guide](docs/acquisition-workflow.en.md) and [verification record](docs/evaluation/collection-backed-workflow.md).
+
 [한국어](README.md) · [User guide — English](docs/user-guide.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md)
 
 **A local app for people to annotate the meaning and requirements of Figma screens,
@@ -18,6 +20,11 @@ corporate or client designs. See [desktop authentication #11](https://github.com
 [plugin authentication #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
 [capture validation #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)
 and the [release boundaries](docs/release-readiness.md).
+
+The unreleased source's authenticated, encrypted connection passed an actual
+Figma check with an owned synthetic file. The 0.1.1 downloads remain unchanged;
+final review and package verification are separate gates. See the
+[source upgrade and validation scope](docs/unreleased-upgrade.md).
 
 [Detailed installation and setup](docs/alpha-installation.en.md)
 · [한국어 설치 가이드](docs/alpha-installation.md)

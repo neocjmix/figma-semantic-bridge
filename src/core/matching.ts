@@ -92,6 +92,8 @@ export function matchRegion(snapshot: Snapshot, region: Rect, options: { toleran
   }).sort((a, b) => Number(b.near) - Number(a.near) || b.iou - a.iou || index.depth(a.node.id) - index.depth(b.node.id) || compareId(a.node.id, b.node.id));
   const candidates: MatchCandidate[] = scored.slice(0, maxCandidates).map(item => ({ nodeId: item.node.id, coverage: item.coverage, iou: item.iou, reason: item.near ? 'equal or near-equal bounds' : item.inside ? 'inside the selected region' : item.contains ? 'contains the selected region' : 'partial spatial intersection' }));
   if(scored.length>maxCandidates)warnings.push(`Spatial candidate limit exceeded. Only the first ${maxCandidates} candidate diagnostics are shown; search all captured nodes or narrow the region to inspect more candidates.`);
+  if(!snapshot.completeness.complete)return {sourceRefs:[],candidates,ambiguous:true,
+    warnings:[...warnings,'Automatic source references are withheld until the requested capture is complete.']};
   const reference = (item: typeof scored[number], matchType: SourceReference['matchType']): SourceReference => ({ snapshotId: snapshot.id, nodeId: item.node.id, matchType, coverage: item.coverage });
   const exact = scored.filter(item => item.near).sort((a, b) => Number(nearEqual(region, b.box, 0)) - Number(nearEqual(region, a.box, 0)) || b.iou - a.iou || index.depth(a.node.id) - index.depth(b.node.id) || compareId(a.node.id, b.node.id));
   if (exact.length) {

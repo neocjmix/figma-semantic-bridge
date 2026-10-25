@@ -1,0 +1,990 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "constructed-geometry-grounding-benchmark",
+  "measuredAt": "2026-10-25T15:40:52.210Z",
+  "command": "npm run benchmark:grounding",
+  "generator": "scripts/benchmark-grounding.ts",
+  "corpusSha256": "32a27d16bb7ddad350569f289415a689125b7928464a932f2b6cf679101cf699",
+  "runtime": {
+    "node": "v22.22.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "warmupPerCase": 3,
+    "repetitionsPerCase": 25
+  },
+  "labelMethod": "Literal source-ID sets and acceptable alternatives written from constructed geometry roles; expected sets never invoke the matcher. Authored by the implementation agent, not independent human reviewers.",
+  "scoreMethod": "Set TP/FP/FN against one acceptable set chosen by highest set F1; exact empty/empty is a successful no-match, with null precision/recall/F1 denominators. Ties use lexicographically sorted source IDs. Macro means exclude null denominators and report their counts.",
+  "limitations": [
+    "Constructed scalar geometry only: no real Figma reads, images, paint order, mask or clipping interpretation.",
+    "Perfect scores on these small selected cases do not establish representative accuracy, unseen-case generalization or semantic correctness.",
+    "Equal-bounds alternatives deliberately do not label which layer is current or visibly on top. Ambiguity is reported separately from source-set accuracy.",
+    "Runtime includes per-call index construction on 2–5 nodes; three warmups and 25 repetitions by default are local observations, not a performance gate.",
+    "The incomplete-observation case labels required abstention, not the unknown complete source set. No-match and withheld cases are reported explicitly."
+  ],
+  "semanticAccuracy": {
+    "status": "not measured",
+    "reason": "No independent human component/spec labels or representative real-world corpus."
+  },
+  "aggregate": {
+    "caseCount": 14,
+    "micro": {
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "macro": {
+      "precision": {
+        "value": 1,
+        "measuredCases": 11
+      },
+      "recall": {
+        "value": 1,
+        "measuredCases": 11
+      },
+      "f1": {
+        "value": 1,
+        "measuredCases": 11
+      }
+    },
+    "exactAcceptableSetCount": 14,
+    "deterministicCaseCount": 14,
+    "ambiguousCaseCount": 4,
+    "ambiguityAgreementCount": 14,
+    "completeScopeAmbiguousCount": 3,
+    "completeScopeAmbiguousFrequency": 0.23076923076923078,
+    "noMatchCaseCount": 3,
+    "correctNoMatchCount": 3,
+    "positiveCaseAbstentions": 0,
+    "completeEmptySpaceCases": 2,
+    "requiredIncompleteAbstentions": 1
+  },
+  "cases": [
+    {
+      "id": "single-exact",
+      "description": "The selected rectangle is exactly one isolated source.",
+      "nodeCount": 2,
+      "scopeComplete": true,
+      "region": {
+        "x": 20,
+        "y": 30,
+        "width": 80,
+        "height": 40
+      },
+      "acceptableSourceSets": [
+        [
+          "button"
+        ]
+      ],
+      "expectedIds": [
+        "button"
+      ],
+      "predictedIds": [
+        "button"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.02625,
+          0.023958,
+          0.072459,
+          0.024542,
+          0.02075,
+          0.017791,
+          0.017875,
+          0.09425,
+          0.026416,
+          0.017958,
+          0.0165,
+          2.011833,
+          0.015416,
+          0.014833,
+          0.013959,
+          0.013875,
+          0.014125,
+          0.013875,
+          0.014,
+          0.014209,
+          0.013667,
+          0.013958,
+          0.014125,
+          0.013583,
+          0.013417
+        ],
+        "median": 0.015416,
+        "min": 0.013417,
+        "max": 2.011833
+      }
+    },
+    {
+      "id": "tolerance-edge",
+      "description": "A 0.3px selection offset still refers to the isolated rectangle.",
+      "nodeCount": 2,
+      "scopeComplete": true,
+      "region": {
+        "x": 9.7,
+        "y": 10,
+        "width": 100,
+        "height": 100
+      },
+      "acceptableSourceSets": [
+        [
+          "card"
+        ]
+      ],
+      "expectedIds": [
+        "card"
+      ],
+      "predictedIds": [
+        "card"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.013708,
+          0.013791,
+          0.01425,
+          0.01375,
+          0.013625,
+          0.013834,
+          0.013708,
+          0.013583,
+          0.013459,
+          0.013375,
+          0.013583,
+          0.013541,
+          0.013625,
+          0.013625,
+          0.01375,
+          0.015125,
+          0.015958,
+          0.01475,
+          0.015875,
+          0.014583,
+          0.014792,
+          0.015916,
+          0.014791,
+          0.015,
+          0.015584
+        ],
+        "median": 0.013791,
+        "min": 0.013375,
+        "max": 0.015958
+      }
+    },
+    {
+      "id": "equal-sibling-bounds",
+      "description": "Two siblings occupy the same rectangle; either geometric candidate is acceptable, but ambiguity is required.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 20,
+        "y": 20,
+        "width": 100,
+        "height": 60
+      },
+      "acceptableSourceSets": [
+        [
+          "layer-a"
+        ],
+        [
+          "layer-b"
+        ]
+      ],
+      "expectedIds": [
+        "layer-a"
+      ],
+      "predictedIds": [
+        "layer-a"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": true,
+      "expectedAmbiguous": true,
+      "candidateCount": 3,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.018625,
+          0.020583,
+          0.021667,
+          0.023916,
+          0.020542,
+          0.034625,
+          0.022792,
+          0.021125,
+          0.021333,
+          0.020125,
+          0.02175,
+          0.021042,
+          0.020208,
+          0.02025,
+          0.021291,
+          0.023542,
+          0.021167,
+          0.020916,
+          0.019958,
+          0.022042,
+          0.02075,
+          0.020083,
+          0.021042,
+          0.020333,
+          0.020792
+        ],
+        "median": 0.021042,
+        "min": 0.018625,
+        "max": 0.034625
+      }
+    },
+    {
+      "id": "equal-parent-child-bounds",
+      "description": "A container and its fill share bounds; geometry alone does not establish their semantic role.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 20,
+        "y": 20,
+        "width": 100,
+        "height": 60
+      },
+      "acceptableSourceSets": [
+        [
+          "container"
+        ],
+        [
+          "fill"
+        ]
+      ],
+      "expectedIds": [
+        "container"
+      ],
+      "predictedIds": [
+        "container"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": true,
+      "expectedAmbiguous": true,
+      "candidateCount": 3,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.026209,
+          0.024083,
+          0.021,
+          0.022083,
+          0.039166,
+          0.022834,
+          0.021583,
+          0.021208,
+          0.0305,
+          0.021708,
+          0.0205,
+          0.020375,
+          0.020833,
+          0.031,
+          0.019292,
+          0.018833,
+          0.019209,
+          0.018708,
+          0.018791,
+          0.019042,
+          0.019083,
+          0.019,
+          0.018875,
+          0.019042,
+          0.019208
+        ],
+        "median": 0.0205,
+        "min": 0.018708,
+        "max": 0.039166
+      }
+    },
+    {
+      "id": "aggregate-siblings-with-gap",
+      "description": "The region spans two distinct sibling boxes and the empty gap between them.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 200,
+        "height": 50
+      },
+      "acceptableSourceSets": [
+        [
+          "left",
+          "right"
+        ]
+      ],
+      "expectedIds": [
+        "left",
+        "right"
+      ],
+      "predictedIds": [
+        "left",
+        "right"
+      ],
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 3,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.020375,
+          0.019583,
+          0.020208,
+          0.020417,
+          0.0195,
+          0.019542,
+          0.019125,
+          0.022417,
+          0.021208,
+          0.0225,
+          0.022167,
+          0.036083,
+          0.016667,
+          0.015375,
+          0.014958,
+          0.0165,
+          0.014958,
+          0.014459,
+          0.01925,
+          0.014667,
+          0.015458,
+          0.014667,
+          0.014542,
+          0.015666,
+          0.014625
+        ],
+        "median": 0.019125,
+        "min": 0.014459,
+        "max": 0.036083
+      }
+    },
+    {
+      "id": "aggregate-distant-ancestry",
+      "description": "Two selected controls belong to separate large tree branches; neither branch is the selected visual region.",
+      "nodeCount": 5,
+      "scopeComplete": true,
+      "region": {
+        "x": 100,
+        "y": 100,
+        "width": 580,
+        "height": 40
+      },
+      "acceptableSourceSets": [
+        [
+          "control-a",
+          "control-b"
+        ]
+      ],
+      "expectedIds": [
+        "control-a",
+        "control-b"
+      ],
+      "predictedIds": [
+        "control-a",
+        "control-b"
+      ],
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 5,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.02325,
+          0.02275,
+          0.023625,
+          0.022041,
+          0.023334,
+          0.022375,
+          0.022958,
+          0.0225,
+          0.023,
+          0.022583,
+          0.021708,
+          0.023083,
+          0.023375,
+          0.030208,
+          0.022875,
+          0.022667,
+          0.023,
+          0.02175,
+          0.022667,
+          0.023,
+          0.07325,
+          0.02375,
+          0.037417,
+          0.02275,
+          0.019708
+        ],
+        "median": 0.022958,
+        "min": 0.019708,
+        "max": 0.07325
+      }
+    },
+    {
+      "id": "container-frontier",
+      "description": "Two complete controls cover their own nested labels; including label IDs would duplicate the chosen sources.",
+      "nodeCount": 5,
+      "scopeComplete": true,
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 200,
+        "height": 50
+      },
+      "acceptableSourceSets": [
+        [
+          "control-a",
+          "control-b"
+        ]
+      ],
+      "expectedIds": [
+        "control-a",
+        "control-b"
+      ],
+      "predictedIds": [
+        "control-a",
+        "control-b"
+      ],
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 5,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.020583,
+          0.019666,
+          0.021084,
+          0.02075,
+          0.020583,
+          0.01975,
+          0.021167,
+          0.021708,
+          0.021583,
+          0.0205,
+          0.019708,
+          0.020542,
+          0.020542,
+          0.01975,
+          0.020625,
+          0.021666,
+          0.029959,
+          0.0205,
+          0.018958,
+          0.019709,
+          0.019416,
+          0.017958,
+          0.018625,
+          0.018167,
+          0.018875
+        ],
+        "median": 0.0205,
+        "min": 0.017958,
+        "max": 0.029959
+      }
+    },
+    {
+      "id": "partly-overlapping-siblings",
+      "description": "The selected strip intersects two overlapping sources; both need explicit review.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 20,
+        "y": 0,
+        "width": 160,
+        "height": 100
+      },
+      "acceptableSourceSets": [
+        [
+          "left",
+          "right"
+        ]
+      ],
+      "expectedIds": [
+        "left",
+        "right"
+      ],
+      "predictedIds": [
+        "left",
+        "right"
+      ],
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": true,
+      "expectedAmbiguous": true,
+      "candidateCount": 3,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.013208,
+          0.0125,
+          0.012209,
+          0.012375,
+          0.015334,
+          0.013166,
+          0.012417,
+          0.012625,
+          0.012542,
+          0.012208,
+          0.013291,
+          0.014292,
+          0.012375,
+          0.012083,
+          0.013292,
+          0.011875,
+          0.012208,
+          0.01225,
+          0.012291,
+          0.013875,
+          0.012709,
+          0.012625,
+          0.012667,
+          0.01275,
+          0.013291
+        ],
+        "median": 0.012625,
+        "min": 0.011875,
+        "max": 0.015334
+      }
+    },
+    {
+      "id": "hidden-ancestry",
+      "description": "Hidden parent and descendant are unavailable visual candidates; the visible sibling remains.",
+      "nodeCount": 4,
+      "scopeComplete": true,
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "acceptableSourceSets": [
+        [
+          "visible-control"
+        ]
+      ],
+      "expectedIds": [
+        "visible-control"
+      ],
+      "predictedIds": [
+        "visible-control"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.012291,
+          0.012667,
+          0.012583,
+          0.012542,
+          0.013417,
+          0.011125,
+          0.011916,
+          0.01275,
+          0.012292,
+          0.011959,
+          0.011958,
+          0.012125,
+          0.011833,
+          0.012083,
+          0.012667,
+          0.012458,
+          0.012625,
+          0.012583,
+          0.012833,
+          0.012209,
+          0.01175,
+          0.013083,
+          0.011708,
+          0.011875,
+          0.011917
+        ],
+        "median": 0.012291,
+        "min": 0.011125,
+        "max": 0.013417
+      }
+    },
+    {
+      "id": "zero-opacity-ancestry",
+      "description": "A zero-opacity parent suppresses its child from automatic visual grounding.",
+      "nodeCount": 4,
+      "scopeComplete": true,
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "acceptableSourceSets": [
+        [
+          "visible-control"
+        ]
+      ],
+      "expectedIds": [
+        "visible-control"
+      ],
+      "predictedIds": [
+        "visible-control"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.011542,
+          0.013667,
+          0.012125,
+          0.012084,
+          0.012042,
+          0.012042,
+          0.012167,
+          0.012833,
+          0.01225,
+          0.012334,
+          0.012333,
+          0.012583,
+          0.014083,
+          0.01175,
+          0.012166,
+          0.012084,
+          0.012916,
+          0.012167,
+          0.01225,
+          0.012041,
+          0.011875,
+          0.013,
+          0.012125,
+          0.012292,
+          0.012458
+        ],
+        "median": 0.012167,
+        "min": 0.011542,
+        "max": 0.014083
+      }
+    },
+    {
+      "id": "child-outside-parent",
+      "description": "A child lies entirely outside its parent bounds and must still be discoverable.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 300,
+        "y": 40,
+        "width": 60,
+        "height": 40
+      },
+      "acceptableSourceSets": [
+        [
+          "overflow-child"
+        ]
+      ],
+      "expectedIds": [
+        "overflow-child"
+      ],
+      "predictedIds": [
+        "overflow-child"
+      ],
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.009708,
+          0.009709,
+          0.009584,
+          0.009333,
+          0.009333,
+          0.009584,
+          0.011166,
+          0.012542,
+          0.009959,
+          0.010208,
+          0.018875,
+          0.011083,
+          0.010042,
+          0.01,
+          0.009875,
+          0.009833,
+          0.009625,
+          0.009709,
+          0.009459,
+          0.009583,
+          0.010416,
+          0.01,
+          0.010166,
+          0.009875,
+          0.009708
+        ],
+        "median": 0.009875,
+        "min": 0.009333,
+        "max": 0.018875
+      }
+    },
+    {
+      "id": "empty-gap",
+      "description": "The selection covers only empty space between two source nodes; a broad root is not the answer.",
+      "nodeCount": 3,
+      "scopeComplete": true,
+      "region": {
+        "x": 90,
+        "y": 0,
+        "width": 20,
+        "height": 50
+      },
+      "acceptableSourceSets": [
+        []
+      ],
+      "expectedIds": [],
+      "predictedIds": [],
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 1,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.0085,
+          0.008375,
+          0.008541,
+          0.008375,
+          0.008333,
+          0.008875,
+          0.008917,
+          0.0085,
+          0.008542,
+          0.008333,
+          0.00925,
+          0.008584,
+          0.008375,
+          0.008541,
+          0.008584,
+          0.008375,
+          0.008667,
+          0.008583,
+          0.00875,
+          0.008666,
+          0.008625,
+          0.0085,
+          0.009167,
+          0.008292,
+          0.00825
+        ],
+        "median": 0.008541,
+        "min": 0.00825,
+        "max": 0.00925
+      }
+    },
+    {
+      "id": "touching-edge-only",
+      "description": "Touching the outside edge has no positive intersection and must remain unresolved.",
+      "nodeCount": 2,
+      "scopeComplete": true,
+      "region": {
+        "x": 80,
+        "y": 0,
+        "width": 20,
+        "height": 50
+      },
+      "acceptableSourceSets": [
+        []
+      ],
+      "expectedIds": [],
+      "predictedIds": [],
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "exactAcceptableSet": true,
+      "ambiguous": false,
+      "expectedAmbiguous": false,
+      "candidateCount": 1,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.00675,
+          0.00675,
+          0.006667,
+          0.006666,
+          0.006917,
+          0.006708,
+          0.006834,
+          0.006875,
+          0.006958,
+          0.006708,
+          0.007084,
+          0.00675,
+          0.006583,
+          0.006667,
+          0.006541,
+          0.006625,
+          0.006709,
+          0.00675,
+          0.006584,
+          0.006791,
+          0.00675,
+          0.006584,
+          0.00675,
+          0.006625,
+          0.006667
+        ],
+        "median": 0.006709,
+        "min": 0.006541,
+        "max": 0.007084
+      }
+    },
+    {
+      "id": "incomplete-observation",
+      "description": "Even an exact captured source cannot justify complete grounding when the requested scope is truncated.",
+      "nodeCount": 2,
+      "scopeComplete": false,
+      "region": {
+        "x": 20,
+        "y": 30,
+        "width": 80,
+        "height": 40
+      },
+      "acceptableSourceSets": [
+        []
+      ],
+      "expectedIds": [],
+      "predictedIds": [],
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "exactAcceptableSet": true,
+      "ambiguous": true,
+      "expectedAmbiguous": true,
+      "candidateCount": 2,
+      "deterministic": true,
+      "runtimeMs": {
+        "samples": [
+          0.007,
+          0.007,
+          0.007208,
+          0.007084,
+          0.006916,
+          0.007167,
+          0.007125,
+          0.00725,
+          0.007084,
+          0.007083,
+          0.00725,
+          0.007416,
+          0.00725,
+          0.007167,
+          0.007,
+          0.00725,
+          0.007458,
+          0.007125,
+          0.007167,
+          0.006958,
+          0.006875,
+          0.006958,
+          0.007,
+          0.007125,
+          0.007292
+        ],
+        "median": 0.007125,
+        "min": 0.006875,
+        "max": 0.007458
+      }
+    }
+  ]
+}

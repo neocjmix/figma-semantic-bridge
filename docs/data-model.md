@@ -1,5 +1,11 @@
 # Data Contracts — Draft
 
+## Implemented external source scopes (unreleased, 2026-10-26)
+
+The runtime contracts in `src/shared/contracts.ts` are authoritative. Optional `Project.scopes` stores `EvidenceScope` records with kind `visual` or `collection`; IDs are unique across scopes and legacy snapshots. `Annotation.snapshotId` and each source reference may address either kind. Visual scopes contain an overview and proposed regions only. Collection scopes reference a complete immutable collection by ID, content hash, node/byte counts and observation time. An explicit equal-file/page/root/bounds attachment upgrades a visual scope once and invalidates earlier review. Every collection annotation requires human source-set confirmation. Original text remains exact and must resolve from the verified collection.
+
+Selective inspections are separate immutable unreviewed observations. `fieldCoverage` distinguishes unread text, observed text and non-text records. Immediate-child completion does not mean descendant completion. Neither selective observations nor imported source transfers carry human approvals. The legacy Snapshot and capture-bundle size limits are unchanged.
+
 Use versioned runtime-validated schemas. These are conceptual types, not frozen API signatures.
 
 ```ts

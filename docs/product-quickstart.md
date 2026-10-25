@@ -1,5 +1,7 @@
 # Local product quickstart
 
+> Current source after 0.1.1 uses a pinned HTTPS desktop/MCP endpoint at `https://127.0.0.1:4178` and an authenticated encrypted plugin channel over `ws://localhost:4177`. Update server and plugin together. The HTTP browser endpoint remains for explicit local development; it is not the native trust boundary. See [source upgrade notes](unreleased-upgrade.md).
+
 The server, browser editor, development plugin and stdio MCP adapter run locally.
 The manual workflow requires no model provider. Use Node.js 22 or later; install
 with `npm ci`, build with `npm run build`, and start with `npm start`.

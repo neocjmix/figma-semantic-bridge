@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { buildSync } from 'esbuild';
 import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
+import { challengeFor } from './bridge-auth-helper.js';
+import { BRIDGE_PROTOCOL, bridgeProof, BridgeChannel } from '../src/shared/bridge-auth.js';
 
 function ui(language = 'en-US') {
   const script = buildSync({ entryPoints: ['plugins/semantic-bridge/ui.ts'], bundle: true, write: false, format: 'iife', platform: 'browser', target: 'es2020' }).outputFiles[0]!.text;
@@ -28,7 +30,7 @@ function ui(language = 'en-US') {
     } },
     navigator: { languages: [language], language },
     window: { addEventListener: (name: string, fn: (event?: unknown) => void) => listeners.set(name, fn) },
-    crypto: { getRandomValues: webcrypto.getRandomValues.bind(webcrypto) }, parent, top,
+    crypto: { getRandomValues: webcrypto.getRandomValues.bind(webcrypto) }, TextEncoder, TextDecoder, btoa, atob, parent, top,
     WebSocket: Socket, setTimeout: () => 0, clearTimeout() {},
   });
   const change = (locale: string) => { elements.get('#locale')!.value = locale; elements.get('#locale')!.onchange!(); };
@@ -72,8 +74,12 @@ test('changing plugin language preserves an authenticated connection and pending
   app.elements.get('#token')!.value = 'synthetic-locale-token-32-characters';
   app.elements.get('#connect')!.onclick!();
   app.socket().onopen!();
-  app.socket().onmessage!({ data: JSON.stringify({ type: 'welcome', sessionId: 'locale-test' }) });
-  app.socket().onmessage!({ data: JSON.stringify({ type: 'request', requestId: 'pending-read', command: { type: 'get_selection' } }) });
+  const challenge=challengeFor(JSON.parse(app.sent[0]!), 'synthetic-locale-token-32-characters');
+  app.socket().onmessage!({data:JSON.stringify(challenge)});
+  app.socket().onmessage!({data:JSON.stringify({type:'welcome',protocol:BRIDGE_PROTOCOL,sessionId:challenge.sessionId,
+    proof:bridgeProof('synthetic-locale-token-32-characters','server-welcome',challenge)})});
+  const channel=new BridgeChannel('synthetic-locale-token-32-characters',challenge,'server');
+  app.socket().onmessage!({data:channel.seal(JSON.stringify({type:'request',requestId:'pending-read',command:{type:'get_selection'}}))});
   const request = app.posted.find(value => value.pluginMessage.type === 'execute')!.pluginMessage;
   app.change('ko');
   assert.equal(app.closed(), 0);
@@ -81,7 +87,7 @@ test('changing plugin language preserves an authenticated connection and pending
   assert.equal(app.elements.get('#disconnect')!.disabled, false);
   assert.match(app.elements.get('#status')!.textContent, /연결되었습니다/);
   app.receive({ type: 'complete', generation: request.generation, response: { type: 'response', requestId: 'pending-read', ok: true, result: {} } });
-  assert.equal(JSON.parse(app.sent.at(-1)!).requestId, 'pending-read');
+  assert.equal((channel.open(app.sent.at(-1)!) as {requestId:string}).requestId, 'pending-read');
   app.receive({ type: 'locale-saved', requestId: 1, ok: false });
   assert.match(app.elements.get('#locale-notice')!.textContent, /저장하지 못/);
   app.change('en');
@@ -96,7 +102,10 @@ test('plugin sandbox stores only a validated locale and serializes writes withou
   const messages: Record<string, unknown>[] = [], writes: [string, unknown][] = [];
   let stored: unknown = 'ko', releaseFirst: (() => void) | undefined;
   const ui: { onmessage?: (message: unknown) => Promise<void>; postMessage: (message: Record<string, unknown>) => void } = { postMessage: message => messages.push(message) };
-  const figma = { ui, showUI() {}, on() {}, clientStorage: {
+  const page = { id: 'synthetic-page', name: 'Synthetic page', type: 'PAGE', parent: null, selection: [],
+    on(type: string, listener: () => void) { assert.equal(type, 'nodechange'); assert.equal(typeof listener, 'function'); },
+    off(type: string, listener: () => void) { assert.equal(type, 'nodechange'); assert.equal(typeof listener, 'function'); } };
+  const figma = { ui, currentPage: page, showUI() {}, on(type: string) { assert.ok(type === 'currentpagechange' || type === 'close'); }, clientStorage: {
     getAsync: async (key: string) => { assert.equal(key, 'fsb-locale'); return stored; },
     setAsync: async (key: string, value: unknown) => { writes.push([key, value]); if (writes.length === 1) await new Promise<void>(resolve => { releaseFirst = resolve; }); stored = value; },
   } };

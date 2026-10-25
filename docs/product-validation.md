@@ -2,7 +2,134 @@
 
 This log records executed evidence rather than changing the requirements in the
 architecture, pipeline or roadmap. The branch builds an executable local product;
-it is not a release certification or a claim of completed Figma Desktop acceptance.
+this log does not certify release readiness or every Figma Desktop acceptance gate.
+
+## Unreleased security candidate, 2026-10-26
+
+The current source uses pinned local TLS for the native app/MCP and the
+`fsb-bridge-v3` mutually authenticated, encrypted plugin protocol. The token never
+travels in the plugin handshake; every subsequent application record is sealed
+with a directional, session-bound key and strict sequence counter. The exact
+localhost manifest permission remains because actual Figma rejected a numeric-IP
+allowlist. [ADR 0010](adr/0010-plugin-mutual-authentication.md) records that decision
+and the remaining threat-model limits; [source upgrade instructions](unreleased-upgrade.md)
+describe the matched app/plugin update. Published and installed 0.1.1 binaries
+do not include these changes.
+
+The focused bridge/application suite passed **143/143** tests with no skips, and
+TypeScript passed. Tests include independent Node crypto comparison, both
+directions' tampering/replay/reflection/cross-session rejection, payload limits,
+stop/reconnect lifecycle, and a real IPv6 localhost relay to the genuine IPv4
+service. The relay forwarded an authenticated session but could neither read
+the synthetic source sentinels nor forge accepted records. This is local
+synthetic socket evidence, not a corporate-design test.
+
+The rebuilt v3 plugin then connected in actual Figma Desktop. An isolated owned
+synthetic Dev Mode harness passed two metadata IDs, nine immediate children
+across three pages with cached replay, a two-node branch in one chunk, and an
+800×600 overview attached to a 21-node collection. Scripted HTTP actions using
+those live observations matched a region, confirmed its source set, approved and
+exported context, and requested a current node preview. The original selection
+was unchanged. This repeated the bounded native source workflow over the encrypted
+v3 channel; it is not human semantic review, a native-app UI study, native pixel
+validation or evidence for the reported original 105,837-node file.
+
+Figma's sandbox initially rejected an `import()` spelling in a bundled Zod 4
+comment. Whitespace minification and `legalComments: 'none'` remove those comments
+from both plugin bundles while preserving separate dependency license notices.
+The focused build regression passed and the rebuilt plugin passed the live run
+above. No sandbox permissions or dependency-validation guarantees were relaxed.
+
+The separately packaged candidate also opened its native WKWebView at the pinned
+HTTPS origin and showed the actual Figma connection. Native open/save panels
+imported a 21-node NDJSON source and exported it again: every node, original text,
+overview and footer checksum passed comparison. No semantic annotations or
+approvals were imported. A compiled Swift self-test separately exercised Unicode
+NDJSON above 15 MB and preservation of existing output on invalid input; the
+interactive dialog sample was 15,878 bytes, not a large-file UI timing measurement.
+The temporary workspace was archived outside application data. All 15 preexisting
+project files retained their combined SHA-256. The installed 0.1.1 app and plugin
+were restored and observed connected; the copied token was cleared. Duplicate
+development registrations with the same plugin ID required removing the checkout
+registration to restore the installed plugin; the source files were retained.
+
+An independent bypass review passed 61 focused checks, including actual Swift
+URLSession/WKWebView wrong-pin and listener-replacement cases. Its malformed MCP
+error-response crash finding was reproduced and fixed; five MCP TLS tests cover
+13 error-envelope shapes. No additional authentication bypass was found in that
+scope. The production dependency audit reported zero known vulnerabilities.
+
+The final `npm run check` passed **406/406 Node tests**, with no skips, TypeScript
+and all plugin/web/server/MCP builds. Both fixture manifests passed validation.
+The 105,837-record encrypted transport/storage test uses a 60-second harness
+deadline after a concurrent browser run exceeded its former 15-second wait;
+this is not an increase to the application's capture budgets or a performance
+claim. The final full check ran separately from the browser suite.
+
+The final React review identified and fixed late project responses overwriting
+new unsaved edits, source text arriving after a specification switch, and a failed
+first child-page request locking an invalid parent ID. A synchronous editor lease,
+specification-context guards and acknowledged cursor release protect these paths.
+The complete browser suite passed **49/49** cases, including five new delayed
+response/recovery regressions. Follow-up review found the three reported UI
+failures addressed. Original characters and source references remain separate
+from semantic approval. Earlier totals below describe their dated runs. Candidate
+package provenance is checked separately through `release:verify`; no new tag or
+replacement 0.1.1 download is implied by these source results.
+
+## Unreleased collection-backed workflow, 2026-10-26
+
+The current source build now connects independently acquired overview images and
+complete chunked collections to the human editor. A visual-only scope accepts
+proposed regions but cannot match, confirm or approve them. An explicit
+file/page/root/bounds-matched attachment upgrades it to a collection-backed scope;
+source-only collections can also be added without inventing a preview. Matching
+scans the verified full collection, while browser node pages, source references
+and exact specification text are fetched only when selected. Every new
+collection-backed approval requires human source-set confirmation. Legacy bounded
+Snapshots remain separate. [ADR 0008](adr/0008-collection-backed-editor.md) and the
+[current verification record](evaluation/collection-backed-workflow.md) define the
+scope and failure gates.
+
+Selective live inspection now reads requested IDs/fields, immediate children or a
+chosen complete branch without claiming that unvisited siblings were read.
+Source evidence transfer moves one complete collection-backed scope in a bounded
+NDJSON file, with source text and an available overview but no semantic decisions.
+Import verifies checksum, end marker and coverage before publishing a fresh,
+unreviewed scope. These are source-build features, not the installed 0.1.1 release.
+
+The full post-integration `npm run check` passed with **365 Node tests**, TypeScript,
+both plugin builds and the web/server/MCP builds. Both synthetic fixture manifests
+passed validation. The full Chrome suite passed **44/44** cases, including the
+actual-server/synthetic-WebSocket editor, transfer, selective reads and delayed
+transfer context race. After the final UI revision guard, all five related
+integration cases passed again against the rebuilt web app. `git diff --check`
+also passed. These browser tests do not substitute for real Figma observations.
+An isolated owned synthetic Figma Dev Mode session separately passed two metadata
+IDs, nine immediate children across three pages with cached replay, a two-node
+branch collection, and an 800×600 overview attached to a 21-node collection.
+Scripted HTTP actions using the native plugin's observations then matched a
+region, invoked source confirmation and approval, exported approved context and
+requested a current node preview; the original selection was unchanged. This was
+not a human semantic review or a native-app test of the new editor UI. It does not
+verify the reported 105,837-node real file, native rendering pixels or its
+native performance.
+
+## Earlier independent acquisition and source collections, 2026-10-25
+
+The [independent acquisition record](evaluation/independent-acquisition.md) covers
+the new preflight, separately cached overview/structure, lazy structure loading,
+progress, cancellation, retry, durable completion and incomplete-source approval
+gates. The later [chunked collection record](evaluation/chunked-source-collections.md)
+covers full selected-subtree raw collection, continuation, exact text and selective
+local queries. That earlier gate passed 292 Node tests, 39 browser tests, both manifests,
+TypeScript and all builds. The new native path passed 21-node image-first/later
+structure acquisition and a 5,001-node collection in eleven batches. Synthetic
+105,837-node tests are not native production-scale proof. Collection-backed
+annotations/approval and the original real large frame remain outside that result.
+See [ADR 0006](adr/0006-image-first-lazy-acquisition.md) and
+[ADR 0007](adr/0007-chunked-source-collections.md) for delivered limits and remaining
+engineering work as of 2026-10-25. This work does not change the installed 0.1.1 release.
 
 ## Delivered slices
 
@@ -11,7 +138,7 @@ it is not a release certification or a claim of completed Figma Desktop acceptan
 | P0 / #1–#4 | Authenticated plugin broker, bounded capture, canvas regions, deterministic matching, semantic tree, local persistence, MCP reads | Pure-function tests, loopback HTTP/WS, stdio MCP, actual Codex, Chrome editor and live Desktop capture/navigation |
 | P1 / #5 | Verbatim spec extraction across snapshots, many-to-many links, approval, undo/redo, approved export | Domain/store/API tests and browser approval/export/reload |
 | P2 / #6 | Optional OpenAI-compatible multimodal draft provider, bounded selected scopes, per-request external consent, protected proposal queue | Local fake HTTP provider, malformed response tests and browser consent controls; no external inference |
-| Release / #7 | Self-contained macOS AppKit/WKWebView app, bundled Node/MCP/production assets, prebuilt local plugin, install/update guide | Installed-app startup, native file dialogs, Figma capture, bundled MCP and restart preservation verified; publication awaits license choice and final artifact freeze |
+| Release / #7 | Self-contained macOS AppKit/WKWebView app, bundled Node/MCP/production assets, prebuilt local plugin, install/update guide | MIT 0.1.1 alpha published; installed-app startup, native file dialogs, Figma capture, bundled MCP and restart preservation verified. Enterprise adoption and permission-matrix acceptance remain separate. |
 
 The manual slice was exercised before adding the provider. AI failures do not
 disable annotation, source matching, review or export. Proposed content is never
@@ -115,10 +242,10 @@ but this is not a clean-machine or quarantined-download acceptance claim.
 
 The app is ad-hoc signed, without Developer ID distribution signing or Apple
 notarization. Its plugin uses local development import, not a Community listing.
-These are declared alpha limits. Public release assets have not been posted;
-license choice is pending. The final clean commit and artifact hashes are recorded
-only after full repackaging and `release:verify -- --require-clean`; the current
-Earlier 187-test/23-browser results are executed evidence, not guessed future commit checks.
+These are declared alpha limits. MIT 0.1.1 alpha assets were subsequently published;
+see [the release notes](releases/0.1.1.md). New source changes require a new clean
+packaging/verification run before their binaries can be called released.
+Earlier 187-test/23-browser results are dated evidence, not checks of later changes.
 
 ## Autonomous native acceptance, 2026-10-24
 

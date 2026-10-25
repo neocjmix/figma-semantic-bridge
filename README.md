@@ -1,5 +1,7 @@
 # Figma Semantic Bridge 0.1.1 Alpha
 
+**미배포 개발 변경(2026-10-26):** 큰 프레임용 이미지 우선 초안, 필요한 노드·하위 영역 읽기, 묶음 구조 수집과 검토·승인, 큰 원본 자료 전달을 추가했습니다. 위 0.1.1 배포 파일에는 아직 포함되지 않습니다. 작업 순서는 [수집 가이드](docs/acquisition-workflow.ko.md), 실제 검증과 남은 외부 조건은 [검증 기록](docs/evaluation/collection-backed-workflow.md)을 보세요.
+
 [English](README.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md) · [User guide — English](docs/user-guide.en.md)
 
 **Figma 화면에 사람이 의미와 요구사항을 정리하고, 승인한 내용을 코딩 AI에게 전달하는 로컬 앱입니다.**
@@ -17,6 +19,10 @@ macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니
 [플러그인 인증 #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
 [캡처 검증 #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)과
 [배포 경계](docs/release-readiness.md)에 기록했습니다.
+
+미배포 소스의 상호 인증·암호화 연결은 소유 합성 파일로 실제 Figma 검증을
+통과했습니다. 0.1.1 배포 파일은 그대로이며, 최종 검토·패키지 검증은 별도입니다.
+[소스 갱신과 검증 범위](docs/unreleased-upgrade.md)를 확인하세요.
 
 [상세 설치·세팅 가이드](docs/alpha-installation.md)
 · [Installation — English](docs/alpha-installation.en.md)

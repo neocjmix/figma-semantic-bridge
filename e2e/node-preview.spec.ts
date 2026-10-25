@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from '../tests/bridge-auth-helper.js';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -57,9 +58,7 @@ const test = base.extend<{ app: AppFixture }>({
         const socket = new WebSocket(server.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
         sockets.push(socket);
         await once(socket, 'open');
-        const welcomed = once(socket, 'message');
-        socket.send(JSON.stringify({ type: 'hello', token, clientId: `synthetic-node-preview-${sockets.length}` }));
-        const [welcome] = await welcomed;
+        const welcome = await authenticatePluginSocket(socket, token, `synthetic-node-preview-${sockets.length}`);
         socket.on('message', bytes => {
           const message: unknown = JSON.parse(String(bytes));
           const control = message as { type?: string; requestId?: string };
@@ -83,7 +82,7 @@ const test = base.extend<{ app: AppFixture }>({
             socket.send(JSON.stringify({ type: 'response', requestId, ok: true, result: { highlightedNodeIds: command.nodeIds } }));
           }
         });
-        return String(JSON.parse(String(welcome)).sessionId);
+        return String(welcome.sessionId);
       };
       await connect();
       await use({ url: server.url, token, initial: project, previewRequests, navigationRequests, read: () => server.store.get(project.id),

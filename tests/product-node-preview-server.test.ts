@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from './bridge-auth-helper.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -19,7 +20,7 @@ async function setup(t:test.TestContext){
   node.rendering={opacity:1,siblingIndex:2};
   demo.annotations=[{id:'review',snapshotId:s.id,name:'Saved approved region',role:'element',bbox:node.bbox!,parentId:null,sourceRefs:[{snapshotId:s.id,nodeId:node.id,matchType:'exact'}],origin:'human',reviewStatus:'approved',revision:1}];
   const project=await server.store.importProject(demo);
-  const connect=async()=>{const ws=new WebSocket(server.url.replace('http:','ws:')+'/bridge',{origin:'null'});t.after(()=>ws.terminate());await once(ws,'open');const welcomed=once(ws,'message');ws.send(JSON.stringify({type:'hello',token,clientId:'preview-test'}));return{ws,sessionId:JSON.parse((await welcomed)[0].toString()).sessionId as string};};
+  const connect=async()=>{const ws=new WebSocket(server.url.replace('http:','ws:')+'/bridge',{origin:'null'});t.after(()=>ws.terminate());await once(ws,'open');const {sessionId}=await authenticatePluginSocket(ws,token,'preview-test');return{ws,sessionId};};
   const plugin=await connect();
   const input={expectedRevision:project.revision,annotationId:'review',expectedSessionId:plugin.sessionId,nodeId:node.id};
   const png=Buffer.alloc(33);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.writeUInt32BE(13,8);png.write('IHDR',12);png.writeUInt32BE(node.bbox!.width,16);png.writeUInt32BE(node.bbox!.height,20);

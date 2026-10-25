@@ -59,6 +59,12 @@ evaluation, productivity participants, and policy/license/release decisions.
 
 ## Runtime and security boundaries
 
+The table and pre-publication findings below describe **published 0.1.1**.
+Subsequent source changes add native/MCP certificate pinning, encrypted plugin
+messages and capture-input preflight bounds. They require their own complete
+verification and a new release; issue closure does not update installed binaries.
+See [source upgrade notes](unreleased-upgrade.md).
+
 Assets include exact source text, PNGs, provenance, human review state/history,
 the local pairing token and an optional model API key. Figma source data and
 imported bundles are untrusted content even when their structure validates.
@@ -173,8 +179,13 @@ Publication record and remaining fixes:
 - [x] Publish tag [`v0.1.1-alpha`](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)
   and its actual download assets. The attached verification JSON records the clean
   source revision and inspected asset SHA values.
-- [ ] Fix issues #11–#13, add focused regressions and publish a separately verified
-  package before sensitive-work use.
+- [x] Fix the source paths reported in #11–#13 with pinned native/MCP TLS,
+  mutually authenticated encrypted plugin records, early collection bounds and
+  the compatible Zod upgrade. Focused regressions and independent bypass review
+  are recorded in the [current validation log](product-validation.md).
+- [ ] Publish a new version containing these fixes after its own clean-commit
+  package verification. The existing 0.1.1 download assets remain affected;
+  closing a source-fix issue does not update an installed application.
 
 For the final candidate, run the complete `npm run package:macos` on a clean
 commit, then `npm run release:verify -- --require-clean`. This rejects dirty or

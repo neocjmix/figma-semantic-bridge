@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createProject, DomainError, validateProject } from '../core/index.js';
 import {
   CAPTURE_BUNDLE_MAX_BYTES, CAPTURE_BUNDLE_MAX_NODE_BYTES, CAPTURE_BUNDLE_MAX_NODES,
-  CaptureBundleSchema, ExportCaptureBundleInputSchema, type CaptureBundle,
+  CaptureBundleSchema, ExportCaptureBundleInputSchema, captureBundleCollectionLimit, type CaptureBundle,
 } from '../shared/capture-bundle.js';
 import type { Project, Snapshot } from '../shared/contracts.js';
 import { validatePreview } from './preview.js';
@@ -28,6 +28,8 @@ function checkBundleBytes(value:unknown):void {
   if(Buffer.byteLength(encoded,'utf8')>CAPTURE_BUNDLE_MAX_BYTES)limit('Capture bundle exceeds the 15 MB encoded limit. Select smaller captures.');
 }
 function validateBundle(value:unknown,verifyDigests:boolean):CaptureBundle {
+  const collectionLimit=captureBundleCollectionLimit(value);
+  if(collectionLimit)limit(collectionLimit);
   checkBundleBytes(value);
   const parsed=CaptureBundleSchema.safeParse(value);
   if(!parsed.success)invalid('Capture bundle does not satisfy the versioned capture-only contract.');

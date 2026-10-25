@@ -5,8 +5,16 @@ Evaluation: 2026-10-22 UTC. Tracked in [issue #8](https://github.com/neocjmix/fi
 **후속 결과(2026-10-23): Bonafide 사본 1개에서 UI와 별도 설명 두 범위 수집.**
 Login 270 nodes / 85 TEXT / 360×800 PNG, User stories 21 nodes / 7 TEXT를 읽었다.
 설명 PNG는 1,024px 예산 초과로 거절됐다. 두 캡처의 로컬 묶음 이동·오프라인 MCP 재조회를 확인했다.
-독립 fixture analyzer의 전체 지표 및 의미 라벨링 승격은 미완료다.
+이 2026-10-23 관측 당시 독립 fixture analyzer와 의미 라벨링 승격은 미완료였다.
 [권한 경로와 실제 실행 결과](research/figma-access-paths-2026-10-23.md)를 참조한다.
+
+**후속 결과(2026-10-24, 현재 상태 정리 2026-10-26): 선택 범위의 native analyzer 검증 완료.**
+Bonafide Login, notes Section, inner explanation Frame을 실제 Desktop Dev Mode에서
+분석했다. 모두 추출·공간 분석을 완료했고 Auto Layout은 각각 58/74, 7/7, 1/1이었다.
+inner Frame은 notes 범위에 포함되므로 총합은 291개의 서로 다른 캡처 노드다.
+[공개 집계](evaluation/native-fixture-analyzer.json)와
+[실행 기록](product-validation.md#native-fixture-analyzer)에 근거를 남겼다.
+파일 전체 검사, 대표 코퍼스 승격, 독립 사람의 의미 라벨과 can-view 권한 증명은 아니다.
 
 **아래 초기 평가 시점의 이미지·노드 구조 검증: 기존 synthetic 1개, 공개 실전 파일 0개.**
 기존 Work 조사에서 찾은 17개 후보를 바탕으로 5개를 재평가했다. 공개 후보에
@@ -93,7 +101,8 @@ Zomato와 WashEase는 이번 부분 응답만으로 현재 이용 조건을 재�
 PNG 29,757 bytes다. 이 부분 범위로 파일 전체 크기·깊이·성능을 추정하지 않는다.
 화면 밖 BBox를 가진 TEXT 67개도 포함되어 clipping과 시각적 확인의 필요성을 확인했다.
 [Desktop 절차](fixture-plugin.md)와 [후속 승격 기준](../fixtures/public/evaluation/README.md)의
-나머지 구조 지표·정성 라벨링은 남아 있다. 원본 can-view 권한 검증도 별도로 남긴다.
+선택한 세 범위의 구조 지표는 위 2026-10-24 native analyzer 관측으로 보완했다.
+대표성·정성 라벨링 승격과 원본 can-view 권한 검증은 별도로 남긴다.
 
 ## 검증과 남은 일
 
@@ -108,6 +117,10 @@ PNG 29,757 bytes다. 이 부분 범위로 파일 전체 크기·깊이·성능�
 
 이 fixture 평가 당시 Desktop 플러그인 실행은 미실행이었다. 이후 synthetic 파일의
 Desktop 실행과 제한된 픽셀 정합성 관찰은 [제품 검증 기록](product-validation.md)에
-별도로 기록했다. Bonafide 복제와 두 범위의 제품 캡처는 위 후속 기록으로 보완한다. 공개 파일의 독립 analyzer 지표, 넓은 범위의 좌표 충실도,
-human-labeled grounding precision/recall, 개발자 생산성 시험은 여전히 미실행이다. 전체 파일 사전 로딩,
+별도로 기록했다. Bonafide 복제와 제품 캡처, 이후 세 범위의 native analyzer 결과는
+위 후속 기록으로 보완한다. 원래 #8의 후보 비교·도구·실측/접근 실패 구분·재현 절차는
+완료했다. 넓은 범위의 좌표 충실도, human-labeled grounding precision/recall,
+개발자 생산성 시험은 여전히 미실행이다. 별도의
+[14개 합성 기하 사례 점수](evaluation/geometry-grounding.md)는 자동 출처 매칭의
+제한된 회귀 지표이며 공개 실무 파일의 의미 정확도를 대신하지 않는다. 전체 파일 사전 로딩,
 의미론적 자동 분할, 원본 Figma 수정, 라이선스 미확인 데이터 커밋은 하지 않았다.

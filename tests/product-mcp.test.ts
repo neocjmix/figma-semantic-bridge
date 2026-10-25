@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from './bridge-auth-helper.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -19,10 +20,10 @@ import { PRODUCT_VERSION, SERVICE_NAME } from '../src/shared/version.js';
 test('real MCP stdio -> authenticated HTTP -> plugin WS, persisted approval reads and proposal protection', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'fsb-mcp-'));
   const server = await startServer({ port: 0, dataDir });
-  const api = new BridgeApi(server.url, server.token);
+  const api = new BridgeApi(server.url, server.token, {allowInsecureHttp:true});
   const client = new Client({ name: 'integration-test', version: '1.0.0' });
   const transport = new StdioClientTransport({ command: process.execPath, args: ['--import', 'tsx', 'src/mcp/cli.ts'],
-    env: { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), FSB_DATA_DIR: dataDir, FSB_SERVER_URL: server.url }, stderr: 'pipe' });
+    env: { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), FSB_DATA_DIR: dataDir, FSB_SERVER_URL: server.url, FSB_ALLOW_INSECURE_HTTP:'1' }, stderr: 'pipe' });
   t.after(async () => { await client.close(); await server.close(); await rm(dataDir, { recursive: true, force: true }); });
   await client.connect(transport);
   assert.deepEqual(client.getServerVersion(), { name: SERVICE_NAME, version: PRODUCT_VERSION });
@@ -35,8 +36,7 @@ test('real MCP stdio -> authenticated HTTP -> plugin WS, persisted approval read
 
   const ws = new WebSocket(server.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
   t.after(() => ws.terminate());
-  await once(ws, 'open'); const welcomed = once(ws, 'message');
-  ws.send(JSON.stringify({ type: 'hello', token: server.token, clientId: 'synthetic-plugin-emulator' })); await welcomed;
+  await once(ws, 'open'); await authenticatePluginSocket(ws,server.token,'synthetic-plugin-emulator');
   let highlighted = false;
   ws.on('message', raw => {
     const message = JSON.parse(raw.toString()); if (message.type !== 'request') return;
@@ -101,7 +101,7 @@ test('SDK cancellation reaches the plugin and a late capture cannot persist or c
   const dataDir = await mkdtemp(join(tmpdir(), 'fsb-mcp-cancel-'));
   const bridge = await startServer({ port: 0, dataDir, aiConfig: null });
   const client = new Client({ name: 'cancellation-test', version: '1.0.0' });
-  const mcp = createMcpServer(new BridgeApi(bridge.url, bridge.token));
+  const mcp = createMcpServer(new BridgeApi(bridge.url, bridge.token, {allowInsecureHttp:true}));
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   t.after(async () => { await client.close(); await mcp.close(); await bridge.close(); await rm(dataDir, { recursive: true, force: true }); });
   await mcp.connect(serverTransport);
@@ -110,9 +110,7 @@ test('SDK cancellation reaches the plugin and a late capture cannot persist or c
   const ws = new WebSocket(bridge.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
   t.after(() => ws.terminate());
   await once(ws, 'open');
-  const welcomed = once(ws, 'message');
-  ws.send(JSON.stringify({ type: 'hello', token: bridge.token, clientId: 'synthetic-cancellation-plugin' }));
-  await welcomed;
+  await authenticatePluginSocket(ws,bridge.token,'synthetic-cancellation-plugin');
 
   const abort = new AbortController();
   const requested = once(ws, 'message');
@@ -174,7 +172,7 @@ test('MCP API client cancels a response body that has already started streaming'
   t.after(async () => { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); });
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
-  const api = new BridgeApi(`http://127.0.0.1:${address.port}`, 'synthetic-pairing-token-'.repeat(2));
+  const api = new BridgeApi(`http://127.0.0.1:${address.port}`, 'synthetic-pairing-token-'.repeat(2), {allowInsecureHttp:true});
   const abort = new AbortController();
   const pending = api.request('/api/projects', undefined, abort.signal);
   const rejection = assert.rejects(pending, error => error instanceof BridgeApiError && error.code === 'CANCELLED');

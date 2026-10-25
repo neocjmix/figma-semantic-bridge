@@ -22,14 +22,14 @@ export function validatePreview(snapshot: Pick<Snapshot,'preview'>): void {
 }
 
 /** Enforce node-export limits independently of the live plugin. No pixel-visibility claims. */
-export function validateNodePreview(result:NodePreviewResult):void {
+export function validateNodePreview(result:NodePreviewResult,limits={dimension:NODE_PREVIEW_MAX_DIMENSION,bytes:NODE_PREVIEW_MAX_BYTES}):void {
   const {preview,node}=result,bounds=node.bbox;
-  if(!bounds||bounds.width<=0||bounds.height<=0||preview.width>NODE_PREVIEW_MAX_DIMENSION||preview.height>NODE_PREVIEW_MAX_DIMENSION||
-    preview.base64.length>Math.ceil(NODE_PREVIEW_MAX_BYTES/3)*4||Buffer.byteLength(preview.base64,'base64')>NODE_PREVIEW_MAX_BYTES) {
+  if(!bounds||bounds.width<=0||bounds.height<=0||preview.width>limits.dimension||preview.height>limits.dimension||
+    preview.base64.length>Math.ceil(limits.bytes/3)*4||Buffer.byteLength(preview.base64,'base64')>limits.bytes) {
     throw new ServiceError('INVALID_PREVIEW','Node export exceeds the bounded image contract.');
   }
   validatePreview(result);
-  const scale=Math.min(1,NODE_PREVIEW_MAX_DIMENSION/Math.max(bounds.width,bounds.height));
+  const scale=Math.min(1,limits.dimension/Math.max(bounds.width,bounds.height));
   if(Math.abs(preview.width-bounds.width*scale)>2||Math.abs(preview.height-bounds.height*scale)>2) {
     throw new ServiceError('INVALID_PREVIEW','Node export dimensions differ from its observed bounds.');
   }

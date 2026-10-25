@@ -1,4 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
+import type { TLSSocket } from 'node:tls';
+import { ensureDesktopTls } from './desktop-tls.js';
 import { constants } from 'node:fs';
 import { mkdir, open, readFile, realpath, stat } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
@@ -9,7 +12,7 @@ import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { CaptureLimitsSchema, DraftSchema, IdSchema, MutationSchema, PluginCommandSchema, SelectionSchema, SnapshotSchema, SourcePreviewInputSchema } from '../shared/contracts.js';
 import { ExportCaptureBundleInputSchema, ImportCaptureBundleInputSchema } from '../shared/capture-bundle.js';
-import { approvedContext, approvedRecords, DomainError } from '../core/index.js';
+import { DomainError, sourceScope, inlineScope } from '../core/index.js';
 import { AiError, aiStatus, generateDraft, readAiConfig, type AiConfig } from '../ai/index.js';
 import { createDemoProject } from '../demo/project.js';
 import { PluginBroker, tokensEqual } from './broker.js';
@@ -18,7 +21,14 @@ import { ServiceError } from './errors.js';
 import { boundedPage, captureSummary, proposalSummary } from './responses.js';
 import { exportCaptureBundle, importCaptureBundle } from './capture-bundle.js';
 import { sourcePreview } from './source-preview.js';
+import { AcquisitionManager } from './acquisition.js';
+import { StructureCollections } from './structure-collections.js';
+import { CollectionQuerySchema, CollectionTextQuerySchema } from '../shared/structure-collection.js';
+import { EvidenceScopes } from './evidence-scopes.js';
+import { SelectiveAcquisition } from './selective-acquisition.js';
+import { SourceTransfer } from './source-transfer.js';
 import { DATA_SCHEMA_VERSION, PRODUCT_VERSION, SERVICE_NAME } from '../shared/version.js';
+import { BRIDGE_MAX_WIRE_BYTES } from '../shared/bridge-auth.js';
 
 export { PluginBroker } from './broker.js';
 export { ProjectStore } from './store.js';
@@ -27,7 +37,7 @@ export { ServiceError } from './errors.js';
 const MAX_BODY_BYTES=16_000_000;
 const RevisionSchema=z.object({expectedRevision:z.number().int().min(0)}).strict();
 const ProposalInputSchema=RevisionSchema.extend({draft:DraftSchema,warnings:z.array(z.string().max(2000)).max(100).default([])});
-const CaptureInputSchema=RevisionSchema.extend({limits:CaptureLimitsSchema.default({})});
+const CaptureInputSchema=RevisionSchema.extend({limits:CaptureLimitsSchema.prefault({})});
 const SourceSelectionInputSchema=RevisionSchema.extend({annotationId:IdSchema,expectedSessionId:IdSchema});
 const CreateSchema=z.object({name:z.string().min(1).max(300)}).strict();
 const PageSchema=z.object({offset:z.coerce.number().int().min(0).max(100000).default(0),limit:z.coerce.number().int().min(1).max(50).default(20)}).strict();
@@ -76,13 +86,23 @@ function body(request:IncomingMessage):Promise<unknown> {
 }
 const MIME:Record<string,string>={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2','.json':'application/json; charset=utf-8'};
 
-export interface ServerOptions {port?:number;token?:string;dataDir?:string;webDir?:string;requestTimeoutMs?:number;aiConfig?:AiConfig|null}
+export interface ServerOptions {port?:number;desktopTlsPort?:number;token?:string;dataDir?:string;webDir?:string;requestTimeoutMs?:number;aiConfig?:AiConfig|null}
 export async function startServer(options:ServerOptions={}) {
   const dataDir=resolve(options.dataDir??join(homedir(),'.figma-semantic-bridge'));
   const token=options.token??await tokenFor(dataDir);
   if(token.length<32||token.length>1024)throw new Error('Pairing token must contain 32–1024 characters.');
   const store=new ProjectStore(dataDir);await store.initialize();
+  const tlsIdentity=options.desktopTlsPort===undefined?null:await ensureDesktopTls(dataDir);
   const broker=new PluginBroker(token);
+  const acquisitions=new AcquisitionManager(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
+  try{await acquisitions.initialize();}catch(error){broker.close();throw error;}
+  const collections=new StructureCollections(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
+  try{await collections.initialize();}catch(error){broker.close();throw error;}
+  const evidence=new EvidenceScopes(store,collections.store,acquisitions);
+  const transfers=new SourceTransfer(store,collections.store,evidence);
+  store.setEvidenceResolver((project,operation)=>evidence.context(project,operation));
+  const selective=new SelectiveAcquisition(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
+  try{await selective.initialize();}catch(error){broker.close();throw error;}
   let aiConfig:AiConfig|null=null,aiConfigurationError:AiError|null=null;
   try {aiConfig=options.aiConfig===undefined?readAiConfig():options.aiConfig;aiStatus(aiConfig);}
   catch(error){if(!(error instanceof AiError))throw error;aiConfigurationError=error;aiConfig=null;}
@@ -90,8 +110,12 @@ export async function startServer(options:ServerOptions={}) {
   let port=options.port??4177;
   let active=0;
   let activeAi=0;
-  const hostAllowed=(request:IncomingMessage)=>request.headers.host===`127.0.0.1:${port}`||request.headers.host===`localhost:${port}`;
+  const encrypted=(request:IncomingMessage)=>(request.socket as TLSSocket).encrypted===true;
+  const hostAllowed=(request:IncomingMessage)=>encrypted(request)
+    ? request.headers.host===`127.0.0.1:${request.socket.localPort}`
+    : request.headers.host===`127.0.0.1:${port}`||request.headers.host===`localhost:${port}`;
   const ownOrigins=()=>new Set([`http://127.0.0.1:${port}`,`http://localhost:${port}`]);
+  const requestOrigins=(request:IncomingMessage)=>encrypted(request)?new Set([`https://127.0.0.1:${request.socket.localPort}`]):ownOrigins();
   async function serveStatic(path:string,response:ServerResponse):Promise<void> {
     if(path.includes('\0')||path.includes('\\'))throw new ServiceError('NOT_FOUND','Not found.',404);
     let target=resolve(webDir,'.'+path);
@@ -108,12 +132,12 @@ export async function startServer(options:ServerOptions={}) {
       throw new ServiceError('WEB_NOT_BUILT','Web app not found. Run npm run build first.',404);
     }
   }
-  const server=createServer(async(request,response)=>{
+  const handler=async(request:IncomingMessage,response:ServerResponse)=>{
     securityHeaders(response);
     try {
       if(!hostAllowed(request))throw new ServiceError('HOST_FORBIDDEN','Only the bound loopback host is allowed.',403);
       const origin=request.headers.origin;
-      if(origin&&!ownOrigins().has(origin))throw new ServiceError('ORIGIN_FORBIDDEN','Origin is not allowed.',403);
+      if(origin&&!requestOrigins(request).has(origin))throw new ServiceError('ORIGIN_FORBIDDEN','Origin is not allowed.',403);
       if(active>=16)throw new ServiceError('SERVER_BUSY','Too many active requests.',429);
       active++;
       try {
@@ -144,11 +168,143 @@ export async function startServer(options:ServerOptions={}) {
             const project=importCaptureBundle(input.bundle,input.name);
             json(response,201,await store.importProject(project));return;
           }
+          const evidenceMatch=path.match(/^\/api\/projects\/([^/]+)\/evidence-scopes(?:\/([^/]+)\/(attach|nodes|text|resolve))?$/);
+          if(evidenceMatch&&request.method==='POST'){
+            const projectId=evidenceMatch[1]!,scopeId=evidenceMatch[2],action=evidenceMatch[3],input=await body(request);
+            if(!scopeId){
+              const value=RevisionSchema.extend({acquisitionId:IdSchema.optional(),collectionId:IdSchema.optional()}).parse(input);
+              json(response,201,await evidence.create(projectId,value.expectedRevision,{
+                ...(value.acquisitionId?{acquisitionId:value.acquisitionId}:{}),...(value.collectionId?{collectionId:value.collectionId}:{})}));return;
+            }
+            if(action==='attach'){
+              const value=RevisionSchema.extend({collectionId:IdSchema}).parse(input);
+              json(response,200,await evidence.attach(projectId,scopeId,value.expectedRevision,value.collectionId));return;
+            }
+            const project=await store.get(projectId);
+            if(action==='nodes'){json(response,200,await evidence.query(project,scopeId,CollectionQuerySchema.parse(input)));return;}
+            if(action==='text'){json(response,200,await evidence.text(project,scopeId,CollectionTextQuerySchema.parse(input)));return;}
+            if(action==='resolve'){
+              const value=z.object({nodeIds:z.array(IdSchema).min(1).max(100)}).strict().parse(input);
+              const result={nodes:await evidence.records(project,scopeId,value.nodeIds),source:sourceScope(project,scopeId)!.source};
+              if(Buffer.byteLength(JSON.stringify(result))>2_000_000)throw new ServiceError('RESPONSE_LIMIT','Source result exceeds 2 MB; request fewer nodes.',413);
+              json(response,200,result);return;
+            }
+          }
+          const transferMatch=path.match(/^\/api\/projects\/([^/]+)\/source-transfer(?:\/([^/]+))?$/);
+          if(transferMatch){
+            const projectId=transferMatch[1]!,scopeId=transferMatch[2];
+            const revision=z.object({expectedRevision:z.coerce.number().int().min(0)}).strict().parse(Object.fromEntries(url.searchParams));
+            if(request.method==='GET'&&scopeId){
+              const iterator=transfers.export(projectId,scopeId,revision.expectedRevision);
+              const first=await iterator.next();
+              response.statusCode=200;response.setHeader('Content-Type','application/x-ndjson');
+              response.setHeader('Content-Disposition','attachment; filename="figma-source.ndjson"');
+              const write=async(value:string)=>{if(response.destroyed)throw new ServiceError('CANCELLED','Export disconnected.',499);
+                if(!response.write(value))await new Promise<void>((resolveDrain,reject)=>{
+                  const cleanup=()=>{response.off('drain',onDrain);response.off('close',onClose);};
+                  const onDrain=()=>{cleanup();resolveDrain();},onClose=()=>{cleanup();reject(new ServiceError('CANCELLED','Export disconnected.',499));};
+                  response.once('drain',onDrain);response.once('close',onClose);
+                });};
+              try{if(!first.done)await write(first.value);for await(const line of iterator)await write(line);response.end();}
+              catch{response.destroy();}finally{await iterator.return(undefined);}return;
+            }
+            if(request.method==='POST'&&!scopeId){
+              if(!/^application\/x-ndjson(?:\s*;|$)/i.test(request.headers['content-type']??''))throw new ServiceError('CONTENT_TYPE','Use application/x-ndjson.',415);
+              const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+              try{json(response,201,await transfers.import(projectId,revision.expectedRevision,request,abort.signal));}finally{response.off('close',onClose);}return;
+            }
+            throw new ServiceError('NOT_FOUND','Source transfer route not found.',404);
+          }
+          const selectiveMatch=path.match(/^\/api\/projects\/([^/]+)\/selective(?:\/([^/]+)(?:\/(nodes|children|remove|observations|records|text))?)?$/);
+          if(selectiveMatch){
+            const projectId=selectiveMatch[1]!,inspectionId=selectiveMatch[2],action=selectiveMatch[3];
+            await store.get(projectId);
+            if(request.method==='GET'){
+              if(!inspectionId){json(response,200,{inspections:selective.list(projectId)});return;}
+              if(action==='observations'){const page=z.object({offset:z.coerce.number().int().min(0).default(0),limit:z.coerce.number().int().min(1).max(20).default(20)}).strict().parse(Object.fromEntries(url.searchParams));
+                json(response,200,selective.listObservations(projectId,inspectionId,page.offset,page.limit));return;}
+              if(!action){const page=z.object({offset:z.coerce.number().int().min(0).default(0),limit:z.coerce.number().int().min(1).max(10).default(10)}).strict().parse(Object.fromEntries(url.searchParams));
+                json(response,200,selective.get(projectId,inspectionId,page.offset,page.limit));return;}
+            }
+            if(request.method==='POST'){
+              const input=await body(request),abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+              try{
+                if(!inspectionId){const value=RevisionSchema.extend({expectedSessionId:IdSchema}).parse(input);
+                  json(response,201,await selective.prepare(projectId,value.expectedRevision,value.expectedSessionId,abort.signal));return;}
+                if(action==='nodes'){json(response,200,await selective.readNodes(projectId,inspectionId,input,abort.signal));return;}
+                if(action==='children'){json(response,200,await selective.readChildren(projectId,inspectionId,input,abort.signal));return;}
+                if(action==='records'){const value=z.object({observationId:IdSchema,offset:z.number().int().min(0).default(0),limit:z.number().int().min(1).max(20).default(20)}).strict().parse(input);
+                  json(response,200,selective.readRecords(projectId,inspectionId,value.observationId,value.offset,value.limit));return;}
+                if(action==='text'){const value=z.object({observationId:IdSchema,nodeId:IdSchema,offset:z.number().int().min(0).default(0),limit:z.number().int().min(1).max(4000).default(4000)}).strict().parse(input);
+                  json(response,200,selective.readText(projectId,inspectionId,value.observationId,value.nodeId,value.offset,value.limit));return;}
+                if(action==='remove'){z.object({}).strict().parse(input);await selective.remove(projectId,inspectionId);json(response,200,{removed:true});return;}
+              }finally{response.off('close',onClose);}
+            }
+            throw new ServiceError('NOT_FOUND','Selective source route not found.',404);
+          }
+          const branchMatch=path.match(/^\/api\/projects\/([^/]+)\/collections\/branch$/);
+          if(branchMatch&&request.method==='POST'){
+            const value=RevisionSchema.extend({expectedSessionId:IdSchema,inspectionId:IdSchema,nodeId:IdSchema}).parse(await body(request));
+            const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+            try{json(response,201,await collections.prepareFromInspection(branchMatch[1]!,value.expectedRevision,value.expectedSessionId,selective,value.inspectionId,value.nodeId,abort.signal));}
+            finally{response.off('close',onClose);}return;
+          }
+          const collectionMatch=path.match(/^\/api\/projects\/([^/]+)\/collections(?:\/([^/]+)(?:\/(start|stop|resume|remove|nodes|text))?)?$/);
+          if(collectionMatch){
+            const projectId=collectionMatch[1]!,id=collectionMatch[2],action=collectionMatch[3];
+            await store.get(projectId);
+            if(request.method==='GET'){
+              if(!id){json(response,200,{collections:collections.list(projectId)});return;}
+              if(!action){json(response,200,collections.get(projectId,id));return;}
+            }
+            if(request.method==='POST'){
+              const input=await body(request);
+              if(!id){
+                const prepare=z.object({expectedRevision:z.number().int().min(0),expectedSessionId:IdSchema}).strict().parse(input);
+                const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                try{json(response,201,await collections.prepare(projectId,prepare.expectedRevision,prepare.expectedSessionId,abort.signal));}
+                finally{response.off('close',onClose);}return;
+              }
+              if(action==='nodes'){json(response,200,await collections.store.query(projectId,id,CollectionQuerySchema.parse(input)));return;}
+              if(action==='text'){json(response,200,await collections.store.text(projectId,id,CollectionTextQuerySchema.parse(input)));return;}
+              z.object({}).strict().parse(input);
+              if(action==='start'||action==='resume'){json(response,202,await collections.start(projectId,id,action==='resume'));return;}
+              if(action==='stop'){json(response,200,await collections.stop(projectId,id));return;}
+              if(action==='remove'){await collections.remove(projectId,id);json(response,200,{removed:true});return;}
+            }
+            throw new ServiceError('NOT_FOUND','Collection route not found.',404);
+          }
+          const acquisitionMatch=path.match(/^\/api\/projects\/([^/]+)\/acquisitions(?:\/([^/]+)(?:\/(start|retry|cancel|commit|preview|remove|load-structure))?)?$/);
+          if(acquisitionMatch){
+            const projectId=acquisitionMatch[1]!,taskId=acquisitionMatch[2],action=acquisitionMatch[3];
+            if(request.method==='GET') {
+              await store.get(projectId);
+              if(!taskId){json(response,200,{tasks:acquisitions.list(projectId)});return;}
+              if(!action){json(response,200,acquisitions.get(projectId,taskId));return;}
+              if(action==='preview'){json(response,200,acquisitions.preview(projectId,taskId));return;}
+            }
+            if(request.method==='POST') {
+              const input=await body(request);
+              if(!taskId){
+                const prepare=z.object({expectedRevision:z.number().int().min(0),expectedSessionId:IdSchema}).strict().parse(input);
+                const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                try{json(response,201,await acquisitions.prepare(projectId,prepare.expectedRevision,prepare.expectedSessionId,abort.signal));}
+                finally{response.off('close',onClose);}return;
+              }
+              if(action==='start'){json(response,202,await acquisitions.start(projectId,taskId,input));return;}
+              if(action==='retry'){const retry=z.object({step:z.enum(['preview','structure'])}).strict().parse(input);json(response,202,await acquisitions.retry(projectId,taskId,retry.step));return;}
+              if(action==='load-structure'){const load=z.object({limits:CaptureLimitsSchema.prefault({})}).strict().parse(input);json(response,202,await acquisitions.loadStructure(projectId,taskId,load.limits));return;}
+              if(action==='cancel'){z.object({}).strict().parse(input);json(response,200,await acquisitions.cancel(projectId,taskId));return;}
+              if(action==='commit'){const commit=RevisionSchema.parse(input);json(response,200,await acquisitions.commit(projectId,taskId,commit.expectedRevision));return;}
+              if(action==='remove'){z.object({}).strict().parse(input);await acquisitions.remove(projectId,taskId);json(response,200,{removed:true});return;}
+            }
+            throw new ServiceError('NOT_FOUND','Acquisition route not found.',404);
+          }
           const componentMatch=path.match(/^\/api\/projects\/([^/]+)\/components\/(.+)$/);
           if(componentMatch&&request.method==='GET'){
             const project=await store.get(componentMatch[1]!);
             const annotationId=IdSchema.parse(componentMatch[2]);
-            const approved=approvedRecords(project),component=approved.annotations.find(a=>a.id===annotationId);
+            const approved=await evidence.approved(project),component=approved.annotations.find(a=>a.id===annotationId);
             if(!component)throw new ServiceError('NOT_FOUND','Approved component not found.',404);
             const related=approved.specifications.filter(s=>s.relations.some(r=>r.targetAnnotationId===component.id));
             const page=boundedPage(related,0,50);
@@ -163,7 +319,7 @@ export async function startServer(options:ServerOptions={}) {
             if((action==='components'||action==='specifications')&&request.method==='GET'){
               const query=SpecificationPageSchema.parse(Object.fromEntries(url.searchParams));
               if(action==='components'&&query.annotationId!==undefined)throw new ServiceError('INVALID_INPUT','annotationId applies only to specifications.');
-              const project=await store.get(id),approved=approvedRecords(project);
+              const project=await store.get(id),approved=await evidence.approved(project);
               if(action==='components'){
                 const {records,...metadata}=boundedPage(approved.annotations,query.offset,query.limit);
                 json(response,200,{components:records,...metadata,revision:project.revision});
@@ -176,7 +332,7 @@ export async function startServer(options:ServerOptions={}) {
             }
             if(action==='export'&&request.method==='GET'){
               const limits=ExportLimitsSchema.parse(Object.fromEntries(url.searchParams));
-              const result=approvedContext(await store.get(id),limits);
+              const result=await evidence.export(await store.get(id),limits);
               if(Buffer.byteLength(JSON.stringify(result))>4_000_000)throw new ServiceError('RESPONSE_LIMIT','Approved context exceeds 4 MB; request smaller export limits.',413);
               json(response,200,result);return;
             }
@@ -187,7 +343,8 @@ export async function startServer(options:ServerOptions={}) {
                 const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
                 try {
                   const preview=await sourcePreview(store,broker,id,previewInput,{signal:abort.signal,timeoutMs:options.requestTimeoutMs??20000,
-                    isClosed:()=>response.destroyed||request.aborted});
+                    isClosed:()=>response.destroyed||request.aborted,
+                    resolve:async(scopeId,nodeId)=>(await evidence.records(await store.get(id),scopeId,[nodeId]))[0]});
                   json(response,200,preview);
                 } finally {response.off('close',onClose);}return;
               }
@@ -213,7 +370,8 @@ export async function startServer(options:ServerOptions={}) {
                   if(project.revision!==selectedInput.expectedRevision)throw new ServiceError('REVISION_CONFLICT','Project changed; reload before adding a source selection.',409);
                   const annotation=project.annotations.find(item=>item.id===selectedInput.annotationId);
                   if(!annotation)throw new ServiceError('NOT_FOUND','Annotation not found.',404);
-                  const snapshot=project.snapshots.find(item=>item.id===annotation.snapshotId)!;
+                  const snapshot=sourceScope(project,annotation.snapshotId);
+                  if(!snapshot)throw new ServiceError('NOT_FOUND','Source scope not found.',404);
                   if(!snapshot.source.fileKey)throw new ServiceError('FILE_IDENTITY_UNAVAILABLE','Captured source file identity is unavailable. Capture a new scope with host-provided identity.',409);
                   const selection=SelectionSchema.parse(await broker.request({type:'get_selection'},{signal:abort.signal,timeoutMs:options.requestTimeoutMs??20000}));
                   checkActive();
@@ -222,7 +380,8 @@ export async function startServer(options:ServerOptions={}) {
                   if(selection.fileKey!==snapshot.source.fileKey)throw new ServiceError('WRONG_FILE','The selected node belongs to a different source file.',409);
                   if(selection.pageId!==snapshot.source.pageId)throw new ServiceError('WRONG_PAGE','The selected node belongs to a different source page.',409);
                   const selected=selection.nodes[0]!;
-                  const captured=snapshot.nodes.find(node=>node.id===selected.id);
+                  const captured=inlineScope(snapshot)?snapshot.nodes.find(node=>node.id===selected.id):
+                    (await evidence.records(project,snapshot.id,[selected.id]).catch(error=>{if(error instanceof ServiceError&&error.code==='NOT_FOUND')return [];throw error;}))[0];
                   if(!captured)throw new ServiceError('SOURCE_OUTSIDE_CAPTURE','The selected node is outside this captured scope. Capture that scope separately before reviewing it.',409);
                   if(selected.name!==captured.name||selected.type!==captured.type||!isDeepStrictEqual(selected.bbox,captured.bbox))throw new ServiceError('SOURCE_METADATA_CHANGED','Selected node metadata changed since capture. Capture a new scope before adding it.',409);
                   const latest=await store.get(id);
@@ -238,10 +397,9 @@ export async function startServer(options:ServerOptions={}) {
               }
               if(action==='nodes'){
                 const selected=z.object({snapshotId:z.string().min(1).max(160),nodeIds:z.array(z.string().min(1).max(160)).min(1).max(100)}).strict().parse(input);
-                const snapshot=(await store.get(id)).snapshots.find(s=>s.id===selected.snapshotId);
+                const project=await store.get(id),snapshot=sourceScope(project,selected.snapshotId);
                 if(!snapshot)throw new ServiceError('NOT_FOUND','Captured scope not found.',404);
-                const ids=new Set(selected.nodeIds),nodes=snapshot.nodes.filter(node=>ids.has(node.id));
-                if(nodes.length!==ids.size)throw new ServiceError('NOT_FOUND','Requested source node is not in the captured scope.',404);
+                const nodes=await evidence.records(project,snapshot.id,[...new Set(selected.nodeIds)]);
                 const result={nodes,source:snapshot.source};
                 if(Buffer.byteLength(JSON.stringify(result))>2_000_000)throw new ServiceError('RESPONSE_LIMIT','Source result exceeds 2 MB; request fewer nodes.',413);
                 json(response,200,result);return;
@@ -294,13 +452,16 @@ export async function startServer(options:ServerOptions={}) {
       if(error instanceof ServiceError)json(response,error.status,{error:{code:error.code,message:error.message}});
       else if(error instanceof AiError){const status=error.code==='AI_CONSENT_REQUIRED'?403:error.code==='AI_TIMEOUT'?504:error.code==='AI_CANCELLED'?499:['AI_PROVIDER_ERROR','AI_RESPONSE_TOO_LARGE','AI_INVALID_RESPONSE'].includes(error.code)?502:400;json(response,status,{error:{code:error.code,message:error.message}});}
       else if(error instanceof z.ZodError)json(response,400,{error:{code:'INVALID_INPUT',message:'Request does not match the validated data contract.'}});
-      else if(error instanceof DomainError){const status=error.code==='NOT_FOUND'?404:error.code==='CAPTURE_BUNDLE_LIMIT'?413:error.code.includes('STALE')||error.code.includes('CONFLICT')?409:error.code==='FORBIDDEN'?403:400;json(response,status,{error:{code:error.code,message:error.message}});}
+      else if(error instanceof DomainError){const status=error.code==='NOT_FOUND'?404:error.code==='CAPTURE_BUNDLE_LIMIT'?413:error.code.includes('STALE')||error.code.includes('CONFLICT')||['SOURCE_INCOMPLETE','SOURCE_RESOLUTION_REQUIRED'].includes(error.code)?409:error.code==='FORBIDDEN'?403:400;json(response,status,{error:{code:error.code,message:error.message}});}
       else json(response,500,{error:{code:'INTERNAL_ERROR',message:'Local operation failed; reload the project to check its latest revision.'}});
     }
-  });
+  };
+  const server=createServer(handler);
+  const desktopServer=tlsIdentity?createHttpsServer({key:tlsIdentity.key,cert:tlsIdentity.cert,minVersion:'TLSv1.2'},handler):null;
   server.requestTimeout=30000;server.headersTimeout=10000;server.keepAliveTimeout=5000;
-  const sockets=new WebSocketServer({noServer:true,maxPayload:MAX_BODY_BYTES,perMessageDeflate:false});
-  sockets.on('connection',socket=>broker.attach(socket));
+  if(desktopServer){desktopServer.requestTimeout=30000;desktopServer.headersTimeout=10000;desktopServer.keepAliveTimeout=5000;}
+  const sockets=new WebSocketServer({noServer:true,maxPayload:BRIDGE_MAX_WIRE_BYTES,perMessageDeflate:false});
+  sockets.on('connection',(socket,request)=>broker.attach(socket,{address:request.socket.localAddress,port:request.socket.localPort}));
   server.on('upgrade',(request,socket,head)=>{
     const origin=request.headers.origin;
     const allowedOrigin=origin==='null'||origin==='https://www.figma.com'||origin==='https://figma.com'||(!!origin&&ownOrigins().has(origin));
@@ -312,12 +473,20 @@ export async function startServer(options:ServerOptions={}) {
   });
   try {
     await new Promise<void>((resolveListen,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',()=>{server.off('error',reject);resolveListen();});});
-  } catch(error){broker.close();sockets.close();throw error;}
+    if(desktopServer)await new Promise<void>((resolveListen,reject)=>{desktopServer.once('error',reject);desktopServer.listen(options.desktopTlsPort,'127.0.0.1',()=>{desktopServer.off('error',reject);resolveListen();});});
+  } catch(error){broker.close();sockets.close();server.closeAllConnections();server.close();desktopServer?.closeAllConnections();desktopServer?.close();throw error;}
   const address=server.address();if(!address||typeof address==='string')throw new Error('Loopback address unavailable.');port=address.port;
+  const desktopAddress=desktopServer?.address();
+  const desktopUrl=desktopAddress&&typeof desktopAddress!=='string'?`https://127.0.0.1:${desktopAddress.port}`:null;
   let shutdown:Promise<void>|undefined;
-  return {url:`http://127.0.0.1:${port}`,token,store,broker,
+  return {url:`http://127.0.0.1:${port}`,desktopUrl,token,store,broker,evidence,collections,selective,acquisitions,transfers,
     close(){
-      if(!shutdown){broker.close();sockets.close();server.closeAllConnections();shutdown=new Promise<void>((done,error)=>server.close(e=>e?error(e):done()));}
+      if(!shutdown){
+        const stopped=Promise.all([acquisitions.close(),collections.close(),selective.close(),transfers.close()]);broker.close();sockets.close();server.closeAllConnections();
+        desktopServer?.closeAllConnections();
+        shutdown=Promise.all([stopped,new Promise<void>((done,error)=>server.close(e=>e?error(e):done())),
+          ...(desktopServer?[new Promise<void>((done,error)=>desktopServer.close(e=>e?error(e):done()))]:[])]).then(()=>{});
+      }
       return shutdown;
     },
   };

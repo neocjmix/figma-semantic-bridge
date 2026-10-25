@@ -211,14 +211,16 @@ export async function packagePlugin({ projectDir = root, version, outputDir = jo
   new vm.Script(code.toString(), { filename: 'code.js' });
   if (!code.includes(Buffer.from('ws://localhost:4177/bridge'))) throw new Error('Built production plugin endpoint is missing. Run npm run build:product-plugin first.');
   const zod = JSON.parse(await readFile(join(projectDir, 'node_modules/zod/package.json'), 'utf8'));
-  const notices = Buffer.from(`Bundled dependency: zod ${zod.version}\nhttps://github.com/colinhacks/zod\n\n${await readFile(join(projectDir, 'node_modules/zod/LICENSE'), 'utf8')}`);
+  const hashes = JSON.parse(await readFile(join(projectDir, 'node_modules/@noble/hashes/package.json'), 'utf8'));
+  const ciphers = JSON.parse(await readFile(join(projectDir, 'node_modules/@noble/ciphers/package.json'), 'utf8'));
+  const notices = Buffer.from(`Bundled dependency: zod ${zod.version}\nhttps://github.com/colinhacks/zod\n\n${await readFile(join(projectDir, 'node_modules/zod/LICENSE'), 'utf8')}\n\nBundled dependency: @noble/hashes ${hashes.version}\nhttps://github.com/paulmillr/noble-hashes\n\n${await readFile(join(projectDir, 'node_modules/@noble/hashes/LICENSE'), 'utf8')}\n\nBundled dependency: @noble/ciphers ${ciphers.version}\nhttps://github.com/paulmillr/noble-ciphers\n\n${await readFile(join(projectDir, 'node_modules/@noble/ciphers/LICENSE'), 'utf8')}`);
   const files = new Map([
     ['manifest.json', manifestBytes], ['code.js', code],
     ['README.md', Buffer.from(installationReadme(version, !!projectLicense.bytes))], ['THIRD_PARTY_NOTICES.txt', notices],
     ['README.en.md', Buffer.from(installationReadme(version, !!projectLicense.bytes))], ['README.ko.md', Buffer.from(installationReadmeKo(version, !!projectLicense.bytes))],
   ]);
   if (projectLicense.bytes) files.set('LICENSE', projectLicense.bytes);
-  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md']) {
+  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md', 'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) {
     files.set(`docs/${file}`, await readRegular(join(projectDir, 'docs', file), 200_000));
   }
   files.set('release.json', encode({ formatVersion: 1, name: 'figma-semantic-bridge-plugin', version,

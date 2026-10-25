@@ -4,10 +4,14 @@ import { homedir } from 'node:os';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { BridgeApi } from './api-client.js';
 import { createMcpServer } from './server.js';
+import { readLocalCertificate } from './local-pin.js';
 
 try {
-  const token = process.env.FSB_TOKEN || (await readFile(join(process.env.FSB_DATA_DIR || join(homedir(), '.figma-semantic-bridge'), 'pairing-token'), 'utf8')).trim();
-  const server = createMcpServer(new BridgeApi(process.env.FSB_SERVER_URL || 'http://127.0.0.1:4177', token));
+  const dataDir=process.env.FSB_DATA_DIR || join(homedir(), '.figma-semantic-bridge');
+  const token = process.env.FSB_TOKEN || (await readFile(join(dataDir, 'pairing-token'), 'utf8')).trim();
+  const url=process.env.FSB_SERVER_URL || 'https://127.0.0.1:4178';
+  const insecure=process.env.FSB_ALLOW_INSECURE_HTTP==='1'&&url.startsWith('http:');
+  const server = createMcpServer(new BridgeApi(url, token,insecure?{allowInsecureHttp:true}:{certificate:await readLocalCertificate(dataDir)}));
   await server.connect(new StdioServerTransport());
 } catch {
   process.stderr.write('Unable to start Figma Semantic Bridge MCP. Start the local server and configure FSB_SERVER_URL plus FSB_DATA_DIR (or FSB_TOKEN).\n');

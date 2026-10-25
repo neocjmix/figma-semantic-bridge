@@ -1,5 +1,7 @@
 # Figma Desktop verification procedure
 
+> Current source after 0.1.1 uses a pinned HTTPS desktop/MCP endpoint at `https://127.0.0.1:4178` and an authenticated encrypted plugin channel over `ws://localhost:4177`. Update server and plugin together. The HTTP browser endpoint remains for explicit local development; it is not the native trust boundary. See [source upgrade notes](unreleased-upgrade.md).
+
 This is the repeatable host-integration procedure, not a list of all unfinished
 work. The owned-fixture Desktop lifecycle, scale and supported geometry matrix
 ran on 2026-10-24; [the validation log](product-validation.md) records the results.

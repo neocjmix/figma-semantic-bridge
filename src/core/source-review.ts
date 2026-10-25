@@ -21,8 +21,8 @@ function sameReferences(a:Annotation,b:Annotation):boolean {
 
 /** Only persisted evidence can survive an edit; input review fields are never trusted. */
 export function annotationSourceReview(snapshot:Snapshot,input:Annotation,prior?:Annotation,result?:MatchResult):SourceReview {
-  const unchanged=!result&&prior?.sourceReview&&sameGeometry(prior,input)&&sameReferences(prior,input);
-  const review=!result&&prior?.sourceReview&&sameGeometry(prior,input)?structuredClone(prior.sourceReview):
+  const unchanged=snapshot.completeness.complete&&!result&&prior?.sourceReview&&sameGeometry(prior,input)&&sameReferences(prior,input);
+  const review=snapshot.completeness.complete&&!result&&prior?.sourceReview&&sameGeometry(prior,input)?structuredClone(prior.sourceReview):
     sourceReviewFromMatch(result??matchRegion(snapshot,input.bbox));
   if(!unchanged){review.status='unconfirmed';review.confirmedAt=null;}
   const modern=snapshot.nodes.some(node=>node.rendering!==undefined);

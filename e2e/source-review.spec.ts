@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from '../tests/bridge-auth-helper.js';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -37,9 +38,7 @@ const test = base.extend<{ app: AppFixture }>({
     select('search-bg');
     const socket = new WebSocket(server.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
     await once(socket, 'open');
-    const welcome = once(socket, 'message');
-    socket.send(JSON.stringify({ type: 'hello', token, clientId: 'synthetic-source-review' }));
-    await welcome;
+    await authenticatePluginSocket(socket, token, 'synthetic-source-review');
     socket.on('message', bytes => {
       const message = JSON.parse(String(bytes));
       if (message.type === 'ping') { socket.send(JSON.stringify({ type: 'pong' })); return; }

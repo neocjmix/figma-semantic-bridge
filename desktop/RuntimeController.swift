@@ -1,11 +1,6 @@
 import Foundation
 import Darwin
 
-private final class NoRedirect: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
-}
-
 @MainActor
 final class RuntimeController {
     let resources: URL
@@ -13,6 +8,7 @@ final class RuntimeController {
     private var lockDescriptor: Int32 = -1
     private(set) var child: Process?
     private(set) var token: String?
+    private(set) var trust: DesktopTrust?
     private(set) var reusedService = false
     var onUnexpectedExit: (() -> Void)?
     private var stopping = false
@@ -59,17 +55,18 @@ final class RuntimeController {
     }
 
     private func probe(token: String?) async throws -> Bool {
+        guard let trust, let token else { return false }
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 2; config.timeoutIntervalForResource = 3
         config.urlCache = nil; config.httpCookieStorage = nil; config.urlCredentialStorage = nil
-        let session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
+        let session = URLSession(configuration: config, delegate: PinnedSessionDelegate(trust: trust), delegateQueue: nil)
         defer { session.invalidateAndCancel() }
         var request = URLRequest(url: URL(string: DesktopPolicy.origin + "/api/health")!)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        if let token { request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization") }
+        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         do {
             let (bytes, response) = try await session.bytes(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200, token != nil,
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                   response.expectedContentLength <= 16_384 else { throw HostFailure(Self.conflictMessage) }
             var data = Data()
             for try await byte in bytes {
@@ -87,6 +84,7 @@ final class RuntimeController {
         stopping = false; ready = false
         try acquireInstanceLock()
         token = try readTokenIfPresent()
+        trust = try DesktopTrust.readIfPresent(dataDirectory: dataDirectory)
         if try await probe(token: token) { reusedService = true; ready = true; return }
         let executable = resources.appendingPathComponent("runtime/node")
         let server = resources.appendingPathComponent("app/server.mjs")
@@ -111,6 +109,7 @@ final class RuntimeController {
             while Date() < deadline {
                 guard process.isRunning else { throw HostFailure("The bundled local service could not start. Another service may have taken port 4177. Check the earlier service, then choose Retry.") }
                 token = try readTokenIfPresent()
+                if trust == nil { trust = try DesktopTrust.readIfPresent(dataDirectory: dataDirectory) }
                 if try await probe(token: token) { ready = true; return }
                 try await Task.sleep(nanoseconds: 200_000_000)
             }

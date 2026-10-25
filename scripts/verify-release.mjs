@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, X509Certificate } from 'node:crypto';
+import { request as httpsRequest } from 'node:https';
+import { checkServerIdentity } from 'node:tls';
 import { createServer } from 'node:net';
 import { mkdir, mkdtemp, readFile, readdir, readlink, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,9 +16,9 @@ import { renderOfflineGuide } from './render-offline-guide.mjs';
 import { readProjectLicense } from './package-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'); process.chdir(root);
-const { values } = parseArgs({ options: { 'require-clean': { type: 'boolean', default: false } } });
+const { values } = parseArgs({ options: { 'require-clean': { type: 'boolean', default: false }, 'release-dir': { type: 'string' } } });
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
-const releaseDir = resolve('dist/releases');
+const releaseDir = resolve(values['release-dir'] ?? 'dist/releases');
 const staging = await mkdtemp(join(tmpdir(), 'fsb-release-acceptance-'));
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const run = (command, args, options = {}) => execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...options });
@@ -98,7 +100,7 @@ try {
   assert.equal(pluginChecksumBytes.toString().trim(), `${assetSha256[`${pluginName}.zip`]}  ${pluginName}.zip`, 'Plugin ZIP checksum sidecar differs from the verified archive.');
   const expectedPluginFiles = ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt',
     'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md',
-    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', ...(projectLicense.bytes ? ['LICENSE'] : [])];
+    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/unreleased-upgrade.md', ...(projectLicense.bytes ? ['LICENSE'] : [])];
   // List and read only allowlisted entries without extracting an archive path.
   // unzip independently checks ZIP structure and CRC; SHA checks bind every byte.
   assert.ok((await stat(pluginZip)).size <= 10_000_000, 'Plugin ZIP exceeds its bounded production package size.');
@@ -141,6 +143,12 @@ try {
   await verifyApplicationLicense(resources, projectLicense);
   for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(resources, 'plugins/semantic-bridge', name)), `Plugin ZIP and app differ: ${name}`);
   const guideAssets = new Map();
+  for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) {
+    const content = await readFile(join(resources, 'docs', file));
+    assert.equal(sha(content), sha(await readFile(join('docs', file))));
+    assert.equal(sha(content), sha(pluginFiles.get(`docs/${file}`)));
+    guideAssets.set(`docs/${file}`, sha(content));
+  }
   for (const locale of release.locales) {
     const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
     for (const [kind, file] of [['setup', setupFile], ['user', `user-guide.${locale}.md`]]) {
@@ -179,7 +187,7 @@ try {
   }
   assert.equal(run(join(diskApp, 'Contents/Resources/runtime/node'), ['--version']).trim(), `v${release.node.version}`);
   // No repository-local or user-owned sources may enter the application archive.
-  const forbidden = new Set(['.bridge-local', '.fixture-local', '.git', 'pairing-token', 'projects', '.env', '.npmrc']);
+  const forbidden = new Set(['.bridge-local', '.fixture-local', '.git', 'pairing-token', 'desktop-tls', 'projects', '.env', '.npmrc']);
   async function inspect(path) {
     for (const entry of await readdir(path, { withFileTypes: true })) {
       assert.ok(!forbidden.has(entry.name), `Private content path in app: ${entry.name}`);
@@ -193,8 +201,10 @@ try {
   assert.ok(appDependency.version); assert.ok((await stat(join(resources, 'THIRD-PARTY-NOTICES.md'))).size > 0);
   const probe = createServer(); await new Promise(resolvePort => probe.listen(0, '127.0.0.1', resolvePort));
   const port = probe.address().port; await new Promise(resolveClose => probe.close(resolveClose));
+  await new Promise(resolvePort => probe.listen(0, '127.0.0.1', resolvePort));
+  const tlsPort = probe.address().port; await new Promise(resolveClose => probe.close(resolveClose));
   const data = join(staging, 'test-data');
-  const env = { PATH: '/usr/bin:/bin', HOME: staging, FSB_DESKTOP: '1', FSB_PORT: String(port), FSB_DATA_DIR: data, FSB_WEB_DIR: join(resources, 'app/web') };
+  const env = { PATH: '/usr/bin:/bin', HOME: staging, FSB_DESKTOP: '1', FSB_PORT: String(port), FSB_DESKTOP_TLS_PORT: String(tlsPort), FSB_DATA_DIR: data, FSB_WEB_DIR: join(resources, 'app/web') };
   child = spawn(node, [join(resources, 'app/server.mjs')], { cwd: tmpdir(), env, stdio: ['ignore', 'pipe', 'pipe'] });
   exit = new Promise(resolveExit => child.once('exit', resolveExit));
   let stdout = '', stderr = ''; child.stdout.on('data', data => { stdout += String(data); }); child.stderr.on('data', data => { stderr += String(data); });
@@ -206,22 +216,40 @@ try {
   });
   const token = (await readFile(join(data, 'pairing-token'), 'utf8')).trim();
   assert.ok(!stdout.includes(token) && !stderr.includes(token), 'Packaged runtime leaked pairing token');
-  const url = `http://127.0.0.1:${port}`;
+  const url = `https://127.0.0.1:${tlsPort}`;
+  assert.equal(JSON.parse(stdout.trim()).url, url);
+  const pin = await readFile(join(data, 'desktop-tls/pin.der'));
+  const cert = new X509Certificate(pin);
+  async function secureFetch(target, options = {}) {
+    assert.equal(new URL(target).origin, url);
+    return new Promise((resolveResponse, reject) => {
+      const request = httpsRequest(target, { ...options, ca: cert.toString(), rejectUnauthorized: true, agent: false,
+        checkServerIdentity: (host, peer) => peer.raw?.equals(pin) ? checkServerIdentity(host, peer) : new Error('Packaged peer pin mismatch'),
+      }, response => {
+        const chunks = []; let bytes = 0;
+        response.on('data', chunk => { bytes += chunk.length; if (bytes > 20_000_000) request.destroy(new Error('Verification response too large')); else chunks.push(chunk); });
+        response.on('error', reject);
+        response.on('end', () => resolveResponse(new Response(Buffer.concat(chunks), { status: response.statusCode, headers: response.headers })));
+      });
+      request.setTimeout(25_000, () => request.destroy(new Error('Verification request timed out')));
+      request.on('error', reject); request.end(options.body);
+    });
+  }
   async function api(path, body) {
-    const response = await fetch(url + path, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const response = await secureFetch(url + path, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     assert.equal(response.status, body === undefined ? 200 : path === '/api/demo' || path === '/api/capture-bundles/import' ? 201 : 200);
     return response.json();
   }
   const health = await api('/api/health');
   assert.equal(health.ok, true);
   for (const [key, expected] of Object.entries(nativeIdentity)) assert.equal(health[key], expected, `Packaged service ${key} does not match the native host.`);
-  assert.equal((await fetch(url + '/api/health')).status, 401);
-  assert.equal((await fetch(url + '/api/health', { headers: { Authorization: `Bearer ${token}`, Origin: 'https://untrusted.invalid' } })).status, 403);
+  assert.equal((await secureFetch(url + '/api/health')).status, 401);
+  assert.equal((await secureFetch(url + '/api/health', { headers: { Authorization: `Bearer ${token}`, Origin: 'https://untrusted.invalid' } })).status, 403);
   const webAssets = await releaseWebAssets(join(resources, 'app/web'));
   assert.deepEqual((await readdir(join(resources, 'app/web'))).sort(), ['assets', 'index.html']);
   assert.deepEqual((await readdir(join(resources, 'app/web/assets'))).sort(), webAssets.filter(name => name.startsWith('assets/')).map(name => name.slice(7)).sort());
   for (const name of webAssets) {
-    const response = await fetch(`${url}/${name}`); assert.equal(response.status, 200);
+    const response = await secureFetch(`${url}/${name}`); assert.equal(response.status, 200);
     const mime = name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html';
     assert.ok(response.headers.get('content-type')?.startsWith(mime));
     assert.equal(sha(Buffer.from(await response.arrayBuffer())), sha(await readFile(join(resources, 'app/web', name))));

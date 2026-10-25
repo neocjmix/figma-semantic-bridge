@@ -1,10 +1,12 @@
 import { useLocale } from './i18n.js';
 import { useRef, useState, type PointerEvent } from 'react';
-import type { Annotation, Rect, Snapshot } from '../src/shared/contracts.js';
+import type { Annotation, Rect, SourceNode } from '../src/shared/contracts.js';
+import { inlineScope, scopeNodeCount, type SourceScope } from '../src/core/source-scopes.js';
 
 type Mode = 'select' | 'draw' | 'pan';
 interface Props {
-  snapshot: Snapshot;
+  scope: SourceScope;
+  fetchedNodes?: SourceNode[];
   annotations: Annotation[];
   selectedId: string | null;
   draft: Annotation | null;
@@ -22,7 +24,7 @@ interface Gesture {
   documentPerPixel: number;
 }
 
-export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onDraft, onCreate }: Props) {
+export function Canvas({ scope, fetchedNodes = [], annotations, selectedId, draft, onSelect, onDraft, onCreate }: Props) {
   const { t, formatNumber } = useLocale();
   const svgRef = useRef<SVGSVGElement>(null);
   const gesture = useRef<Gesture | null>(null);
@@ -31,7 +33,8 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [drawing, setDrawing] = useState<Rect | null>(null);
   const [showSources, setShowSources] = useState(false);
-  const b = snapshot.bounds;
+  const b = scope.bounds;
+  const sourceNodes = inlineScope(scope) ? scope.nodes : fetchedNodes;
   const margin = Math.max(b.width, b.height) * 0.04;
   const viewWidth = (b.width + margin * 2) / zoom;
   const viewHeight = (b.height + margin * 2) / zoom;
@@ -92,7 +95,7 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
   const visible = annotations.map(a => draft?.id === a.id ? draft : a);
-  if (draft?.snapshotId === snapshot.id && !visible.some(a => a.id === draft.id)) visible.push(draft);
+  if (draft?.snapshotId === scope.id && !visible.some(a => a.id === draft.id)) visible.push(draft);
   return <div className="canvas-shell">
     <div className="canvas-toolbar">
       <div className="segmented" aria-label={t("Canvas tools")}>
@@ -112,9 +115,9 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
       viewBox={`${viewX} ${viewY} ${viewWidth} ${viewHeight}`} onPointerDown={pointerDown} onPointerMove={pointerMove}
       onPointerUp={pointerUp} onPointerCancel={() => { gesture.current = null; setDrawing(null); }}>
       <rect x={b.x} y={b.y} width={b.width} height={b.height} fill="white" />
-      {snapshot.preview ? <image href={`data:image/png;base64,${snapshot.preview.base64}`} x={b.x} y={b.y} width={b.width} height={b.height} preserveAspectRatio="none" />
-        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>{t("Preview unavailable · metadata remains editable")}</text></g>}
-      {showSources && snapshot.nodes.filter(n => n.bbox && n.visible).slice(0, 2000).map(n => <rect key={n.id} {...n.bbox!} fill="none" stroke="#8b5cf6" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.35} pointerEvents="none" />)}
+      {scope.preview ? <image href={`data:image/png;base64,${scope.preview.base64}`} x={b.x} y={b.y} width={b.width} height={b.height} preserveAspectRatio="none" />
+        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>{inlineScope(scope) ? t("Preview unavailable · metadata remains editable") : t('No overview image · draw from source bounds')}</text></g>}
+      {showSources && sourceNodes.filter(n => n.bbox && n.visible).slice(0, 2000).map(n => <rect key={n.id} {...n.bbox!} fill="none" stroke="#8b5cf6" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.35} pointerEvents="none" />)}
       {visible.map(a => <g key={a.id} data-annotation-id={a.id} className={`region ${a.id === selectedId ? 'selected' : ''} status-${a.reviewStatus}`}>
         <rect {...a.bbox} fill={a.id === selectedId ? '#00a89925' : '#126ad316'} stroke={a.reviewStatus === 'approved' ? '#14846b' : '#2876c8'} strokeWidth={a.id === selectedId ? 2.5 : 1.5} vectorEffect="non-scaling-stroke" />
         <text x={a.bbox.x + 5 / zoom} y={a.bbox.y + 15 / zoom} fontSize={Math.max(10, b.width / 100) / zoom} fill="#103f66" paintOrder="stroke" stroke="white" strokeWidth={2 / zoom} pointerEvents="none">{a.name}</text>
@@ -122,6 +125,8 @@ export function Canvas({ snapshot, annotations, selectedId, draft, onSelect, onD
       </g>)}
       {drawing && <rect {...drawing} fill="#00a89922" stroke="#009b8d" strokeDasharray="5 3" strokeWidth={1.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
     </svg>
-    <div className="canvas-footer"><span>{t('{nodes} source nodes · {regions} regions', { nodes: formatNumber(snapshot.nodes.length), regions: formatNumber(annotations.length) })}</span><span>{mode === 'draw' ? t("Drag to mark a component. Save it in the inspector.") : t("Drag a selected region to move · corner handle to resize · Alt + drag to pan")}</span></div>
+    <div className="canvas-footer"><span>{inlineScope(scope)
+      ? t('{nodes} source nodes · {regions} regions', { nodes: formatNumber(scope.nodes.length), regions: formatNumber(annotations.length) })
+      : t('{nodes} source nodes · {loaded} loaded bounds · {regions} regions', { nodes: formatNumber(scopeNodeCount(scope)), loaded: formatNumber(fetchedNodes.length), regions: formatNumber(annotations.length) })}</span><span>{mode === 'draw' ? t("Drag to mark a component. Save it in the inspector.") : t("Drag a selected region to move · corner handle to resize · Alt + drag to pan")}</span></div>
   </div>;
 }

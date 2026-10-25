@@ -1,10 +1,38 @@
 # Completion status
 
-Audit date: 2026-10-24 KST. This separates remaining implementation and verification
+Current status reviewed: 2026-10-26 KST; earlier native experiments retain their
+2026-10-24 observation dates. This separates remaining implementation and verification
 from external dependencies and future scope. It does not certify release readiness.
 The [validation log](product-validation.md) records executed native observations;
 the [roadmap](roadmap.md) and [feasibility gates](feasibility.md) remain requirements.
-Historical fixture manifests keep their original observation dates.
+Historical fixture manifests keep their original observation dates. The released
+baseline is [0.1.1 alpha](releases/0.1.1.md), published under MIT. The subsequent
+[large-source workflow](evaluation/collection-backed-workflow.md) is implemented
+and locally verified but remains an unreleased source change.
+
+## Unreleased security candidate, 2026-10-26
+
+The current source adds pinned local TLS for the native app/MCP and a mutually
+authenticated, encrypted v3 Figma bridge. The published and installed 0.1.1
+binaries remain unchanged; use the [source upgrade guide](unreleased-upgrade.md)
+for the transport and matched app/plugin update requirements.
+
+The rebuilt v3 plugin connected in actual Figma Desktop. An isolated owned
+synthetic Dev Mode file passed two metadata IDs, nine immediate children across
+three pages with cached replay, a two-node branch in one chunk, an 800×600
+overview and a 21-node collection. Scripted source confirmation, approval,
+approved export and current preview passed with the original selection unchanged.
+The focused bridge/application regression suite passed 143 tests, including real
+IPv6 relay confidentiality and tamper rejection. See the
+[candidate validation record](product-validation.md#unreleased-security-candidate-2026-10-26).
+
+Independent scoped security review and follow-up UI review found their reported
+issues addressed. The final full check passed 406 Node tests, TypeScript and all
+builds; the complete browser suite passed 49 cases. Native candidate open/save
+dialogs also roundtripped a 21-node NDJSON source without transferring approval.
+Package provenance is a separate release gate. These bounded observations do
+not establish the original large-file workflow, independent human semantic
+review or a new release.
 
 ## Agent-owned work complete for the accepted scope
 
@@ -14,8 +42,8 @@ implemented and has passed installed-app workflow checks. The native analyzer UI
 and fresh native reports now complete the selected geometry scope and all three
 previously captured Bonafide scopes. The lifecycle, performance, cancellation and
 geometry experiments below are also closed. Broader acceptance dependencies are
-the four external decisions/participant requirements below. Alpha publication is
-waiting for license choice; final posting records belong to the release process.
+the external account/policy/participant requirements below. License selection and
+0.1.1 alpha publication are complete; its recorded release limits still apply.
 
 This closes the selected experiments, not every feasibility gate or release
 claim. In particular, the observed scopes do not satisfy the proposed ten-screen
@@ -29,7 +57,7 @@ are not implemented merely because the pipeline lists them.
 
 Documentation preparation is complete in [release readiness](release-readiness.md):
 observed compatibility, runtime/security boundaries, source-data risks and a release
-checklist are available. Human license/policy/signoff, the required account/file
+checklist are available. Target-organization policy/signoff, the required account/file
 combination and independent evaluations remain external dependencies; this is
 not a formal security-audit certification.
 
@@ -44,13 +72,15 @@ migration from the task-owned development service. Quit stopped the app-owned
 listener; restart retained token, project hashes and the saved annotation.
 See the [installed-app aggregate](evaluation/alpha-desktop-acceptance.json).
 
-The macOS app/DMG and prebuilt local plugin are ready for the declared alpha path;
-public assets have not been posted. macOS 13 is a build target, not a verified OS
+This section records the original installed 0.1.0 experiment. The subsequent
+0.1.1 bilingual app/DMG and local plugin were published with MIT and package
+verification; see the [publication record](release-readiness.md#release-checklist).
+macOS 13 is a build target, not a verified OS
 execution result. Developer ID notarization and Figma Community publication are
 not supplied by this alpha. The final clean-commit verifier records source revision
-and asset hashes separately; no unpublished download URL or future hash is inferred.
-The remaining publication steps are license inclusion and final commit/tag/links,
-as listed in the [release note](releases/0.1.0.md).
+and asset hashes separately. The [0.1.0 note](releases/0.1.0.md) remains historical;
+the [0.1.1 release note](releases/0.1.1.md) is the released baseline. New source
+changes require their own package verification before a later release is claimed.
 
 ## Completed native geometry and rendering checks
 
@@ -115,6 +145,18 @@ estimate. No numerical pass threshold or arbitrary-design performance guarantee
 is inferred. Export-only latency, first-node latency and wire bytes remain
 unmeasured; none is silently substituted with cached analyzer replay.
 
+## Completed constructed-geometry scoring
+
+The [14-case geometry benchmark](evaluation/geometry-grounding.md) supplies the
+synthetic source-set precision/recall report requested by issue #3. Literal
+expected ID sets are written separately from matcher execution. It reports
+TP=15, FP=0, FN=0; micro precision/recall/F1=1.0 and macro values=1.0 over the
+11 cases with nonzero denominators. Two empty-space cases and one required
+incomplete-scope abstention are counted separately. Four cases are ambiguous;
+all 14 agree with the explicit ambiguity labels and remain deterministic under
+two input-order permutations. These deliberately small construction cases are
+regressions, not independent human semantic accuracy or real-file generalization.
+
 ## External dependencies
 
 | Dependency | What is missing | Stop and resume condition |
@@ -122,7 +164,8 @@ unmeasured; none is silently substituted with cached analyzer replay.
 | Dev-only plus source can-view acceptance | A permitted file owned by someone else, an account with only the effective Dev seat for that file, and observed can-view/export policy | Owned-copy success is insufficient. Resume with that actual account/file combination; do not retry the disabled Open Collective Dev menu or request edit rights to manufacture a pass. |
 | Representative corpus and independent F4 labels | Human agreement on representative sample/task selection and two frontend reviewers for independent source-set/spec-link judgments | Prepared rubric is ready; the three measured Community scopes do not meet the ten-screen target. No agent-generated interpretation counts as independent human ground truth, and fixture adoption counts are unchanged. |
 | F5 productivity | Human participants and comparable manual/tool/AI tasks, including correction time | Counterbalance task order and retain failures. Mock provider success supplies neither model quality nor time saved. |
-| F0 and release decisions | Target organization's installation/data/egress policy, owner-selected repository license, security/release signoff | Local implementation can continue; enterprise rollout and OSS release cannot be declared approved by the agent. No internal-data transfer is assumed. |
+| F0 and enterprise adoption | Target organization's installation/data/egress policy and its security/deployment signoff | MIT and the owner's 0.1.1 alpha publication decision are complete. They do not authorize corporate rollout or internal-data transfer. |
+| Original large production capture | Permitted access to the reported 105,837-node source and a reproducible selected scope | The generated large-case and owned native fixtures validate different layers; neither supplies that file's performance, shape or permissions. |
 
 The fresh remote account check reports a Full seat, not a Dev-only identity.
 That result does not independently identify the Desktop/browser session or supply
@@ -141,7 +184,8 @@ defects that must all be implemented before finishing this local manual workflow
   full-document analysis and guaranteed live synchronization.
 - Electron or other-platform installers, cloud collaboration and Figma Community
   plugin distribution. The requested macOS app/DMG and prebuilt local plugin are
-  implemented; their alpha publication is tracked separately in the release note.
+  implemented and the 0.1.1 alpha is published; later source changes are not part
+  of those existing download assets.
 - New schema-version migrations before a concrete schema change is defined, broad
   style/asset acquisition, and automatic production code generation.
 

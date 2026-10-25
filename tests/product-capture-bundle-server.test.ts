@@ -148,3 +148,22 @@ test('invalid capture bundle imports cannot create projects or target existing a
     assert.deepEqual(await store.get(source.id), source);
   }
 });
+
+test('oversized nested collections fail before persistence and the HTTP service remains usable', async t => {
+  const {api,store}=await harness(t);
+  const envelope=(snapshots:unknown[])=>({kind:'figma-semantic-bridge.capture-bundle',version:'1.0.0',exportedAt:'2026-10-26T00:00:00.000Z',snapshots});
+  for(const bundle of [
+    envelope(Array.from({length:1000},()=>({}))),
+    envelope([{snapshot:{nodes:Array(6000).fill({})}},{snapshot:{nodes:Array(4001).fill({})}}]),
+    envelope([{snapshot:{warnings:Array(101).fill({}),nodes:[]}}]),
+  ]) {
+    const response=await api('/api/capture-bundles/import',{name:'Untrusted collection',bundle});
+    assert.equal(response.status,400);
+    assert.equal((await response.text()).length<300,true);
+    assert.deepEqual(await store.list(),[]);
+  }
+  const source=await store.importProject(createDemoProject());
+  const exported=await api(`/api/projects/${source.id}/capture-bundle`,{expectedRevision:source.revision,snapshotIds:['demo-ui']});
+  assert.equal(exported.status,200);
+  assert.equal((await api('/api/capture-bundles/import',{name:'Valid after rejection',bundle:await exported.json()})).status,201);
+});

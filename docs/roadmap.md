@@ -1,5 +1,9 @@
 # Development Plan — Feasibility → PoC → MVP → Release
 
+## Current scoped continuation (2026-10-26, unreleased)
+
+The large-source development slice implements image-only drafts, complete collection-backed matching/review/approval, selective first-time Figma node/field/child reads, explicit branch acquisition and verified source-only transfer. These are no longer remaining engineering tasks. See [the verification record](evaluation/collection-backed-workflow.md) for actual automated/native results and external acceptance boundaries. This does not promote unrelated F0/F4/F5 enterprise or participant gates, known alpha security issues, or an unreleased build into a new public release.
+
 **Execution model:** Codex-assisted implementation, human architectural approval, PR-based development. Estimates are hypotheses, not commitments.
 
 ## Phase 0 — Repository readiness

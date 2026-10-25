@@ -184,7 +184,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent(); config.preferences.javaScriptCanOpenWindowsAutomatically = false
         config.applicationNameForUserAgent = "FigmaSemanticBridge/\(DesktopPolicy.version)"
-        let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^data:image/png[;,]"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^blob:http://127\\.0\\.0\\.1:4177/"},"action":{"type":"ignore-previous-rules"}}]"#
+        let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^https://127\\.0\\.0\\.1:4178/"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^data:image/png[;,]"},"action":{"type":"ignore-previous-rules"}},{"trigger":{"url-filter":"^blob:https://127\\.0\\.0\\.1:4178/"},"action":{"type":"ignore-previous-rules"}}]"#
         config.userContentController.add(try await contentRules(rules, name: "fsb-local-only-\(DesktopPolicy.version)"))
         guard !terminating else { return }
         let bootstrap = try workspaceBootstrap()
@@ -200,7 +200,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
 
     private func trustedFrame(_ frame: WKFrameInfo) -> Bool {
         let origin = frame.securityOrigin
-        return frame.isMainFrame && origin.protocol == "http" && origin.host == "127.0.0.1" && origin.port == 4177
+        return frame.isMainFrame && origin.protocol == "https" && origin.host == "127.0.0.1" && origin.port == 4178
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -233,18 +233,24 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? { nil }
 
-    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) { completionHandler(.cancelAuthenticationChallenge, nil) }
+    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        guard webView === self.webView, let trust = runtime.trust else { completionHandler(.cancelAuthenticationChallenge, nil); return }
+        let credential = trust.credential(for: challenge)
+        completionHandler(credential == nil ? .cancelAuthenticationChallenge : .useCredential, credential)
+    }
 
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) { decisionHandler(.deny) }
 
     func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
         guard trustedFrame(frame), webView === self.webView else { completionHandler(nil); return }
-        let panel = NSOpenPanel(); panel.title = text("Import Capture Bundle"); panel.prompt = text("Import"); panel.allowedContentTypes = [.json]
+        let panel = NSOpenPanel(); panel.title = text("Import Source Evidence"); panel.prompt = text("Import")
+        panel.allowedContentTypes = [.json, UTType(filenameExtension: "ndjson", conformingTo: .text) ?? .data]
         panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
         panel.beginSheetModal(for: window) { [weak self] response in
-            guard let self, response == .OK, let url = panel.url, url.pathExtension.lowercased() == "json",
+            guard let self, response == .OK, let url = panel.url, DesktopPolicy.isImportName(url.lastPathComponent),
                   !self.protectedLocation(url), let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
-                  values.isRegularFile == true, let size = values.fileSize, size <= DesktopPolicy.maximumTransferBytes else { completionHandler(nil); return }
+                  values.isRegularFile == true, let size = values.fileSize, size > 0,
+                  size <= DesktopPolicy.transferLimit(extension: url.pathExtension.lowercased()) else { completionHandler(nil); return }
             completionHandler([url])
         }
     }
@@ -263,14 +269,14 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
 
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
         guard !savePanelPending, transfers.isEmpty, let original = download.originalRequest?.url, DesktopPolicy.isExportBlob(original),
-              let name = DesktopPolicy.safeExportName(suggestedFilename), response.expectedContentLength <= DesktopPolicy.maximumTransferBytes,
+              let name = DesktopPolicy.safeExportName(suggestedFilename), response.expectedContentLength <= DesktopPolicy.transferLimit(extension: (name as NSString).pathExtension.lowercased()),
               DesktopPolicy.isExportMime(response.mimeType, extension: (name as NSString).pathExtension.lowercased()) else { completionHandler(nil); return }
         savePanelPending = true
         let ext = (name as NSString).pathExtension.lowercased(), panel = NSSavePanel()
         panel.title = text("Save Export"); panel.prompt = text("Save"); panel.nameFieldStringValue = name
-        panel.allowedContentTypes = [ext == "json" ? .json : (UTType(filenameExtension: "md") ?? .plainText)]
+        panel.allowedContentTypes = [ext == "json" ? .json : (UTType(filenameExtension: ext, conformingTo: .text) ?? .plainText)]
         panel.allowsOtherFileTypes = false
-        panel.beginSheetModal(for: window) { [weak self] result in
+        panel.beginSheetModal(for: window) { [weak self, download] result in
             guard let self else { completionHandler(nil); return }
             self.savePanelPending = false
             guard result == .OK, let destination = panel.url, destination.pathExtension.lowercased() == ext, !self.protectedLocation(destination) else { completionHandler(nil); return }
@@ -282,8 +288,9 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 transfer.observation = download.progress.observe(\.completedUnitCount, options: [.new]) { [weak self, weak download] _, _ in
                     Task { @MainActor in
                         guard let self, let download else { return }
-                        if download.progress.completedUnitCount > DesktopPolicy.maximumTransferBytes || download.progress.totalUnitCount > DesktopPolicy.maximumTransferBytes {
-                            download.cancel(nil); self.removeTransfer(download); self.alert("Export exceeds the 15 MB desktop transfer limit.")
+                        let limit = DesktopPolicy.transferLimit(extension: ext)
+                        if download.progress.completedUnitCount > limit || download.progress.totalUnitCount > limit {
+                            download.cancel(nil); self.removeTransfer(download); self.alert("Export exceeds its format limit: 15 MB for JSON/Markdown, 80 MB for source NDJSON.")
                         }
                     }
                 }
@@ -293,7 +300,11 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     }
 
     func download(_ download: WKDownload, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, decisionHandler: @escaping (WKDownload.RedirectPolicy) -> Void) { decisionHandler(.cancel) }
-    func download(_ download: WKDownload, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) { completionHandler(.cancelAuthenticationChallenge, nil) }
+    func download(_ download: WKDownload, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        guard transfers[ObjectIdentifier(download)] != nil, let trust = runtime.trust else { completionHandler(.cancelAuthenticationChallenge, nil); return }
+        let credential = trust.credential(for: challenge)
+        completionHandler(credential == nil ? .cancelAuthenticationChallenge : .useCredential, credential)
+    }
 
     private func removeTransfer(_ download: WKDownload) {
         if let transfer = transfers.removeValue(forKey: ObjectIdentifier(download)) {
@@ -306,12 +317,9 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         defer { removeTransfer(download) }
         do {
             let attributes = try FileManager.default.attributesOfItem(atPath: transfer.temporary.path)
-            guard let size = attributes[.size] as? NSNumber, size.int64Value <= DesktopPolicy.maximumTransferBytes, !protectedLocation(transfer.destination) else { throw HostFailure("Invalid export.") }
-            let data = try Data(contentsOf: transfer.temporary)
-            guard String(data: data, encoding: .utf8) != nil else { throw HostFailure("Invalid text export.") }
-            if transfer.fileExtension == "json" { _ = try JSONSerialization.jsonObject(with: data) }
-            try data.write(to: transfer.destination, options: .atomic)
-        } catch { alert("The export could not be saved as bounded JSON or Markdown. Choose a writable folder and try again.") }
+            guard let size = attributes[.size] as? NSNumber, size.int64Value <= DesktopPolicy.transferLimit(extension: transfer.fileExtension), !protectedLocation(transfer.destination) else { throw HostFailure("Invalid export.") }
+            try DesktopTransfer.save(source: transfer.temporary, destination: transfer.destination, fileExtension: transfer.fileExtension)
+        } catch { alert(DesktopTransfer.invalidMessage) }
     }
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) { removeTransfer(download); alert("The export could not finish. Try exporting again.") }
@@ -329,7 +337,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     @objc private func revealData() { NSWorkspace.shared.activateFileViewerSelecting([runtime.dataDirectory]) }
     @objc private func copyMCPConfiguration() {
         let value: [String: Any] = ["mcpServers": ["figma-semantic-bridge": ["command": runtime.resources.appendingPathComponent("runtime/node").path,
-            "args": [runtime.resources.appendingPathComponent("app/mcp.mjs").path], "env": ["FSB_DATA_DIR": runtime.dataDirectory.path, "FSB_SERVER_URL": DesktopPolicy.origin]]]]
+            "args": [runtime.resources.appendingPathComponent("app/mcp.mjs").path], "env": ["FSB_DATA_DIR": runtime.dataDirectory.path, "FSB_SERVER_URL": DesktopPolicy.mcpOrigin]]]]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys]), let text = String(data: data, encoding: .utf8) else { return }
         clearCopiedToken(); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
     }

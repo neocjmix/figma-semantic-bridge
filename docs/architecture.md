@@ -1,5 +1,21 @@
 # Architecture
 
+## Local peer authentication (unreleased)
+
+[ADR 0010](adr/0010-plugin-mutual-authentication.md) defines the mutually
+authenticated, encrypted plugin channel on Figma's supported localhost endpoint.
+[ADR 0011](adr/0011-pinned-desktop-service.md) covers native/MCP TLS pinning for every
+connection and executable web resource. Pairing tokens never enter the plugin
+wire protocol. Native/MCP trust comes from a private local certificate, never from
+an unauthenticated health response. HTTP browser development remains an explicit
+separate boundary. See [upgrade notes](unreleased-upgrade.md).
+
+## Current acquisition and editor implementation (unreleased, 2026-10-26)
+
+[ADR 0008](adr/0008-collection-backed-editor.md) separates visual-only drafts and collection-backed scopes from legacy embedded snapshots. The local JSON project stores image/bounds/provenance and references to immutable chunk files. The editor pages metadata and explicitly resolves selected original text; matching streams the complete selected tree. Approval and approved MCP reads verify backing integrity. [ADR 0009](adr/0009-selective-source-acquisition.md) adds explicit-ID metadata/text and immediate-child observations, plus complete collection capture of a chosen descendant branch. These are distinct from subtree-complete evidence. Source-only NDJSON interchange validates every chunk, content digest, footer and EOF before attaching a new scope.
+
+Figma native operations remain serialized to preserve cursor ownership and avoid duplicate expensive work. Independent local display and cached reads need no new provider call. A stopped/restarted plugin cannot rehydrate an old live cursor as an unchanged revision. Browser lists, selected text and overlays have bounded pages; they never imply that an unloaded node is absent.
+
 ```text
 Figma Desktop document
   ↕ Figma Plugin API

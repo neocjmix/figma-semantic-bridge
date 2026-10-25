@@ -1,5 +1,5 @@
 import { BridgeClient, type SocketLike } from '../../src/figma/bridge-client.js';
-import { PluginResponseSchema } from '../../src/shared/contracts.js';
+import { PluginProgressSchema, PluginResponseSchema } from '../../src/shared/contracts.js';
 import { initialPluginLocale, isPluginLocale, pluginText } from './locale.js';
 
 const token=document.querySelector<HTMLInputElement>('#token')!;
@@ -61,6 +61,11 @@ window.addEventListener('message',event=>{
   if(message?.type==='locale-read-failed'&&!localeEdited){localeDetail='Saved language could not be loaded. Choose a language here.';renderLocale();return;}
   if(message?.type==='locale-saved'&&message.requestId===localeRequest&&typeof message.ok==='boolean') {
     localeDetail=message.ok?'':'Language could not be saved. This choice applies until the plugin closes.';renderLocale();return;
+  }
+  if(message?.type==='progress'&&typeof message.generation==='number') {
+    const progress=PluginProgressSchema.safeParse(message.progress);
+    if(progress.success)client.progress(progress.data,message.generation);
+    return;
   }
   if(message?.type!=='complete'||typeof message.generation!=='number')return;
   const response=PluginResponseSchema.safeParse(message.response);

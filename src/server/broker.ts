@@ -1,13 +1,19 @@
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import WebSocket from 'ws';
 import { z } from 'zod';
-import { NodePreviewResultSchema, PluginCommandSchema, PluginResponseSchema, SelectionSchema, SnapshotSchema, type PluginCommand } from '../shared/contracts.js';
+import { NodePreviewResultSchema, PluginCommandSchema, PluginProgressSchema, PluginResponseSchema, SelectionSchema, SnapshotSchema, type PluginCommand } from '../shared/contracts.js';
 import { validateNodePreview, validatePreview } from './preview.js';
 import { ServiceError } from './errors.js';
+import { StructureChunkSchema, STRUCTURE_CHUNK_BYTES } from '../shared/structure-collection.js';
+import { SelectiveNodesResultSchema, SelectiveChildrenResultSchema } from '../shared/selective-source-results.js';
+import { SELECTIVE_CHILDREN_WIRE_BYTES, SELECTIVE_NODES_WIRE_BYTES } from '../shared/selective-source.js';
+import { BRIDGE_PROTOCOL, BridgeHelloSchema, BridgeAuthenticateSchema, bridgeEndpoint, bridgeProof, BridgeChannel, BRIDGE_MAX_WIRE_BYTES,
+  type BridgeTranscript } from '../shared/bridge-auth.js';
 
-const HelloSchema=z.object({type:z.literal('hello'),token:z.string().min(32).max(1024),clientId:z.string().min(1).max(160)}).strict();
 const HighlightSchema=z.object({highlightedNodeIds:z.array(z.string().min(1).max(160)).max(100)}).strict();
-type Pending={command:PluginCommand;resolve:(value:unknown)=>void;reject:(error:Error)=>void;cleanup:()=>void};
+type Progress=z.infer<typeof PluginProgressSchema>;
+type Pending={command:PluginCommand;resolve:(value:unknown)=>void;reject:(error:Error)=>void;cleanup:()=>void;onProgress?:((progress:Progress)=>void)|undefined};
+type Session={socket:WebSocket;clientId:string;sessionId:string;lastSeen:number;channel:BridgeChannel};
 
 export function tokensEqual(actual:string,expected:string):boolean {
   const a=Buffer.from(actual),b=Buffer.from(expected);
@@ -16,7 +22,7 @@ export function tokensEqual(actual:string,expected:string):boolean {
 
 /** One explicit Figma session. Requests never silently fall through to stale cached source. */
 export class PluginBroker {
-  private current: {socket:WebSocket;clientId:string;sessionId:string;lastSeen:number}|undefined;
+  private current:Session|undefined;
   private pending=new Map<string,Pending>();
   private sockets=new Set<WebSocket>();
   private heartbeat:NodeJS.Timeout;
@@ -29,49 +35,102 @@ export class PluginBroker {
   get status() {
     return {connected:!!this.current&&this.current.socket.readyState===WebSocket.OPEN,clientId:this.current?.clientId??null,sessionId:this.current?.sessionId??null,pendingRequests:this.pending.size};
   }
-  attach(socket:WebSocket):void {
+  attach(socket:WebSocket,bound:{address:string|undefined;port:number|undefined}):void {
+    let endpoint:string;
+    try {endpoint=bridgeEndpoint(bound.address,bound.port);}catch {socket.close(1008,'Invalid bound endpoint');return;}
     this.sockets.add(socket);
     let authenticated=false;
+    let channel:BridgeChannel|undefined;
+    let challenge:BridgeTranscript|undefined;
+    let challenged=false,closed=false;
     const timer=setTimeout(()=>socket.close(1008,'Authentication required'),this.options.authTimeoutMs??3000);
     timer.unref();
     socket.on('error',()=>{});
     socket.on('close',()=>{
+      closed=true;challenge=undefined;channel?.destroy();
       clearTimeout(timer);this.sockets.delete(socket);
       if(this.current?.socket===socket){this.current=undefined;this.failPending(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected.',503));}
     });
     socket.on('message',(data,isBinary)=>{
+      if(closed||socket.readyState!==WebSocket.OPEN)return;
+      const messageBytes=Array.isArray(data)?data.reduce((sum,chunk)=>sum+chunk.byteLength,0):data.byteLength;
+      if(messageBytes>(authenticated?BRIDGE_MAX_WIRE_BYTES:4096)){socket.close(1008,'Bridge message too large');return;}
       if(isBinary){socket.close(1008,'Text JSON required');return;}
       let value:unknown;
-      try {value=JSON.parse(data.toString());} catch {socket.close(1008,'Invalid JSON');return;}
+      try {value=authenticated?channel!.open(data.toString()):JSON.parse(data.toString());} catch {socket.close(1008,'Invalid bridge record');return;}
       if(!authenticated){
-        const parsed=HelloSchema.safeParse(value);
-        if(!parsed.success||!tokensEqual(parsed.data.token,this.token)){socket.close(1008,'Invalid authentication');return;}
+        if(!challenged) {
+          const hello=BridgeHelloSchema.safeParse(value);
+          if(!hello.success){socket.close(1008,'Invalid authentication');return;}
+          challenged=true;
+          challenge={protocol:BRIDGE_PROTOCOL,endpoint,clientId:hello.data.clientId,clientNonce:hello.data.clientNonce,
+            serverNonce:randomBytes(32).toString('hex'),sessionId:randomBytes(32).toString('hex')};
+          socket.send(JSON.stringify({type:'challenge',...challenge,proof:bridgeProof(this.token,'server-challenge',challenge)}));return;
+        }
+        const expected=challenge;challenge=undefined; // A challenge is usable exactly once, on this socket.
+        const parsed=BridgeAuthenticateSchema.safeParse(value);
+        if(!expected||!parsed.success||parsed.data.sessionId!==expected.sessionId||
+          !tokensEqual(parsed.data.proof,bridgeProof(this.token,'client-authentication',expected))){socket.close(1008,'Invalid authentication');return;}
         clearTimeout(timer);
         if(this.current){const old=this.current.socket;this.current=undefined;this.failPending(new ServiceError('PLUGIN_REPLACED','Figma plugin session replaced.',503));old.close(4001,'Session replaced');}
         authenticated=true;
-        this.current={socket,clientId:parsed.data.clientId,sessionId:randomUUID(),lastSeen:Date.now()};
-        socket.send(JSON.stringify({type:'welcome',sessionId:this.current.sessionId}));return;
+        channel=new BridgeChannel(this.token,expected,'server');
+        this.current={socket,clientId:expected.clientId,sessionId:expected.sessionId,lastSeen:Date.now(),channel};
+        socket.send(JSON.stringify({type:'welcome',protocol:BRIDGE_PROTOCOL,sessionId:expected.sessionId,
+          proof:bridgeProof(this.token,'server-welcome',expected)}));return;
       }
       if(this.current?.socket!==socket){socket.close(1008,'Inactive session');return;}
       this.current.lastSeen=Date.now();
-      if(value&&typeof value==='object'&&'type' in value&&value.type==='ping'){socket.send(JSON.stringify({type:'pong'}));return;}
+      if(value&&typeof value==='object'&&'type' in value&&value.type==='ping'){this.sendRecord(this.current,{type:'pong'});return;}
+      if(value&&typeof value==='object'&&'type' in value&&value.type==='progress') {
+        const progress=PluginProgressSchema.safeParse(value);
+        if(!progress.success){this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin progress.',502));socket.close(1008,'Invalid progress');return;}
+        const pending=this.pending.get(progress.data.requestId);
+        if(!pending)return;
+        const type=pending.command.type;
+        const allowed=type==='capture_selection'||((type==='capture_metadata'||type==='read_structure_chunk')&&progress.data.phase==='structure')||((type==='preview_capture'||type==='preview_node')&&progress.data.phase==='preview');
+        if(!allowed){this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Unexpected progress for source operation.',502));socket.close(1008,'Unexpected progress');return;}
+        pending.onProgress?.(progress.data);return;
+      }
       const parsed=PluginResponseSchema.safeParse(value);
       if(!parsed.success){this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin response.',502));socket.close(1008,'Invalid response');return;}
       const response=parsed.data,pending=this.pending.get(response.requestId);
       if(!pending)return; // Cancelled or timed-out responses cannot complete another request.
       this.pending.delete(response.requestId);pending.cleanup();
-      if(!response.ok){pending.reject(new ServiceError('PLUGIN_ERROR',response.error?.message??'Plugin command failed.',502));return;}
+      if(!response.ok){
+        if(['read_structure_chunk','read_source_nodes','read_source_children'].includes(pending.command.type)&&response.error?.code==='PLUGIN_BUSY')
+          pending.reject(new ServiceError('PLUGIN_BUSY','Figma is still completing another operation. Retry once it settles.',409));
+        else pending.reject(new ServiceError('PLUGIN_ERROR',response.error?.message??'Plugin command failed.',502));
+        return;
+      }
       try {
         let result:unknown;
         if(pending.command.type==='get_selection')result=SelectionSchema.parse(response.result);
-        else if(pending.command.type==='capture_selection'){result=SnapshotSchema.parse(response.result);validatePreview(result as z.infer<typeof SnapshotSchema>);}
+        else if(pending.command.type==='capture_selection'||pending.command.type==='capture_metadata'){result=SnapshotSchema.parse(response.result);validatePreview(result as z.infer<typeof SnapshotSchema>);}
         else if(pending.command.type==='preview_node'){const preview=NodePreviewResultSchema.parse(response.result);validateNodePreview(preview);result=preview;}
+        else if(pending.command.type==='preview_capture'){const preview=NodePreviewResultSchema.parse(response.result);validateNodePreview(preview,{dimension:2048,bytes:8_000_000});result=preview;}
+        else if(pending.command.type==='read_structure_chunk'){
+          result=StructureChunkSchema.parse(response.result);
+          if(Buffer.byteLength(JSON.stringify(result))>STRUCTURE_CHUNK_BYTES)throw new Error('Chunk exceeds wire byte budget.');
+        }
+        else if(pending.command.type==='release_structure_cursor'||pending.command.type==='release_source_children')result=z.object({released:z.literal(true)}).strict().parse(response.result);
+        else if(pending.command.type==='read_source_nodes'){
+          result=SelectiveNodesResultSchema.parse(response.result);
+          if(Buffer.byteLength(JSON.stringify(result))>SELECTIVE_NODES_WIRE_BYTES)throw new Error('Selective result exceeds wire budget.');
+        }else if(pending.command.type==='read_source_children'){
+          result=SelectiveChildrenResultSchema.parse(response.result);
+          if(Buffer.byteLength(JSON.stringify(result))>SELECTIVE_CHILDREN_WIRE_BYTES)throw new Error('Child result exceeds wire budget.');
+        }
         else result=HighlightSchema.parse(response.result);
         pending.resolve(result);
       } catch {pending.reject(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid result from Figma plugin.',502));}
     });
   }
-  request(command:PluginCommand,options:{timeoutMs?:number;signal?:AbortSignal}={}):Promise<unknown> {
+  private sendRecord(session:Session,value:unknown,callback?:(error?:Error)=>void):void {
+    try {session.socket.send(session.channel.seal(JSON.stringify(value)),callback);}
+    catch {session.socket.close(1008,'Invalid encrypted bridge record');callback?.(new Error('Encrypted bridge channel failed.'));}
+  }
+  request(command:PluginCommand,options:{timeoutMs?:number;signal?:AbortSignal;onProgress?:(progress:Progress)=>void}={}):Promise<unknown> {
     const parsed=PluginCommandSchema.parse(command);
     const session=this.current;
     if(!session||session.socket.readyState!==WebSocket.OPEN)return Promise.reject(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin is disconnected.',503));
@@ -84,15 +143,15 @@ export class PluginBroker {
       const cancel=(error:Error)=>{
         const pending=this.pending.get(requestId);if(!pending)return;
         this.pending.delete(requestId);pending.cleanup();
-        if(session.socket.readyState===WebSocket.OPEN)session.socket.send(JSON.stringify({type:'cancel',requestId}));
+        if(session.socket.readyState===WebSocket.OPEN)this.sendRecord(session,{type:'cancel',requestId});
         reject(error);
       };
       const onAbort=()=>cancel(new ServiceError('CANCELLED','Plugin request cancelled.',499));
       const timer=setTimeout(()=>cancel(new ServiceError('PLUGIN_TIMEOUT','Figma plugin request timed out.',504)),timeoutMs);
       const cleanup=()=>{clearTimeout(timer);options.signal?.removeEventListener('abort',onAbort);};
       options.signal?.addEventListener('abort',onAbort,{once:true});
-      this.pending.set(requestId,{command:parsed,resolve,reject,cleanup});
-      session.socket.send(JSON.stringify({type:'request',requestId,command:parsed}),error=>{if(error)cancel(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected while sending.',503));});
+      this.pending.set(requestId,{command:parsed,resolve,reject,cleanup,onProgress:options.onProgress});
+      this.sendRecord(session,{type:'request',requestId,command:parsed},error=>{if(error)cancel(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected while sending.',503));});
     });
   }
   private failPending(error:Error):void {

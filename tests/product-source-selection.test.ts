@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from './bridge-auth-helper.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -45,9 +46,7 @@ async function harness(t: test.TestContext, withoutIdentity = false) {
     const ws = new WebSocket(server.url.replace('http:', 'ws:') + '/bridge', { origin: 'null' });
     t.after(() => ws.terminate());
     await once(ws, 'open');
-    const welcomed = once(ws, 'message');
-    ws.send(JSON.stringify({ type: 'hello', token, clientId: 'synthetic-selection-review' }));
-    const welcome = JSON.parse((await welcomed)[0].toString()) as { sessionId: string };
+    const welcome = await authenticatePluginSocket(ws,token,'synthetic-selection-review');
     return { ws, sessionId: welcome.sessionId };
   };
   const plugin = await connect();

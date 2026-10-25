@@ -2,6 +2,11 @@
 
 [한국어](user-guide.ko.md) · [Installation and MCP setup](alpha-installation.en.md) · [README](../README.en.md)
 
+For the unreleased source-build workflow, see [separate image and structure
+acquisition](acquisition-workflow.en.md). It includes visual drafts, complete
+collection-backed editing, selective reads and source evidence transfer; none of
+these changes is in the published 0.1.1 app described below.
+
 Installation and user guides are packaged together. Links to other documents,
 including README, validation and release records, refer to the source repository
 and may be unavailable in standalone documents or the plugin ZIP.
@@ -52,6 +57,42 @@ error codes, identifiers and role values may remain in English in either locale.
 
 Without Figma, import a permitted capture bundle or start with **Load demo**.
 New source reads and navigation require a running, connected Figma plugin.
+
+## Unreleased source-build path for larger or selective work
+
+The **Source scopes** list in a matching source build can contain three distinct
+forms: an existing bounded saved capture, an overview-only visual draft, and a
+complete collection-backed source scope. A visual draft lets you draw and save
+**proposed** regions immediately. It has no source tree, so matching, confirmation
+and approval remain unavailable. A completed **Raw source collection** can be
+added as a source-only scope or explicitly attached to a matching visual draft.
+The editor never turns a partial or page-sized prefix into a complete Snapshot.
+
+For a collection-backed region, browse/search source metadata in pages, choose
+the intended node IDs, save the annotation, then explicitly **Confirm sources**.
+Only after this separate human decision may you **Approve annotation**. The canvas
+shows how many bounds were loaded versus the collection's full count. In
+**Specifications**, choose TEXT records from a collection; exact text is fetched
+only for the selected nodes and preserved in source order. Existing captures and
+approved human work are unchanged by these new scopes.
+
+**Selective source inspection** is an alternative when you know an ID or need to
+discover one parent's immediate children before deciding which branch to collect.
+It reads requested metadata and optional original text without a whole-frame walk.
+A complete branch collection covers only that branch; unread siblings remain
+unknown. A wide native parent may still allocate its complete `children` array.
+Selections, page changes and reconnects can invalidate live cursors; follow the
+panel's session and pause notices.
+
+**Source evidence transfer** downloads one complete collection-backed scope as a
+local NDJSON file, up to 80 MB. It includes exact original text and an overview
+PNG if present, but no annotations, specifications or approvals. Import verifies
+checksum, end marker and full collection coverage before adding a fresh,
+unreviewed scope to the current workspace. This differs from **Capture transfer**,
+which moves one or two bounded snapshots into a new workspace. Neither workflow
+grants permission to share a design; handle the local file under your source's
+access policy. See the [development workflow](acquisition-workflow.en.md) and
+[current verification record](evaluation/collection-backed-workflow.md).
 
 ## 1. Choose a bounded capture
 

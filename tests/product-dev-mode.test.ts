@@ -13,8 +13,13 @@ function readOnlyHost() {
     defineProperty() { writes++; throw new Error('Document mutation is forbidden.'); },
     deleteProperty() { writes++; throw new Error('Document mutation is forbidden.'); },
   });
-  const rawPage: FigmaReadableNode & { selection: readonly FigmaReadableNode[] } = {
+  const nodeChangeListeners = new Set<(event: unknown) => void>();
+  const rawPage: FigmaReadableNode & { selection: readonly FigmaReadableNode[];
+    on: (type: string, listener: (event: unknown) => void) => void;
+    off: (type: string, listener: (event: unknown) => void) => void } = {
     id: '0:1', name: 'Read-only page', type: 'PAGE', parent: null, children: [], selection: [],
+    on(type, listener) { assert.equal(type, 'nodechange'); nodeChangeListeners.add(listener); },
+    off(type, listener) { assert.equal(type, 'nodechange'); nodeChangeListeners.delete(listener); },
   };
   const page = protect(rawPage);
   const png = new Uint8Array(24);
@@ -38,7 +43,7 @@ function readOnlyHost() {
   const api = {
     editorType: 'dev', mode: 'inspect', fileKey: 'synthetic-view-only-file', currentPage: page,
     skipInvisibleInstanceChildren: true, ui,
-    showUI: () => {}, on: () => {}, closePlugin: () => {},
+    showUI: () => {}, on: (type: string) => { assert.ok(type === 'currentpagechange' || type === 'close'); }, closePlugin: () => {},
     getNodeByIdAsync: async (id: string) => [page, root, text].find(node => node.id === id) ?? null,
   };
   const figma = new Proxy(api, {
@@ -53,7 +58,7 @@ function readOnlyHost() {
       writes++; throw new Error('Only the runtime traversal flag may be changed.');
     },
   });
-  return { figma, ui, messages, writes: () => writes };
+  return { figma, ui, messages, writes: () => writes, nodeChangeListeners: () => nodeChangeListeners.size };
 }
 
 function startPlugin(directory: string, figma: object) {
@@ -65,7 +70,13 @@ function startPlugin(directory: string, figma: object) {
   assert.equal(manifest.documentAccess, 'dynamic-page');
   const bundle = buildSync({ entryPoints: [`plugins/${directory}/code.ts`], bundle: true, write: false,
     target: 'es2018', format: 'iife', platform: 'browser', define: { __html__: JSON.stringify('<html></html>') } });
-  vm.runInNewContext(bundle.outputFiles[0]!.text, { figma, setTimeout }, { timeout: 2000 });
+  vm.runInNewContext(bundle.outputFiles[0]!.text, { figma,
+    setTimeout: (callback: () => void, delay: number) => {
+      const timer = setTimeout(callback, delay);
+      if (delay >= 60_000) timer.unref();
+      return timer;
+    }, clearTimeout,
+  }, { timeout: 2000 });
 }
 
 test('Dev Mode bridge reads selection and captures with document writes denied', async () => {
@@ -85,6 +96,18 @@ test('Dev Mode bridge reads selection and captures with document writes denied',
   assert.equal(nodes[1]?.text, 'Exact policy 한글');
   assert.equal((capture.result.preview as { width: number }).width, 400);
   assert.deepEqual(capture.result.completeness, { complete: true, reason: null });
+  const structure = await send('structure', { type: 'read_structure_chunk', fileKey: 'synthetic-view-only-file',
+    pageId: '0:1', nodeId: '1:1', collectionId: 'synthetic-structure', sequence: 0 });
+  assert.equal(structure.ok, true);
+  assert.deepEqual((structure.result.nodes as { id: string; text?: string }[]).map(node => node.id), ['1:1', '1:2']);
+  assert.deepEqual(structure.result.childCounts, [1, 0]);
+  assert.equal(structure.result.complete, true);
+  assert.equal(structure.result.nextSequence, null);
+  const release = await send('release', { type: 'release_structure_cursor', collectionId: 'synthetic-structure' });
+  assert.equal(release.ok, true);
+  assert.deepEqual(release.result, { released: true });
+  assert.equal(host.nodeChangeListeners(), 1);
+  assert.deepEqual(host.figma.currentPage.selection.map(node => node.id), ['1:1']);
   assert.equal(host.figma.skipInvisibleInstanceChildren, true);
   assert.equal(host.writes(), 0);
 });

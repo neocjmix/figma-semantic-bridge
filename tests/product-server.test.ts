@@ -1,3 +1,4 @@
+import { authenticatePluginSocket } from './bridge-auth-helper.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
@@ -25,9 +26,7 @@ async function harness(t: test.TestContext,options:Partial<ServerOptions>={}) {
 async function connect(url:string, suppliedToken=token) {
   const ws = new WebSocket(url.replace('http:','ws:')+'/bridge',{origin:'null'});
   await once(ws,'open');
-  const response = once(ws,'message');
-  ws.send(JSON.stringify({type:'hello',token:suppliedToken,clientId:'test-plugin'}));
-  await response;
+  await authenticatePluginSocket(ws,suppliedToken,'test-plugin');
   return ws;
 }
 

@@ -1,5 +1,9 @@
 # Processing Pipeline
 
+## Implemented large-source path (unreleased, 2026-10-26)
+
+An overview can be saved first and used for proposed annotation drafts. Prepare an explicit selective inspection when only known IDs or immediate children are needed. Choose a descendant container for complete branch capture, or collect the selected root in acknowledged chunks. A complete collection is explicitly attached to an equal-source visual draft or opened as its own scope. All chunks participate in matching; selected exact text and metadata are loaded only on demand. Human source confirmation precedes approval. Approved context remains bounded; a separate source-only NDJSON stream carries large collections without flattening them into legacy snapshots. See [the current verification](evaluation/collection-backed-workflow.md).
+
 Each stage has independently testable inputs, outputs and fallback behavior.
 
 ## Stage 1 — Bounded acquisition

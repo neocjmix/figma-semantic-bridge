@@ -3,12 +3,14 @@ import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 import { releaseWebAssets } from './release-web-assets.mjs';
 import { renderOfflineGuide } from './render-offline-guide.mjs';
 import { readProjectLicense } from './package-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
+const { values } = parseArgs({ options: { 'skip-build': { type: 'boolean', default: false }, 'output-dir': { type: 'string' } } });
 if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Build this alpha on macOS Apple Silicon.');
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 if (!/^\d+\.\d+\.\d+$/.test(pkg.version)) throw new Error('A numeric release version is required.');
@@ -19,7 +21,7 @@ const nodeArchive = `node-v${nodeVersion}-darwin-arm64.tar.gz`;
 const nodeSha256 = 'c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428';
 const cache = resolve('.bridge-local/release-cache');
 const staging = resolve('dist/macos');
-const releases = resolve('dist/releases');
+const releases = resolve(values['output-dir'] ?? 'dist/releases');
 const app = join(staging, 'Figma Semantic Bridge.app');
 const resources = join(app, 'Contents/Resources');
 const run = (command, args, options = {}) => execFileSync(command, args, { cwd: root, stdio: 'inherit', ...options });
@@ -31,8 +33,8 @@ await mkdir(cache, { recursive: true }); await mkdir(releases, { recursive: true
 const verification = join(releases, `figma-semantic-bridge-${version}-verification.json`);
 await rm(verification, { force: true });
 await rm(`${verification}.sha256`, { force: true });
-if (!process.argv.includes('--skip-build')) run('npm', ['run', 'build']);
-run(process.execPath, ['scripts/package-plugin.mjs']);
+if (!values['skip-build']) run('npm', ['run', 'build']);
+run(process.execPath, ['scripts/package-plugin.mjs', '--output-dir', releases]);
 
 const archivePath = join(cache, nodeArchive);
 if (!await exists(archivePath)) {
@@ -66,6 +68,7 @@ await cp(join('docs/releases', `${version}.md`), join(resources, 'RELEASE-NOTES.
 if (projectLicense.bytes) await writeFile(join(resources, 'LICENSE'), projectLicense.bytes);
 
 await mkdir(join(resources, 'docs'), { recursive: true });
+for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) await cp(join('docs', file), join(resources, 'docs', file));
 for (const locale of ['ko', 'en']) {
   const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
   const userFile = `user-guide.${locale}.md`;

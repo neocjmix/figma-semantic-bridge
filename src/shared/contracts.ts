@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SelectiveReadNodesCommandSchema, SelectiveReadChildrenCommandSchema } from './selective-source.js';
 
 export const SCHEMA_VERSION = '1.0.0' as const;
 export const IdSchema = z.string().min(1).max(160);
@@ -46,7 +47,27 @@ export const SnapshotSchema = z.object({
   preview: PreviewSchema.nullable(),
   completeness: z.object({ complete: z.boolean(), reason: z.string().max(1000).nullable() }).strict(),
   warnings: z.array(z.string().max(2000)).max(100),
+  acquisition: z.object({ taskId: IdSchema, structureStartedAt: z.string().datetime(), structureFinishedAt: z.string().datetime(),
+    previewObservedAt: z.string().datetime().nullable(), consistency: z.literal('separate-observations') }).strict().optional(),
 }).strict();
+/** External source identity is explicit: these records never contain an inline node prefix. */
+export const CollectionReferenceSchema = z.object({
+  id: IdSchema, contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  nodeCount: z.number().int().min(1).max(200000), byteCount: z.number().int().min(1).max(64000000),
+  observedAt: z.string().datetime(),
+}).strict();
+export const EvidenceScopeSchema = z.object({
+  id: IdSchema, name: z.string().min(1).max(300), kind: z.enum(['visual','collection']),
+  source: SnapshotSchema.shape.source, bounds: RectSchema, preview: PreviewSchema.nullable(),
+  warnings: z.array(z.string().max(2000)).max(100),
+  visualObservation: z.object({taskId:IdSchema,observedAt:z.string().datetime()}).strict().nullable(),
+  collection: CollectionReferenceSchema.nullable(),
+}).strict().superRefine((scope,ctx)=>{
+  if(!scope.source.fileKey || (scope.kind==='visual')!==(scope.collection===null) ||
+    (scope.kind==='visual'&&(!scope.preview||!scope.visualObservation)) ||
+    (!!scope.preview)!==!!scope.visualObservation)
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:'Evidence scope requires explicit visual or collection backing.'});
+});
 export const SourceReferenceSchema = z.object({
   snapshotId: IdSchema, nodeId: IdSchema,
   matchType: z.enum(['exact', 'contained', 'partial', 'aggregate']),
@@ -89,10 +110,13 @@ export const ProjectSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION), id: IdSchema, name: z.string().min(1).max(300),
   revision: z.number().int().min(0), updatedAt: z.string().datetime(),
   snapshots: z.array(SnapshotSchema).max(30), annotations: z.array(AnnotationSchema).max(2000),
+  scopes: z.array(EvidenceScopeSchema).max(30).optional(),
   specifications: z.array(SpecificationSchema).max(2000), proposals: z.array(ProposalSchema).max(100),
 }).strict();
 export const OperationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_snapshot'), snapshot: SnapshotSchema }).strict(),
+  z.object({ type: z.literal('add_evidence_scope'), scope: EvidenceScopeSchema }).strict(),
+  z.object({ type: z.literal('attach_scope_collection'), scopeId: IdSchema, collection: CollectionReferenceSchema }).strict(),
   z.object({ type: z.literal('upsert_annotation'), annotation: AnnotationSchema }).strict(),
   z.object({ type: z.literal('delete_annotation'), id: IdSchema }).strict(),
   z.object({ type: z.literal('review_annotation'), id: IdSchema, status: ReviewStatusSchema }).strict(),
@@ -114,8 +138,16 @@ export const CaptureLimitsSchema = z.object({ maxNodes: z.number().int().min(1).
   maxImageDimension: z.number().int().min(256).max(4096).default(2048),
 }).strict();
 export const PluginCommandSchema = z.discriminatedUnion('type', [
+  SelectiveReadNodesCommandSchema, SelectiveReadChildrenCommandSchema,
+  z.object({type:z.literal('release_source_children'),observationId:IdSchema}).strict(),
   z.object({ type: z.literal('get_selection') }).strict(),
   z.object({ type: z.literal('capture_selection'), limits: CaptureLimitsSchema }).strict(),
+  z.object({ type: z.literal('capture_metadata'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema, limits: CaptureLimitsSchema }).strict(),
+  z.object({ type: z.literal('preview_capture'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),
+  z.object({ type: z.literal('read_structure_chunk'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema,
+    scopeId: IdSchema.optional(),
+    collectionId: IdSchema, sequence: z.number().int().min(0).max(200000) }).strict(),
+  z.object({ type: z.literal('release_structure_cursor'), collectionId: IdSchema }).strict(),
   z.object({ type: z.literal('preview_node'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),
   z.object({ type: z.literal('highlight_nodes'), fileKey: IdSchema, pageId: IdSchema, nodeIds: z.array(IdSchema).min(1).max(100) }).strict(),
 ]);
@@ -123,6 +155,9 @@ export const PluginRequestSchema = z.object({ type: z.literal('request'), reques
 export const PluginResponseSchema = z.object({ type: z.literal('response'), requestId: IdSchema, ok: z.boolean(),
   result: z.unknown().optional(), error: z.object({code:z.string().max(80),message:z.string().max(1000)}).strict().optional(),
 }).strict();
+export const PluginProgressSchema = z.object({ type: z.literal('progress'), requestId: IdSchema,
+  phase: z.enum(['structure', 'preview']), nodes: z.number().int().min(0).max(10000),
+  bytes: z.number().int().min(0).max(4_000_000) }).strict();
 export const SelectionSchema = z.object({ fileKey: z.string().max(160).nullable(), pageId: IdSchema,
   nodes: z.array(z.object({id:IdSchema,name:z.string().max(1000),type:z.string().max(80),bbox:NodeBoundsSchema.nullable()}).strict()).max(100),
 }).strict();
@@ -132,6 +167,8 @@ export type SourceNode = z.infer<typeof SourceNodeSchema>;
 export type SourceReference = z.infer<typeof SourceReferenceSchema>;
 export type SourceReview = z.infer<typeof SourceReviewSchema>;
 export type Snapshot = z.infer<typeof SnapshotSchema>;
+export type EvidenceScope = z.infer<typeof EvidenceScopeSchema>;
+export type CollectionReference = z.infer<typeof CollectionReferenceSchema>;
 export type Annotation = z.infer<typeof AnnotationSchema>;
 export type Specification = z.infer<typeof SpecificationSchema>;
 export type Project = z.infer<typeof ProjectSchema>;

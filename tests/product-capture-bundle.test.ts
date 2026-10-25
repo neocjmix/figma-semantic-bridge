@@ -87,6 +87,19 @@ test('capture transfer preserves observed opacity and local sibling order withou
   rejects(()=>importCaptureBundle(changed,'Tampered rendering'),'CAPTURE_BUNDLE_INTEGRITY');
 });
 
+test('capture transfer preserves independent acquisition provenance and includes it in integrity checks',()=>{
+  const source=project();
+  source.snapshots[0]!.acquisition={taskId:'synthetic-task',structureStartedAt:time,
+    structureFinishedAt:'2026-10-23T00:00:03.000Z',previewObservedAt:'2026-10-22T23:59:30.000Z',consistency:'separate-observations'};
+  const bundle=exportCaptureBundle(source,['ui','notes'],time);
+  const imported=importCaptureBundle(JSON.parse(JSON.stringify(bundle)),'Separate observations');
+  assert.deepEqual(imported.snapshots[0]!.acquisition,source.snapshots[0]!.acquisition);
+  assert.equal(imported.snapshots[1]!.acquisition,undefined);
+  const changed=structuredClone(bundle);
+  changed.snapshots[0]!.snapshot.acquisition!.previewObservedAt=time;
+  rejects(()=>importCaptureBundle(changed,'Changed observation time'),'CAPTURE_BUNDLE_INTEGRITY');
+});
+
 test('unknown fields, versions, semantic decisions and credentials are rejected instead of stripped',()=>{
   const bundle=exportCaptureBundle(project(),['ui'],time);
   for(const value of [

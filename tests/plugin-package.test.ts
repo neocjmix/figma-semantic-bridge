@@ -33,12 +33,14 @@ function entries(bytes: Buffer): Map<string, Buffer> {
 async function preparedPlugin(directory: string) {
   await writeFile(join(directory, 'package.json'), JSON.stringify({ version: '0.1.0' }));
   await mkdir(join(directory, 'docs'));
-  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md']) {
+  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md', 'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) {
     await writeFile(join(directory, 'docs', file), await readFile(join('docs', file)));
   }
-  await mkdir(join(directory, 'node_modules/zod'), { recursive: true });
-  for (const file of ['package.json', 'LICENSE']) {
-    await writeFile(join(directory, 'node_modules/zod', file), await readFile(join('node_modules/zod', file)));
+  for(const dependency of ['zod','@noble/hashes','@noble/ciphers']) {
+    await mkdir(join(directory, 'node_modules',dependency), { recursive: true });
+    for (const file of ['package.json', 'LICENSE']) {
+      await writeFile(join(directory, 'node_modules',dependency, file), await readFile(join('node_modules',dependency, file)));
+    }
   }
   const pluginDir = join(directory, 'plugin'); await mkdir(pluginDir);
   const manifest = await readFile('plugins/semantic-bridge/manifest.json');
@@ -62,9 +64,11 @@ test('plugin release ZIP contains only the approved prebuilt files and verifiabl
     const result = await packagePlugin({ projectDir: directory, version: '0.1.0', outputDir, pluginDir: source.pluginDir });
     const zip = await readFile(result.zipPath), files = entries(zip);
     const prefix = 'figma-semantic-bridge-plugin-0.1.0/';
-    assert.deepEqual([...files.keys()].sort(), ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md', 'docs/alpha-installation.md', 'docs/alpha-installation.en.md'].map(name => prefix + name).sort());
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md', 'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/unreleased-upgrade.md'].map(name => prefix + name).sort());
     assert.deepEqual(files.get(prefix + 'manifest.json'), source.manifest);
     assert.deepEqual(files.get(prefix + 'code.js'), Buffer.from(source.code));
+    assert.match(files.get(prefix+'THIRD_PARTY_NOTICES.txt')!.toString(),/Bundled dependency: @noble\/hashes/);
+    assert.match(files.get(prefix+'THIRD_PARTY_NOTICES.txt')!.toString(),/Bundled dependency: @noble\/ciphers/);
     assert.equal(zip.includes(Buffer.from('PRIVATE_SENTINEL')), false);
     assert.equal((await readFile(result.checksumPath, 'utf8')).trim(), `${sha(zip)}  figma-semantic-bridge-plugin-0.1.0.zip`);
     const metadata = JSON.parse(files.get(prefix + 'release.json')!.toString());

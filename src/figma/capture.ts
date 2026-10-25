@@ -25,12 +25,16 @@ export interface CaptureHost {
 export interface CaptureOptions {
   now?:()=>number; capturedAt?:()=>string; id?:()=>string;
   cancelled?:()=>boolean; yieldControl?:()=>Promise<void>;
+  onProgress?:(progress:{phase:'structure'|'preview';nodes:number;bytes:number})=>void;
+  metadataOnly?:boolean;
 }
 export class PluginCommandError extends Error {
   constructor(public readonly code:string,message:string) { super(message); this.name='PluginCommandError'; }
 }
 const containers = new Set(['FRAME','GROUP','COMPONENT','COMPONENT_SET','INSTANCE','SECTION']);
 const MAX_PNG_BYTES=8_000_000;
+const CAPTURE_PREVIEW_MAX_DIMENSION=2048;
+const CAPTURE_PREVIEW_MAX_DURATION_MS=55_000;
 const SECTION_PREVIEW_UNSUPPORTED='Section capture supports metadata only; PNG coordinate mapping is unsupported. Select an unrotated inner Frame explicitly and capture it.';
 function fail(code:string,message:string):never { throw new PluginCommandError(code,message); }
 function checkCancelled(options:CaptureOptions) { if(options.cancelled?.())fail('CANCELLED','Capture cancelled.'); }
@@ -110,6 +114,7 @@ export async function captureSelection(host:CaptureHost,rawLimits:CaptureLimits,
       const size=utf8Bytes(JSON.stringify(candidate))+(nodes.length?1:0);
       if(bytes+size>limits.maxBytes){reason='Metadata byte budget reached; exact text was not truncated.';break;}
       nodes.push(candidate);seen.add(node.id);bytes+=size;
+      if(nodes.length%100===0)options.onProgress?.({phase:'structure',nodes:nodes.length,bytes});
       if('isMask' in node&&node.isMask)warnings.add('Masks are present. BBoxes do not represent the rendered masked silhouette.');
       if('clipsContent' in node&&node.clipsContent)warnings.add('Clipping is present. Descendant BBoxes can extend outside the visible preview.');
       if(rotated(node))warnings.add('Rotated, reflected or skewed nodes are present; source matching uses axis-aligned BBoxes.');
@@ -118,13 +123,18 @@ export async function captureSelection(host:CaptureHost,rawLimits:CaptureLimits,
     }
     if(nodes.length===0)fail('EMPTY_CAPTURE',reason??'No source nodes could be read.');
     checkCancelled(options);
+    if(nodes.length%100!==0)options.onProgress?.({phase:'structure',nodes:nodes.length,bytes});
+    checkCancelled(options);
     let preview:Snapshot['preview']=null;
-    if(root.type==='SECTION')warnings.add(SECTION_PREVIEW_UNSUPPORTED);
+    if(options.metadataOnly)warnings.add('Metadata-only observation; no preview was requested.');
+    else if(root.type==='SECTION')warnings.add(SECTION_PREVIEW_UNSUPPORTED);
     else if(rotated(root))warnings.add('Preview withheld: rotated, reflected or skewed root coordinate mapping is not supported. Select an unrotated enclosing frame.');
     else if(!('exportAsync' in root)||!root.exportAsync)warnings.add('Preview unavailable: this node does not expose image export.');
     else if(now()-start>=limits.maxDurationMs)warnings.add('Preview not attempted because the extraction time budget was exhausted.');
     else {
       try {
+        options.onProgress?.({phase:'preview',nodes:nodes.length,bytes});
+        checkCancelled(options);
         const scale=Math.min(1,limits.maxImageDimension/Math.max(bounds.width,bounds.height));
         const image=await root.exportAsync({format:'PNG',contentsOnly:true,useAbsoluteBounds:true,constraint:{type:'SCALE',value:scale}});
         checkCancelled(options);
@@ -142,20 +152,80 @@ export async function captureSelection(host:CaptureHost,rawLimits:CaptureLimits,
         warnings.add(error instanceof PluginCommandError?error.message:'Native Figma image export failed; metadata remains available.');
       }
     }
-    warnings.add('Preview uses contentsOnly=true and useAbsoluteBounds=true; overlapping siblings outside the selected subtree are excluded.');
-    warnings.add('Snapshot is an observation, not an immutable Figma revision. Native page loading and image-export memory are not bounded by metadata limits.');
+    if(!options.metadataOnly)warnings.add('Preview uses contentsOnly=true and useAbsoluteBounds=true; overlapping siblings outside the selected subtree are excluded.');
+    warnings.add(options.metadataOnly
+      ? 'Snapshot is an observation, not an immutable Figma revision. Native page loading is not bounded by metadata limits.'
+      : 'Snapshot is an observation, not an immutable Figma revision. Native page loading and image-export memory are not bounded by metadata limits.');
     return SnapshotSchema.parse({schemaVersion:'1.0.0',id:options.id?.()??`capture-${Date.now()}-${Math.random().toString(36).slice(2,12)}`,
       name:root.name.slice(0,300)||'Selected scope',source:{fileKey:host.fileKey??null,pageId:page.id,rootId:root.id,revision:null,capturedAt:options.capturedAt?.()??new Date().toISOString()},
       bounds,nodes,preview,completeness:{complete:reason===null,reason},warnings:[...warnings]});
   } finally {host.skipInvisibleInstanceChildren=previous;}
 }
 
+/** Capture a pinned current-page root without reading or changing Figma selection. */
+async function captureMetadata(host:CaptureHost,command:Extract<PluginCommand,{type:'capture_metadata'}>,options:CaptureOptions):Promise<Snapshot> {
+  const checkAncestry=(node:FigmaReadableNode)=>{
+    const seen=new Set([node.id]);let ancestor=node.parent;
+    for(let hops=0;ancestor&&hops<256;hops++) {
+      const id=ancestor.id;
+      if(seen.has(id))break;
+      if(id===command.pageId)return;
+      seen.add(id);ancestor=ancestor.parent;
+    }
+    fail('WRONG_PAGE','Requested source root does not belong to the current page.');
+  };
+  const checkScope=()=>{
+    checkCancelled(options);
+    if(!host.fileKey)fail('FILE_IDENTITY_UNAVAILABLE','Figma did not expose this file identity; metadata cannot be verified.');
+    if(host.fileKey!==command.fileKey)fail('WRONG_FILE','The connected plugin is not in the requested source file.');
+    if(host.currentPage.id!==command.pageId)fail('WRONG_PAGE','Open the requested source page before capturing metadata.');
+  };
+  checkScope();
+  const previous=host.skipInvisibleInstanceChildren;
+  host.skipInvisibleInstanceChildren=false;
+  try {
+    const root=await host.getNodeByIdAsync(command.nodeId);checkScope();
+    if(!root||root.id!==command.nodeId)fail('NODE_UNAVAILABLE','Requested source root is unavailable.');
+    checkAncestry(root);
+    const original={id:root.id,name:root.name,type:root.type,parentId:root.parent?.id??null,bbox:copyBounds(root)};
+    // The adapter supplies a fixed selection only to the existing bounded walker.
+    // It never writes Figma's actual currentPage.selection.
+    const pinnedPage:CaptureHost['currentPage']={id:command.pageId,name:'',type:'PAGE',parent:null,selection:[root]};
+    const pinnedHost:CaptureHost={
+      get fileKey(){return host.fileKey;},currentPage:pinnedPage,
+      get skipInvisibleInstanceChildren(){return host.skipInvisibleInstanceChildren;},
+      set skipInvisibleInstanceChildren(value){host.skipInvisibleInstanceChildren=value;},
+      getNodeByIdAsync:id=>host.getNodeByIdAsync(id),
+      setCurrentPageAsync:page=>host.setCurrentPageAsync(page),
+      selectNodes:nodes=>host.selectNodes(nodes),
+      scrollAndZoomIntoView:nodes=>host.scrollAndZoomIntoView(nodes),
+    };
+    const snapshot=await captureSelection(pinnedHost,command.limits,{...options,metadataOnly:true});
+    checkScope();
+    const current=await host.getNodeByIdAsync(command.nodeId);checkScope();
+    if(current)checkAncestry(current);
+    const observed=snapshot.nodes[0];
+    const matches=(node:FigmaReadableNode|SourceNode|undefined)=>!!node&&node.id===original.id&&node.name===original.name&&node.type===original.type&&
+      ('parentId' in node?node.parentId:node.parent?.id??null)===original.parentId&&
+      JSON.stringify('bbox' in node?node.bbox:copyBounds(node))===JSON.stringify(original.bbox);
+    if(!matches(current??undefined)||!matches(observed)||snapshot.source.fileKey!==command.fileKey||
+      snapshot.source.pageId!==command.pageId||snapshot.source.rootId!==command.nodeId) {
+      fail('SOURCE_METADATA_CHANGED','Source root metadata changed during capture. Capture the scope again.');
+    }
+    return snapshot;
+  } finally {host.skipInvisibleInstanceChildren=previous;}
+}
+
 /** Export one explicit current-page node without reading its children or changing the document. */
-async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:'preview_node'}>,options:CaptureOptions):Promise<NodePreviewResult> {
+async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:'preview_node'|'preview_capture'}>,options:CaptureOptions):Promise<NodePreviewResult> {
+  const independent=command.type==='preview_capture';
+  const maxDimension=independent?CAPTURE_PREVIEW_MAX_DIMENSION:NODE_PREVIEW_MAX_DIMENSION;
+  const maxBytes=independent?MAX_PNG_BYTES:NODE_PREVIEW_MAX_BYTES;
+  const maxDurationMs=independent?CAPTURE_PREVIEW_MAX_DURATION_MS:NODE_PREVIEW_MAX_DURATION_MS;
   const now=options.now??Date.now,start=now();
   const checkActive=()=>{
     checkCancelled(options);
-    if(now()-start>=NODE_PREVIEW_MAX_DURATION_MS)fail('PREVIEW_TIMEOUT','Node export exceeded the cooperative deadline; the result was discarded. Native exportAsync cannot be preempted.');
+    if(now()-start>=maxDurationMs)fail('PREVIEW_TIMEOUT','Node export exceeded the cooperative deadline; the result was discarded. Native exportAsync cannot be preempted.');
     if(!host.fileKey)fail('FILE_IDENTITY_UNAVAILABLE','Figma did not expose this file identity; node export cannot be verified.');
     if(host.fileKey!==command.fileKey)fail('WRONG_FILE','The connected plugin is not in the requested source file.');
     if(host.currentPage.id!==command.pageId)fail('WRONG_PAGE','Open the requested source page in Figma before requesting its node export.');
@@ -166,6 +236,7 @@ async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:
     const node=await host.getNodeByIdAsync(command.nodeId);checkActive();
     if(!node||node.id!==command.nodeId||['PAGE','DOCUMENT','SLICE'].includes(node.type))fail('NODE_UNAVAILABLE','Requested source node is unavailable or does not support scoped node export.');
     if(node.type==='SECTION')fail('UNSUPPORTED_NODE_PREVIEW',SECTION_PREVIEW_UNSUPPORTED);
+    if(independent&&!containers.has(node.type))fail('NODE_UNAVAILABLE','Select a supported source container for an independent overview.');
     const readObservation=()=>{
       // Ancestors contribute IDs only. No sibling arrays, styles or external opacity are read.
       const parents:string[]=[],seen=new Set([node.id]);let parent=node.parent;
@@ -195,7 +266,9 @@ async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:
     }
     if(!('exportAsync' in node)||!node.exportAsync)fail('PREVIEW_UNAVAILABLE','This node does not expose image export.');
     checkActive();
-    const scale=Math.min(1,NODE_PREVIEW_MAX_DIMENSION/Math.max(bounds.width,bounds.height));
+    options.onProgress?.({phase:'preview',nodes:0,bytes:0});
+    checkActive();
+    const scale=Math.min(1,maxDimension/Math.max(bounds.width,bounds.height));
     const image=await node.exportAsync({format:'PNG',contentsOnly:true,useAbsoluteBounds:true,constraint:{type:'SCALE',value:scale}});
     checkActive();
     const after=readObservation();
@@ -203,10 +276,10 @@ async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:
       ||JSON.stringify(before.transform)!==JSON.stringify(after.transform)||!Object.is(before.opacity,after.opacity)||!Object.is(before.visible,after.visible)) {
       fail('NODE_CHANGED','Source node metadata or ancestry changed during export; the live image was discarded.');
     }
-    if(image.byteLength>NODE_PREVIEW_MAX_BYTES)fail('IMAGE_TOO_LARGE','Node PNG exceeds the 2 MB image budget.');
+    if(image.byteLength>maxBytes)fail('IMAGE_TOO_LARGE',`Node PNG exceeds the ${maxBytes/1_000_000} MB image budget.`);
     const {width,height}=pngDimensions(image),expectedWidth=bounds.width*scale,expectedHeight=bounds.height*scale;
-    const diagnostic=`PNG diagnostics: actual=${width}x${height}; requestedMaxDimension=${NODE_PREVIEW_MAX_DIMENSION}; scale=${scale}; sourceBounds=${bounds.width}x${bounds.height}; expectedScaled=${expectedWidth}x${expectedHeight}.`;
-    if(width<1||height<1||width>NODE_PREVIEW_MAX_DIMENSION||height>NODE_PREVIEW_MAX_DIMENSION)fail('INVALID_IMAGE_SIZE',`Node PNG exceeds the requested pixel budget. ${diagnostic}`);
+    const diagnostic=`PNG diagnostics: actual=${width}x${height}; requestedMaxDimension=${maxDimension}; scale=${scale}; sourceBounds=${bounds.width}x${bounds.height}; expectedScaled=${expectedWidth}x${expectedHeight}.`;
+    if(width<1||height<1||width>maxDimension||height>maxDimension)fail('INVALID_IMAGE_SIZE',`Node PNG exceeds the requested pixel budget. ${diagnostic}`);
     if(Math.abs(width-expectedWidth)>2||Math.abs(height-expectedHeight)>2)fail('COORDINATE_MISMATCH',`Node PNG dimensions differ from absolute bounds; uncertain mapping was rejected. ${diagnostic}`);
     const result=NodePreviewResultSchema.parse({fileKey:command.fileKey,pageId:command.pageId,node:after.source,
       observedAt:options.capturedAt?.()??new Date().toISOString(),preview:{mimeType:'image/png',base64:encodeBase64(image),width,height},warnings:[
@@ -227,7 +300,10 @@ export async function executePluginCommand(host:CaptureHost,input:PluginCommand,
   const command=PluginCommandSchema.parse(input);checkCancelled(options);
   if(command.type==='get_selection')return getSelection(host);
   if(command.type==='capture_selection')return captureSelection(host,command.limits,options);
+  if(command.type==='capture_metadata')return captureMetadata(host,command,options);
+  if(command.type==='preview_capture')return previewNode(host,command,options);
   if(command.type==='preview_node')return previewNode(host,command,options);
+  if(command.type==='read_structure_chunk'||command.type==='release_structure_cursor'||command.type==='read_source_nodes'||command.type==='read_source_children'||command.type==='release_source_children')fail('SESSION_REQUIRED','These source reads require the plugin session reader.');
   if(!host.fileKey)fail('FILE_IDENTITY_UNAVAILABLE','Figma did not expose this file identity; source navigation cannot be verified.');
   if(host.fileKey!==command.fileKey)fail('WRONG_FILE','The connected plugin is not in the requested source file.');
   // Captures preserve hidden instance children. Dev Mode skips them by default,

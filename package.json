@@ -12,6 +12,7 @@
     "package:macos": "node scripts/package-macos.mjs",
     "release:verify": "node scripts/verify-release.mjs",
     "benchmark:fixtures": "tsx scripts/benchmark-fixtures.ts",
+    "benchmark:grounding": "tsx scripts/benchmark-grounding.ts",
     "check": "npm run typecheck && npm test && npm run build",
     "fixtures:validate": "tsx scripts/validate-manifests.ts",
     "build:product-plugin": "node scripts/build-product-plugin.mjs",
@@ -42,10 +43,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "@noble/ciphers": "2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@peculiar/x509": "2.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "reflect-metadata": "0.2.2",
     "ws": "^8.22.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": ">=22"

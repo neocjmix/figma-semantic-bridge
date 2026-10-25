@@ -1,3 +1,5 @@
+import { challengeFor, welcomeBridgeClient } from './bridge-auth-helper.js';
+import { BRIDGE_PROTOCOL, bridgeProof, BridgeChannel, type BridgeChallenge } from '../src/shared/bridge-auth.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -36,23 +38,23 @@ test('pairing token limits match the server at 32 and 1024 characters',()=>{
   assert.throws(()=>h.client.start('t'.repeat(1025)),/32–1024/);
   for(const length of [32,1024]) {
     h.client.start('t'.repeat(length));const socket=h.sockets.at(-1)!;socket.open();
-    assert.equal(JSON.parse(socket.sent[0]!).token.length,length);h.client.stop();
+    assert.equal('token' in JSON.parse(socket.sent[0]!),false);welcomeBridgeClient(socket,'t'.repeat(length));h.client.stop();
   }
 });
 test('iframe bridge authenticates before relaying and discards stale responses after reconnect',()=>{
   const h=harness();h.client.start('pairing-token-for-tests-32-chars-long');const first=h.sockets[0]!;first.open();
-  assert.deepEqual(JSON.parse(first.sent[0]!),{type:'hello',token:'pairing-token-for-tests-32-chars-long',clientId:'test-client'});
-  first.receive({type:'welcome',sessionId:'one'});first.receive({type:'request',requestId:'read-1',command:{type:'get_selection'}});
+  assert.equal('token' in JSON.parse(first.sent[0]!),false);
+  welcomeBridgeClient(first,'pairing-token-for-tests-32-chars-long');first.receive({type:'request',requestId:'read-1',command:{type:'get_selection'}});
   const request=h.requests[0]!;assert.ok(request);
   first.close(1006);assert.deepEqual(h.cancelled,['read-1']);h.advance(500);
-  const second=h.sockets[1]!;second.open();second.receive({type:'welcome',sessionId:'two'});
+  const second=h.sockets[1]!;second.open();welcomeBridgeClient(second,'pairing-token-for-tests-32-chars-long');
   assert.equal(h.client.complete({type:'response',requestId:'read-1',ok:true,result:{}},request.generation),false);
   second.receive({type:'request',requestId:'read-2',command:{type:'get_selection'}});
   assert.equal(h.client.complete({type:'response',requestId:'read-2',ok:true,result:{}},h.requests[1]!.generation),true);
   assert.equal(JSON.parse(second.sent.at(-1)!).requestId,'read-2');h.client.stop();
 });
 test('server cancellation prevents result emission; explicit stop clears timers and credentials',()=>{
-  const h=harness();h.client.start('pairing-token-for-tests-32-chars-long');const socket=h.sockets[0]!;socket.open();socket.receive({type:'welcome',sessionId:'one'});
+  const h=harness();h.client.start('pairing-token-for-tests-32-chars-long');const socket=h.sockets[0]!;socket.open();welcomeBridgeClient(socket,'pairing-token-for-tests-32-chars-long');
   socket.receive({type:'request',requestId:'capture-1',command:{type:'capture_selection',limits:{}}});
   socket.receive({type:'cancel',requestId:'capture-1'});assert.deepEqual(h.cancelled,['capture-1']);
   assert.equal(h.client.complete({type:'response',requestId:'capture-1',ok:true,result:{}},h.requests[0]!.generation),false);
@@ -64,7 +66,7 @@ test('unauthenticated requests are never forwarded and rejected pairing does not
   assert.equal(h.requests.length,0);assert.equal(h.scheduled.size,0);assert.equal(h.states.at(-1),'disconnected');
 });
 test('a replaced plugin stops retrying so two open files cannot repeatedly take control',()=>{
-  const h=harness();h.client.start('pairing-token-for-tests-32-chars-long');const socket=h.sockets[0]!;socket.open();socket.receive({type:'welcome',sessionId:'one'});
+  const h=harness();h.client.start('pairing-token-for-tests-32-chars-long');const socket=h.sockets[0]!;socket.open();welcomeBridgeClient(socket,'pairing-token-for-tests-32-chars-long');
   socket.receive({type:'request',requestId:'old-read',command:{type:'get_selection'}});
   socket.close(4001);
   assert.deepEqual(h.cancelled,['old-read']);assert.equal(h.scheduled.size,0);assert.equal(h.states.at(-1),'disconnected');
@@ -78,18 +80,24 @@ test('bridge client performs an authenticated request/response over actual loopb
   t.after(async()=>{client?.stop();for(const socket of server.clients)socket.terminate();await new Promise<void>(resolve=>server.close(()=>resolve()));});
   const received=new Promise<unknown>((resolve,reject)=>{
     server.on('connection',socket=>{
+      let challenge:BridgeChallenge;let channel:BridgeChannel|undefined;
       socket.on('error',reject);
       socket.on('message',raw=>{
-        const value=JSON.parse(raw.toString());
+        const value=(channel?channel.open(raw.toString()):JSON.parse(raw.toString())) as {type:string;proof?:string};
         if(value.type==='hello'){
-          assert.equal(value.token,'loopback-test-pairing-token-32-chars-long');
-          socket.send(JSON.stringify({type:'welcome',sessionId:'loopback-session'}));
-          socket.send(JSON.stringify({type:'request',requestId:'loopback-read',command:{type:'get_selection'}}));
+          assert.equal('token' in value,false);
+          challenge=challengeFor(value as unknown as {clientId:string;clientNonce:string},'loopback-test-pairing-token-32-chars-long',`ws://127.0.0.1:${port}/bridge`);
+          socket.send(JSON.stringify(challenge));
+        }else if(value.type==='authenticate'){
+          assert.equal(value.proof,bridgeProof('loopback-test-pairing-token-32-chars-long','client-authentication',challenge));
+          socket.send(JSON.stringify({type:'welcome',protocol:BRIDGE_PROTOCOL,sessionId:challenge.sessionId,proof:bridgeProof('loopback-test-pairing-token-32-chars-long','server-welcome',challenge)}));
+          channel=new BridgeChannel('loopback-test-pairing-token-32-chars-long',challenge,'server');
+          socket.send(channel.seal(JSON.stringify({type:'request',requestId:'loopback-read',command:{type:'get_selection'}})));
         }else if(value.type==='response')resolve(value);
       });
     });
   });
-  client=new BridgeClient({clientId:'loopback-client',socketFactory:url=>{const endpoint=new URL(url);endpoint.port=String(port);return new WebSocket(endpoint) as unknown as SocketLike;},
+  client=new BridgeClient({clientId:'loopback-client',endpoint:`ws://127.0.0.1:${port}/bridge`,socketFactory:url=>new WebSocket(url) as unknown as SocketLike,
     onCancel:()=>{},onState:()=>{},onRequest:(request,generation)=>{client.complete({type:'response',requestId:request.requestId,ok:true,result:{fileKey:null,pageId:'0:1',nodes:[]}},generation);}});
   client.start('loopback-test-pairing-token-32-chars-long');
   assert.deepEqual(await received,{type:'response',requestId:'loopback-read',ok:true,result:{fileKey:null,pageId:'0:1',nodes:[]}});

@@ -9,9 +9,14 @@ macOS 13 이상을 빌드 대상으로 하는 Apple Silicon(M1 이상) 앱입니
 사용자가 Node.js, npm, 소스 체크아웃이나 별도 개발 서버를 준비할 필요가 없습니다.
 0.1.1의 실제 로컬 업데이트·실행은 macOS 26.6.2에서 검증했으며 macOS 13 실행은 아직 확인하지 않았습니다.
 
-**0.1.1 다국어 알파 후보의 패키지·로컬 업데이트 검증 완료 · 공개 릴리스 게시 대기.**
-라이선스 선택 후 최종 게시 커밋과 설치 파일을 고정합니다.
-다운로드 URL은 게시 예정이며 아직 사용할 공개 릴리스 링크는 없습니다.
+**[0.1.1 다국어 알파 릴리스](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)를 공개했습니다.**
+[MIT 라이선스](LICENSE)를 적용했습니다. 이번 공개 알파는 로컬 서비스 인증과 캡처
+가져오기 입력 검증에 알려진 미수정 문제가 있습니다. 수정 전에는 본인 소유의 합성·
+비민감 파일로만 평가하고 사내·고객 디자인에는 사용하지 마세요. 세부 내용은
+[앱 인증 #11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[플러그인 인증 #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
+[캡처 검증 #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)과
+[배포 경계](docs/release-readiness.md)에 기록했습니다.
 
 [상세 설치·세팅 가이드](docs/alpha-installation.md)
 · [Installation — English](docs/alpha-installation.en.md)
@@ -70,8 +75,8 @@ Intel Mac, Windows, Linux용 데스크톱 앱은 이번 알파에 포함하지 �
 기존 앱 디렉터리는 그대로 두고 정상 종료 후 내부 파일을 교체하며,
 프로젝트·토큰·언어 선택과 Figma 플러그인의 등록 경로를 보존합니다.
 
-1. 공개된 후 릴리스의 설치 파일과 `SHA256SUMS`를 받고 체크섬을 확인합니다.
-   게시 전에는 제공받은 로컬 후보 파일을 검증할 수 있지만 공개 다운로드로 간주하지 않습니다.
+1. [0.1.1 알파 릴리스](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)에서
+   설치 파일과 `SHA256SUMS`를 받고 체크섬을 확인합니다.
 2. DMG를 열어 `Figma Semantic Bridge.app`을 `/Applications`에 복사하고 실행합니다.
 3. 먼저 **Load demo**로 계정 없이 화면 표시·저장·재실행을 확인할 수 있습니다.
 4. 앱의 **Reveal Figma Plugin**을 누르거나 플러그인 ZIP을 고정된 위치에 풉니다.
@@ -227,6 +232,6 @@ npm run release:verify
 - [에이전트 작업 규칙](AGENTS.md)
 
 원본 디자인·사내 스펙·연결 토큰을 저장소에 커밋하지 않습니다.
-라이선스는 소유자의 선택을 기다리는 중이며, 공개 저장소라는 사실만으로 사용 권한을
-부여하지 않습니다. 포함된 제3자 소프트웨어의 라이선스는 설치 파일의
+프로젝트가 소유한 코드와 문서의 라이선스는 [MIT](LICENSE)입니다. 외부 Figma
+디자인의 권리는 이 라이선스에 포함되지 않습니다. 포함된 제3자 소프트웨어의 라이선스는 설치 파일의
 `THIRD-PARTY-NOTICES.md`와 원본 라이선스 파일을 확인하세요.

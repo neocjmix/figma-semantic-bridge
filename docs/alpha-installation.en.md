@@ -5,10 +5,16 @@
 The 0.1.1 candidate package and actual local update from 0.1.0 passed verification,
 preserving projects, the token, language choices and the existing Figma registration.
 Earlier 0.1.0 observations remain separate historical evidence.
-**The public release has not been published; LICENSE selection
-is pending.** Download URLs will be added to the README after publication.
-This guide describes verified paths and procedures without presenting a planned
-URL as an available download.
+**The [0.1.1 public alpha](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha) is published.**
+The project is MIT licensed. Local authentication and input-validation findings
+remain unresolved and are tracked in [desktop #11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[plugin #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12) and
+[capture validation #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13).
+
+Evaluate this alpha only with your own synthetic or non-sensitive files. Until
+local-service authentication is fixed, do not capture corporate or client designs
+or import untrusted capture bundles. See [release readiness](release-readiness.md)
+for the current boundaries.
 
 Figma Semantic Bridge stores a separate interpretation of unchanged Figma source,
 then exposes reviewed components and specifications through MCP. It is not a
@@ -43,8 +49,10 @@ This is not a plugin already listed in Figma Community.
 - [x] Passed 198 Node tests, 27 browser scenarios, two fixture manifests, typecheck/build and native self-tests.
 - [x] Verified the 0.1.1 candidate ZIP/DMG, plugin, versions, guides and checksums.
 - [x] Exercised the 0.1.0 → 0.1.1 update and preserved 15 projects, the token and language choices.
-- [ ] Include the owner's chosen LICENSE; publication is waiting for this decision.
-- [ ] After license inclusion, fix the final posting commit, tag and public download links.
+- [x] Include the owner's MIT choice in `LICENSE` and package metadata.
+- [x] Track the [unresolved security findings](release-readiness.md) in public
+  GitHub issues #11–#13 and link the alpha-use warning. Fixes and retests follow later.
+- [x] Specify the public tag `v0.1.1-alpha` and release download link.
 
 The [installed-app aggregate](evaluation/alpha-desktop-acceptance.json) and
 [bilingual observations](evaluation/bilingual-interface-acceptance.json) record the
@@ -89,9 +97,9 @@ operate or bypass the locked screen. The user handles unlocking and account logi
 If 0.1.0 is already installed, use section 9 instead of repeating first-time setup.
 Do not reset existing projects, the token, language choices or a valid plugin registration.
 
-1. After publication, obtain the Apple Silicon DMG and checksums from the actual
-   release linked by the README. Before publication, distinguish a provided local
-   candidate from a publicly released build. Check filename, version and checksum.
+1. Obtain the Apple Silicon DMG and `SHA256SUMS` from the
+   [0.1.1 public release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha).
+   Check filename, version and checksum.
 2. Open the DMG and copy the app into Applications. Do not keep running from the
    mounted image or accumulate differently located copies for each update.
 3. Launch the app from Applications. Because this alpha lacks Developer ID signing

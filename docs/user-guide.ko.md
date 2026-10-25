@@ -10,8 +10,14 @@
 코딩 에이전트에게 전달하세요. 설치한 앱은 내장 편집기에 자동 연결됩니다.
 Figma 플러그인에는 앱의 **페어링 토큰 복사(Copy Pairing Token)**으로 복사한 토큰을 붙여넣습니다.
 
-**0.1.1 알파의 공개 릴리스는 LICENSE 선택을 기다리며 아직 게시되지 않았습니다.**
-설치 파일과 실제 검증 범위는 설치 문서를 확인하세요. 이 가이드는 사용 절차이며
+**[0.1.1 공개 알파](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)는 MIT 라이선스입니다.**
+로컬 서비스 인증과 캡처 가져오기 입력 검증의 알려진 문제가 수정되기 전에는
+본인 소유의 합성·비민감 파일로만 평가하고 사내·고객 디자인이나 신뢰할 수 없는
+캡처 묶음을 사용하지 마세요. 미수정 문제는 [#11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[#12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
+[#13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)에서 추적합니다.
+설치 파일과 실제 검증 범위는 설치 문서를 확인하세요.
+이 가이드는 사용 절차이며
 독립된 의미 전문가의 정확도 평가나 생산성 검증 결과가 아닙니다.
 
 ## 화면 언어

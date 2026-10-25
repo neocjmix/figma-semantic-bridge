@@ -12,8 +12,14 @@ source nodes, review their meaning, then share approved context with coding agen
 The installed app pairs its embedded editor automatically. Use the app's
 **Copy Pairing Token** only when pairing the Figma plugin.
 
-**The 0.1.1 alpha public release has not been published; repository license choice
-is pending.** See the installation guide for artifacts and tested boundaries.
+**The [0.1.1 public alpha](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha) is MIT licensed.**
+Until known local-service authentication and capture-import validation issues
+are fixed, evaluate only with your own synthetic or non-sensitive files. Do not
+use corporate or client designs or import untrusted capture bundles. The open
+issues are [#11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[#12](https://github.com/neocjmix/figma-semantic-bridge/issues/12) and
+[#13](https://github.com/neocjmix/figma-semantic-bridge/issues/13). See the
+installation guide for artifacts and tested boundaries.
 This is a workflow guide, not evidence of independent semantic-expert accuracy
 or a completed human productivity study.
 

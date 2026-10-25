@@ -7,6 +7,29 @@ is false for every current entry, including those whose Community page displays
 CC BY 4.0. Source use, actual duplication and third-party asset rights are separate
 checks.
 
+## Publication and local acquisition
+
+The tracked public-candidate fixtures are links, our evaluation notes and aggregate
+measurements, not copies of the designs. The demo pixels are generated from
+self-authored HTML. No third-party `.fig`, source JSON, screenshot or exact source
+text is required to build, package or run CI. Keep these metadata and synthetic
+fixtures tracked; excluding them for a design-file license would discard useful
+test evidence without removing any redistributed design file.
+
+Acquire a real test file only when a specific manual Figma test needs it. First
+check that file's current license, attribution and copy/test terms. For a permitted
+Community file, use Figma's **Open in Figma** to make a personal copy; an ordinary
+shared file needs its own permission basis. Keep any downloaded `.fig`, captured
+PNG, source JSON/text, analyzer report and copy identity under the ignored
+`.fixture-local/` directory. Do not put them in `fixtures/`, package assets or CI,
+and do not edit the author's original. The existing `.gitignore` excludes
+`.fixture-local/` and `*.fig`; it does not erase files already tracked by Git.
+
+The synthetic registry includes a user-supplied Figma design URL and file key.
+The owner approved disclosure of that link and key for the 0.1.1 alpha source
+release. This approval does not grant permission to redistribute the design file,
+its screenshots or any third-party assets.
+
 - [public/manifest.json](public/manifest.json): five conditional public candidates.
   No public candidate has a measured node scope in this evaluation.
 - [synthetic/manifest.json](synthetic/manifest.json): the existing small Figma baseline,

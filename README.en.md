@@ -11,9 +11,13 @@ Figma plugin. Users do not need Node.js, npm, a source checkout or a separate
 development server. The actual 0.1.1 local update and execution were exercised on macOS 26.6.2;
 execution on macOS 13 has not been verified.
 
-**0.1.1 bilingual alpha candidate package and local update verified; public release
-pending.** Publication awaits the owner's license choice and final publication artifacts.
-Public download URLs are planned and are not available yet.
+**The [0.1.1 bilingual alpha release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha) is published.** The project carries the [MIT license](LICENSE). This public alpha has
+known, unresolved local-service authentication and capture-import validation issues.
+Until fixed, evaluate it only with your own synthetic or non-sensitive files, not
+corporate or client designs. See [desktop authentication #11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[plugin authentication #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
+[capture validation #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)
+and the [release boundaries](docs/release-readiness.md).
 
 [Detailed installation and setup](docs/alpha-installation.en.md)
 · [한국어 설치 가이드](docs/alpha-installation.md)
@@ -79,9 +83,9 @@ If 0.1.0 is already installed, skip repeated first-time setup and follow the
 Keep the existing application directory in place, quit normally before replacing
 its contents, and preserve projects, the token, language choices and Figma's plugin path.
 
-1. Once published, obtain the release artifacts and `SHA256SUMS`, then verify their
-   checksums. A supplied local candidate can be checked before publication, but it
-   is not a public download.
+1. Obtain the artifacts and `SHA256SUMS` from the
+   [0.1.1 alpha release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha),
+   then verify their checksums.
 2. Open the DMG, copy `Figma Semantic Bridge.app` to `/Applications`, and launch it.
    Its embedded editor pairs automatically; no separate browser token entry is needed.
 3. Use **Load demo** to check the editor, saving and restart without a Figma account.
@@ -254,7 +258,7 @@ Some reference documents remain in Korean. Workflow and installation guides are
 provided in both languages. Reference links outside those guides point to source
 repository documents and may not be included in standalone or plugin packages.
 
-Never commit source designs, internal specifications or pairing tokens. The
-repository's license awaits the owner's selection; public availability alone
-does not grant a license. See the distribution's `THIRD-PARTY-NOTICES.md` and
+Never commit source designs, internal specifications or pairing tokens.
+Project-owned code and documentation are [MIT licensed](LICENSE); that license
+does not cover external Figma designs. See the distribution's `THIRD-PARTY-NOTICES.md` and
 original license files for bundled third-party software.

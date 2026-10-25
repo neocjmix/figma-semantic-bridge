@@ -5,9 +5,16 @@
 0.1.1 후보의 패키지와 0.1.0에서의 실제 로컬 업데이트 검증을 완료했다.
 프로젝트·토큰·언어 선택과 기존 Figma 플러그인 등록을 보존했으며,
 이전 0.1.0 실행 기록은 별도의 역사로 유지한다.
-**공개 릴리스는 아직 게시되지 않았으며 LICENSE 선택을 기다린다.** 다운로드 URL은
-게시 예정이고, 공개 후 README에 실제 링크를 추가한다. 이 문서는 검증된 앱 경로와
-설치 절차를 설명하며 미게시 URL을 다운로드 링크처럼 제공하지 않는다.
+**[0.1.1 공개 알파](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)를 게시했다.**
+MIT 라이선스를 적용했고, 로컬 인증·입력 검증 문제는
+[앱 인증 #11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+[플러그인 인증 #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
+[캡처 검증 #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)에서
+미수정 제한으로 추적한다.
+
+이 알파는 본인 소유의 합성·비민감 자료로만 평가한다. 알려진 로컬 서비스 인증
+문제가 수정되기 전에는 사내·고객 디자인을 캡처하거나 신뢰할 수 없는 캡처 묶음을
+가져오지 않는다. 자세한 범위는 [릴리스 준비 문서](release-readiness.md)를 따른다.
 
 Figma Semantic Bridge는 Figma 원본 위에 별도의 의미 해석을 저장하고, 사람이
 검토한 구성요소와 명세를 MCP로 전달하는 로컬 도구다. Figma-to-code 생성기가 아니다.
@@ -41,8 +48,10 @@ Node/MCP의 정확한 경로는 6절에 있다.
 - [x] 0.1.1 Node 198개·브라우저 27개·fixture manifest 2개, 타입 검사·빌드와 native 자체 검사 통과.
 - [x] 0.1.1 후보 패키지, ZIP/DMG, 플러그인·버전·안내·체크섬 검증 완료.
 - [x] 0.1.0 → 0.1.1 실제 업데이트와 기존 15개 프로젝트·토큰·언어 선택 보존 확인.
-- [ ] 소유자의 LICENSE 선택을 반영한다. 공개 게시를 기다리는 외부 결정이다.
-- [ ] 라이선스 반영 후 최종 게시 커밋·태그·공개 다운로드 링크를 고정한다.
+- [x] 소유자의 MIT 선택을 `LICENSE`와 패키지 메타데이터에 반영한다.
+- [x] [미수정 보안 문제](release-readiness.md)를 GitHub 이슈 #11–#13으로 공개 추적하고
+  알파 사용 제한과 링크를 안내한다. 수정·재검증은 후속 버전의 과제다.
+- [x] 공개 태그 `v0.1.1-alpha`와 릴리스 다운로드 링크를 지정한다.
 
 이전 0.1.0 실행 증거는 [설치 앱 집계](evaluation/alpha-desktop-acceptance.json)와
 [다국어 관측](evaluation/bilingual-interface-acceptance.json)에 있다.
@@ -84,8 +93,8 @@ macOS가 잠겨 있다면 파일/패키지 문서 확인 같은 작업까지만 
 이미 0.1.0이 설치된 경우 이 신규 설치 절차 대신 9절을 따른다. 기존 프로젝트,
 토큰, 언어 선택이나 정상 등록된 플러그인을 초기화할 필요가 없다.
 
-1. 공개 게시 후 README가 안내하는 실제 릴리스에서 Apple Silicon DMG와 체크섬을 받는다.
-   게시 전 제공받은 로컬 후보는 공개 배포본과 구분한다. 파일명·버전·체크섬이
+1. [0.1.1 공개 릴리스](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)에서
+   Apple Silicon DMG와 `SHA256SUMS`를 받는다. 파일명·버전·체크섬이
    일치하는지 확인하고, 불일치하면 실행하지 않는다.
 2. DMG를 열고 포함된 앱을 Applications로 복사한다. DMG 내부에서 계속 실행하거나
    업데이트마다 다른 폴더에 여러 사본을 남기지 않는다.

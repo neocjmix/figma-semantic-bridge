@@ -141,4 +141,4 @@ for (const [source, suffix] of [['docs/alpha-installation.en.md', 'INSTALLATION.
   await cp(source, target); assets.push(target);
 }
 await writeFile(join(releases, 'SHA256SUMS'), (await Promise.all(assets.map(async path => `${sha(await readFile(path))}  ${path.split('/').at(-1)}`))).join('\n') + '\n');
-console.log(`Packaged ${version} alpha: ${releases}. Ad-hoc signed; not notarized. Publication requires a clean, verified release commit and owner license decision.`);
+console.log(`Packaged ${version} alpha: ${releases}. Ad-hoc signed; not notarized. Publication requires a clean, verified release commit.`);

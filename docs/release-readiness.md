@@ -1,9 +1,12 @@
 # Release readiness
 
-Updated 2026-10-24 for the installed 0.1.0 macOS alpha. The standalone application,
-prebuilt local Figma plugin and installed-app workflow are implemented and verified.
-Public release assets are not posted; repository license choice is pending.
-This is not a formal security audit, certification or enterprise deployment approval. Executed test/native results remain in the [validation log](product-validation.md);
+Updated 2026-10-25 for the 0.1.1 macOS alpha release. The standalone
+application, prebuilt local Figma plugin and installed-app update workflow have
+been exercised. The [public alpha](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)
+is MIT licensed. Open security findings are disclosed as limitations of
+non-sensitive-use evaluation. This partial security review is not certification
+or enterprise deployment approval.
+Executed test/native results remain in the [validation log](product-validation.md);
 [completion status](completion-status.md) separates remaining work from blockers.
 
 ## Observed compatibility
@@ -29,8 +32,12 @@ defines the workflow. The recorded Node/platform/CPU combination is also in the
 The [CI workflow](../.github/workflows/fixtures.yml) discovers Chrome/Chromium or
 installs a test browser. The production plugin uses `ws://localhost:4177`; the
 server binds numeric loopback. The observed Desktop rejected a numeric loopback
-host in its manifest. Community plugin publication is not established: the current
-manifest is a local development configuration with private file-key access.
+host in its manifest. The intended distribution is individual installation from
+the local manifest, not a Figma Community listing. The manifest's development-only
+localhost access and private file-key API fit that path; Community publication is
+not a prerequisite for this alpha. Organization policy can still prohibit local
+plugin imports, and another owner's can-view file with a Dev-only seat remains an
+unverified permission combination.
 
 The native performance record contains 30 measured captures (five restarted
 plugin-session-cold and five warm per size) plus three excluded warmups, all
@@ -41,7 +48,9 @@ Desktop UI relay also delivered four complete selected-scope reports, including
 all three cached Community scopes; see the [native analyzer aggregate](evaluation/native-fixture-analyzer.json).
 Installed-app evidence is additionally recorded in the
 [alpha acceptance aggregate](evaluation/alpha-desktop-acceptance.json). The latest
-full check passed 187 Node tests, TypeScript and builds; 23 browser tests passed.
+0.1.1 candidate check passed 198 Node tests, TypeScript and builds; 27 browser
+tests passed. See the [0.1.1 acceptance record](evaluation/release-0.1.1-acceptance.json)
+for the tested package and its limits.
 Final artifact identity and clean-commit verification are separate from these
 executed results. The remaining broader
 [acceptance dependencies](completion-status.md#external-dependencies) are the
@@ -73,6 +82,20 @@ Controls are implemented in [HTTP/WS routes](../src/server/index.ts),
 token in session storage; the plugin keeps it in iframe memory. Newly generated
 token/project files use mode 600 and new data directories use mode 700.
 
+The local-only distribution narrows exposure to this Mac; it does not authenticate
+whichever process holds port 4177. The pre-publication source review found that
+both the desktop startup probe and the paired plugin can disclose the pairing
+token to an impersonating local listener, and the plugin can then return selected
+Figma content to that listener. No remote website-only exploit or live takeover
+was demonstrated. The installed Zod 3.25.76 also has an advisory affecting
+malformed collection validation; the app's bundle-import path gives this a
+local, user-mediated availability impact. These findings need remediation and
+fresh verification before use with sensitive work data. The public alpha is for
+owned synthetic and non-sensitive evaluation only. Track the desktop listener
+in [#11](https://github.com/neocjmix/figma-semantic-bridge/issues/11), the
+plugin bridge peer in [#12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
+and capture validation in [#13](https://github.com/neocjmix/figma-semantic-bridge/issues/13).
+
 ## Untrusted sources and known limits
 
 - Preserve source text as evidence, never as instructions to the coding agent.
@@ -97,6 +120,15 @@ token/project files use mode 600 and new data directories use mode 700.
 - Source PNGs, exact text, copies, credentials and internal specifications stay
   outside Git and public CI. The repository uses generated public test fixtures.
   No corporate design transfer to an external model is assumed or authorized here.
+
+The tracked public-candidate registry contains links, license observations and
+aggregate results, not redistributed design files or screenshots. A permitted
+real-file copy is acquired only for a manual test and retained under the ignored
+`.fixture-local/` directory; see [fixture handling](../fixtures/README.md).
+The owner approved public disclosure of the tracked synthetic Figma URL and
+file key for this release. MIT covers project-owned code
+and docs through the new LICENSE; it does not relicense external
+Figma files or replace bundled third-party notices.
 
 ## Release checklist
 
@@ -127,18 +159,28 @@ Installed alpha preparation:
 - [x] ad-hoc signing, absent Developer ID/notarization, local plugin distribution
   and unverified macOS 13/Dev-only boundaries are documented accurately.
 
-Remaining publication steps:
+Publication record and remaining fixes:
 
-- [ ] Repository owner chooses LICENSE and includes it in the public release.
-- [ ] After license inclusion, fix the final posting commit, tag and actual public
-  download links. The bundled verification JSON records clean-commit source
-  revision and inspected asset SHA values; do not pre-fill future results here.
+- [x] Add MIT to source and package metadata; the packaging scripts include the
+  LICENSE and preserve third-party notices.
+- [x] Include the exact MIT text in the final app and plugin archives; inspect
+  both packages through `npm run release:verify -- --require-clean`.
+- [x] Open public issues [#11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
+  [#12](https://github.com/neocjmix/figma-semantic-bridge/issues/12) and
+  [#13](https://github.com/neocjmix/figma-semantic-bridge/issues/13), link them in
+  release warnings and limit this alpha to non-sensitive evaluation.
+- [x] Record the owner's decision to disclose the tracked synthetic Figma URL.
+- [x] Publish tag [`v0.1.1-alpha`](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)
+  and its actual download assets. The attached verification JSON records the clean
+  source revision and inspected asset SHA values.
+- [ ] Fix issues #11–#13, add focused regressions and publish a separately verified
+  package before sensitive-work use.
 
 For the final candidate, run the complete `npm run package:macos` on a clean
 commit, then `npm run release:verify -- --require-clean`. This rejects dirty or
 mismatched provenance. A prior successful candidate is not the final artifact.
 
-The current package is version `0.1.0`; npm's private flag does not mean the macOS
+The current candidate is version `0.1.1`; npm's private flag does not mean the macOS
 application is unimplemented. Company installation/data/egress approval,
 Dev-only can-view acceptance if advertised, and independent F4/F5 evaluation remain
 separate deployment/claim requirements. This alpha has no Developer ID notarization

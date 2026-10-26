@@ -1,6 +1,11 @@
 # ADR 0007 — Chunked source collections outside project snapshots
 
-Status: implemented in the unreleased working tree, 2026-10-25; extends ADR 0006.
+Status: implemented first as the 2026-10-25 raw collection slice; extends ADR 0006.
+This dated decision's "not an annotation source" and later-slice statements below
+were superseded in the 0.2.0 candidate by explicit collection-backed editor
+scopes in [ADR 0008](0008-collection-backed-editor.md), selective reads in
+[ADR 0009](0009-selective-source-acquisition.md) and the
+[current verification record](../evaluation/collection-backed-workflow.md).
 
 This vertical slice acquires the entire explicitly selected subtree into a
 separate, unreviewed source collection. It does not lift the 10,000-node Snapshot

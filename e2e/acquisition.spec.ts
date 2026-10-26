@@ -101,7 +101,7 @@ async function mockAcquisition(page: Page) {
 async function openDemo(page: Page, app: { url: string; token: string }, mock: Awaited<ReturnType<typeof mockAcquisition>>) {
   await page.goto(app.url);
   await page.getByLabel('Pairing token').fill(app.token);
-  await page.getByRole('button', { name: 'Pair server', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByRole('button', { name: 'Load demo', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Capture Figma selection', exact: true })).toBeEnabled();
   await expect.poll(() => mock.calls.list).toBeGreaterThan(0);
@@ -111,37 +111,37 @@ test('preflight pins the source and never starts acquisition before the user cho
   const mock = await mockAcquisition(page); await openDemo(page, app, mock);
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
   await expect(page.locator('.acquisition-source')).toContainText('Synthetic selected frame');
-  await expect(page.getByText('Total nodes, completion time and memory use are unknown until observed.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Large designs may take longer; the total size and time are not known yet.', { exact: false })).toBeVisible();
   expect(mock.calls.prepare).toBe(1); expect(mock.calls.start).toHaveLength(0);
-  await expect(page.getByText('Overview limit: 2,048 px', { exact: false })).toBeVisible();
-  await expect(page.getByText('Image and structure are separate live observations', { exact: false })).toBeVisible();
-  await expect(page.getByText('Acquisition reads the selection without editing the Figma document.')).toBeVisible();
-  await page.getByLabel('Acquisition plan').selectOption('structure_then_overview');
-  await page.getByRole('button', { name: 'Start acquisition' }).click();
+  await expect(page.getByText('The overview is limited to 2,048 px', { exact: false })).toBeVisible();
+  await expect(page.getByText('The image and structure are read at different times', { exact: false })).toBeVisible();
+  await expect(page.getByText('Your Figma design is not changed.')).toBeVisible();
+  await page.getByLabel('What to bring in').selectOption('structure_then_overview');
+  await page.getByRole('button', { name: 'Start import' }).click();
   await expect.poll(() => mock.calls.start.length).toBe(1);
   expect(mock.calls.start[0]).toEqual({ plan: 'structure_then_overview', limits: {} });
-  await expect(page.getByText('Stage: Reading structure', { exact: false })).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Acquisition progress' })).toBeVisible();
+  await expect(page.getByText('Reading source structure ·', { exact: false })).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: 'Figma import progress' })).toBeVisible();
 });
 
 test('partial structure cannot be saved as a complete capture', async ({ page, app }) => {
   const mock = await mockAcquisition(page); await openDemo(page, app, mock);
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
-  await page.getByLabel('Acquisition plan').selectOption('structure');
-  await page.getByRole('button', { name: 'Start acquisition' }).click();
+  await page.getByLabel('What to bring in').selectOption('structure');
+  await page.getByRole('button', { name: 'Start import' }).click();
   await expect.poll(() => mock.calls.start.length).toBe(1);
   mock.update({ status: 'partial', stage: 'done', progress: { nodes: 47, bytes: 12345, elapsedMs: 5100 },
     structure: { status: 'partial', complete: false, reason: 'Synthetic node budget reached.', error: null } });
   await expect(page.getByText('Structure is incomplete: Synthetic node budget reached.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save complete capture' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Retry structure from the beginning' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Restart structure read' })).toBeEnabled();
   expect(mock.calls.commit).toBe(0);
 });
 
 test('overview remains visible when later structure reading fails', async ({ page, app }) => {
   const mock = await mockAcquisition(page); await openDemo(page, app, mock);
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
-  await page.getByRole('button', { name: 'Start acquisition' }).click();
+  await page.getByRole('button', { name: 'Start import' }).click();
   await expect.poll(() => mock.calls.start.length).toBe(1);
   mock.update({ status: 'running', stage: 'structure', preview: { status: 'ready', observedAt, error: null },
     structure: { status: 'running', complete: false, reason: null, error: null } });
@@ -149,10 +149,10 @@ test('overview remains visible when later structure reading fails', async ({ pag
   expect(mock.calls.preview).toBeGreaterThan(0);
   mock.update({ status: 'partial', stage: 'done', structure: { status: 'failed', complete: false, reason: null,
     error: { code: 'SYNTHETIC_FAILURE', message: 'Synthetic metadata read failed.' } } });
-  await expect(page.getByText('Structure failed: Synthetic metadata read failed.')).toBeVisible();
+  await expect(page.getByText('Could not read the source structure: Synthetic metadata read failed.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Figma overview image' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save complete capture' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Retry structure from the beginning' }).click();
+  await page.getByRole('button', { name: 'Restart structure read' }).click();
   await expect.poll(() => mock.calls.retry).toEqual(['structure']);
   await expect(page.getByRole('img', { name: 'Figma overview image' })).toBeVisible();
 });
@@ -173,8 +173,8 @@ test('overview-only work can request structure later without rendering another i
   });
   mock.setPreview({ ...preview, preview: { ...preview.preview, base64, width: 800, height: 500 } });
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
-  await page.getByLabel('Acquisition plan').selectOption('overview');
-  await page.getByRole('button', { name: 'Start acquisition' }).click();
+  await page.getByLabel('What to bring in').selectOption('overview');
+  await page.getByRole('button', { name: 'Start import' }).click();
   await expect.poll(() => mock.calls.start.length).toBe(1);
   mock.update({ status: 'ready', stage: 'done', preview: { status: 'ready', observedAt, error: null } });
   await expect(page.getByRole('img', { name: 'Figma overview image' })).toBeVisible();
@@ -211,17 +211,17 @@ test('saved acquisition records remain selectable after reload and can be remove
   const listCallsBeforeReload = mock.calls.list;
   await page.reload();
   await expect.poll(() => mock.calls.list).toBeGreaterThan(listCallsBeforeReload);
-  const jobs = page.getByLabel('Recent acquisition jobs');
+  const jobs = page.getByLabel('Recent imports');
   await expect(jobs.locator('option')).toHaveCount(2);
   await jobs.selectOption('saved-task');
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Remove acquisition record' }).click();
+  await page.getByRole('button', { name: 'Delete import record' }).click();
   await expect.poll(() => mock.calls.remove).toBe(1);
   await expect(jobs.locator('option')).toHaveCount(1);
   await expect(jobs.locator('option[value="saved-task"]')).toHaveCount(0);
   await expect(page.locator('.revision')).toHaveText(revisionBefore!);
   await page.reload();
-  await expect(page.getByLabel('Recent acquisition jobs').locator('option')).toHaveCount(1);
+  await expect(page.getByLabel('Recent imports').locator('option')).toHaveCount(1);
 });
 
 test('removing a stopped acquisition clears its observations without changing the workspace', async ({ page, app }) => {
@@ -229,7 +229,7 @@ test('removing a stopped acquisition clears its observations without changing th
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
   await expect(page.locator('.acquisition-source')).toContainText('Synthetic selected frame');
   const before = await page.locator('.revision').textContent();
-  await page.getByRole('button', { name: 'Remove acquisition record' }).click();
+  await page.getByRole('button', { name: 'Delete import record' }).click();
   await expect.poll(() => mock.calls.remove).toBe(1);
   await expect(page.locator('.acquisition-source')).toHaveCount(0);
   await expect(page.locator('.revision')).toHaveText(before!);
@@ -239,16 +239,16 @@ test('removing a stopped acquisition clears its observations without changing th
 test('a late ready status cannot undo a requested cancellation', async ({ page, app }) => {
   const mock = await mockAcquisition(page); await openDemo(page, app, mock);
   await page.getByRole('button', { name: 'Capture Figma selection', exact: true }).click();
-  await page.getByRole('button', { name: 'Start acquisition' }).click();
-  await expect(page.getByRole('button', { name: 'Stop acquisition' })).toBeVisible();
-  await page.getByRole('button', { name: 'Stop acquisition' }).click();
-  await expect(page.getByText('Stop requested. A native Figma export already in progress may finish before the job stops.')).toBeVisible();
+  await page.getByRole('button', { name: 'Start import' }).click();
+  await expect(page.getByRole('button', { name: 'Stop import from Figma' })).toBeVisible();
+  await page.getByRole('button', { name: 'Stop import from Figma' }).click();
+  await expect(page.getByText('Stopping after the current Figma image export finishes.')).toBeVisible();
   mock.update({ status: 'ready', stage: 'done', preview: { status: 'ready', observedAt, error: null },
     structure: { status: 'ready', complete: true, reason: null, error: null } });
   await page.waitForTimeout(1400);
-  await expect(page.getByText('Stop requested. A native Figma export already in progress may finish before the job stops.')).toBeVisible();
+  await expect(page.getByText('Stopping after the current Figma image export finishes.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save complete capture' })).toBeDisabled();
   expect(mock.calls.cancel).toBe(1); expect(mock.calls.commit).toBe(0);
   mock.update({ status: 'cancelled' });
-  await expect(page.getByText('This job stopped. Previously validated observations remain available.')).toBeVisible();
+  await expect(page.getByText('Import stopped. Results already received are still available.')).toBeVisible();
 });

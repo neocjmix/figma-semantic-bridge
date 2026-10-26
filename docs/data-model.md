@@ -1,201 +1,148 @@
-# Data Contracts — Draft
+# Data model and source-evidence invariants
 
-## Implemented external source scopes (unreleased, 2026-10-26)
+This documents the 0.2.0 implementation, not a frozen third-party SDK.
+`src/shared/contracts.ts`, `structure-collection.ts`, `selective-source*.ts`,
+`source-transfer.ts` and `capture-bundle.ts` define the exact Zod contracts;
+`src/core/project.ts` and server storage add cross-record validation. The project
+data schema is still `1.0.0`, independent of the application version. Optional
+new fields let existing projects load without silently changing their approvals.
 
-The runtime contracts in `src/shared/contracts.ts` are authoritative. Optional `Project.scopes` stores `EvidenceScope` records with kind `visual` or `collection`; IDs are unique across scopes and legacy snapshots. `Annotation.snapshotId` and each source reference may address either kind. Visual scopes contain an overview and proposed regions only. Collection scopes reference a complete immutable collection by ID, content hash, node/byte counts and observation time. An explicit equal-file/page/root/bounds attachment upgrades a visual scope once and invalidates earlier review. Every collection annotation requires human source-set confirmation. Original text remains exact and must resolve from the verified collection.
+## Persisted project and source kinds
 
-Selective inspections are separate immutable unreviewed observations. `fieldCoverage` distinguishes unread text, observed text and non-text records. Immediate-child completion does not mean descendant completion. Neither selective observations nor imported source transfers carry human approvals. The legacy Snapshot and capture-bundle size limits are unchanged.
+`Project` has ID, name, schema version, monotonic revision and update time;
+arrays of `snapshots` (at most 30), `annotations` and `specifications` (at most
+2,000 each), `proposals` (at most 100), and optional `scopes` (at most 30). IDs
+for legacy Snapshots and new scopes are unique together. Project JSON does not
+contain a 200,000-node collection.
 
-Use versioned runtime-validated schemas. These are conceptual types, not frozen API signatures.
+| Kind | What the project stores | What it establishes |
+| --- | --- | --- |
+| `Snapshot` | `source` file/page/root/revision/capture time, document `bounds`, 1–10,000 inline `SourceNode`s, nullable PNG, `completeness` and warnings. | A bounded selected subtree if complete; a limit-hit prefix remains incomplete. |
+| Visual `EvidenceScope` | Same explicit source identity/bounds, PNG, visual task/observation time, no inline nodes and `collection=null`. | Image observation and proposed regions only. Matching, confirmation and new approval require structure. |
+| Collection `EvidenceScope` | Source/bounds, optional separately timed PNG and a required immutable collection reference: ID, SHA-256 content hash, node/byte counts, observation time. | Verified complete traversal of its root and descendants, possibly a branch; no claim about its siblings or an atomic Figma revision. |
 
-```ts
-type Rect = { x: number; y: number; width: number; height: number };
-type Origin = "human" | "ai";
-type ReviewStatus = "proposed" | "approved" | "rejected";
-type Role = "page" | "section" | "component" | "element" | "specification" | "ignore";
-type MatchType = "exact" | "contained" | "partial" | "aggregate";
+`Annotation.snapshotId` and `SourceReference.snapshotId` retain their wire names
+for compatibility but may address either a legacy Snapshot or an EvidenceScope.
+EvidenceScopes are created/attached only through trusted server routes with
+revision and backing checks; generic mutation cannot forge completion. Attachment
+requires equal file/page/root/bounds and resets existing visual-draft regions to
+proposed with source review invalidated. A referenced collection cannot be
+removed. Missing, altered or corrupt backing chunks block new review and
+approved export. Back up project files **with** their referenced collection data.
 
-interface SourceNode {
-  id: string;
-  parentId?: string;
-  type: string;
-  name: string;
-  bbox: Rect;
-  text?: string;
-  visible: boolean;
-  rendering?: { opacity?: number; siblingIndex?: number };
-  sourceFileKey: string;
-  sourcePageId: string;
-  childrenIds?: string[];
-}
-interface SourceReference {
-  nodeId: string;
-  matchType: MatchType;
-  coverage?: number; // geometry only, not calibrated probability
-}
-interface Annotation {
-  id: string; // independent from Figma node ID
-  name: string;
-  role: Role;
-  bbox: Rect; // Figma document coordinates
-  parentId?: string;
-  childIds: string[];
-  sourceRefs: SourceReference[];
-  origin: Origin;
-  reviewStatus: ReviewStatus;
-  revision: number;
-}
-interface SpecRelation {
-  targetAnnotationId: string;
-  relationType: "describes" | "behavior" | "constraint" | "interaction" | "dependency";
-  reviewStatus: ReviewStatus;
-}
-interface Specification {
-  id: string;
-  text: string; // exact extracted text
-  sourceRefs: SourceReference[];
-  relations: SpecRelation[];
-  origin: Origin;
-  reviewStatus: ReviewStatus;
-}
-```
+## Exact source records and geometry
 
-## Required envelope
-Persist schemaVersion, source file/page/scope identity, source revision/fingerprint if available, coordinate transform, annotations, specifications, provenance and unresolved questions. Track patch history for undo and audit.
+`SourceNode` stores `id`, nullable `parentId`, type, name, nullable axis-aligned
+absolute `bbox`, optional exact `text`, `visible`, nullable `sourceFileKey`, page
+ID and optional local `rendering` (`opacity`, `siblingIndex`). IDs are bounded to
+160 characters, names to 1,000, and text to 50,000 JavaScript string code units.
+Text over that limit is rejected rather than truncated or replaced with OCR.
+Some non-rendered nodes have no positive-area box; annotation and scope rectangles
+require finite positive width and height. The captured root's bounds must equal
+the scope bounds. Figma source ancestry stays separate from semantic hierarchy.
 
-## Invariants
-- Semantic parent graph is acyclic; spatial overlap is allowed.
-- Source node may be referenced by multiple annotations and vice versa.
-- Specs link to multiple components and components to multiple specs.
-- Missing/stale source references do not delete annotations.
-- AI patches cannot silently overwrite approved human records.
-- Original text remains verbatim; interpretation is separate.
-- A geometry score is not semantic certainty.
+Coordinates are Figma document coordinates, including negative positions. PNG
+width/height and mapping are validated; an unsupported rotated/reflected/skewed
+root or SECTION can retain metadata with `preview=null`. Descendant transforms,
+masking, clipping and external overlays can make an AABB a poor visual silhouette.
+Original text and coordinates are evidence, not instructions or inferred behavior.
 
-## Schema implementation tasks
-Define Zod/JSON Schema validators, migrations, stable ID strategy, patch operations, optimistic concurrency and import/export canonicalization. Test equal BBoxes, tolerance ties, rotations, clipping, hidden layers, conflicting specs and missing nodes.
+`SourceNode.rendering` records observed local opacity in [0,1] and original
+captured sibling index where available. The selected root has no outside-sibling
+index. Derived review states are:
 
-## Implemented rendering evidence
+| State | Evidence | Limit |
+| --- | --- | --- |
+| `hidden` | Node or captured ancestor has `visible=false`. | Does not delete the source record. |
+| `transparent` | Node or captured ancestor has observed `opacity=0`, absent known hidden evidence. | Does not explain why a PNG is blank. |
+| `unknown` | Missing opacity or an unobserved ancestor outside the page boundary, absent stronger evidence. | Do not infer visibility. |
+| `potential` | Visible and positive-opacity chain observed to the page boundary. | Not proof of contributed pixels or design age. |
 
-`SourceNode.rendering` optionally records observed local `opacity` (finite 0..1)
-and `siblingIndex` (the nonnegative index in the original captured child array).
-New captures always emit the object, leaving unsupported or invalid opacity
-unrecorded. Root sibling order is omitted: capture does not read external parents
-or siblings. Sibling index is local context, not global paint order or an occlusion
-proof. Old snapshots are not backfilled with assumed values.
+Known hidden/transparent subtrees are excluded from automatic geometric matches,
+but retain IDs, text and boxes for explicit human selection. Sibling index is
+local order, not a general paint/occlusion proof. Legacy records are not
+backfilled with invented opacity. See [ADR 0002](adr/0002-rendering-evidence-grounding.md).
 
-The bounded ancestry index derives these states without changing source records:
+## Semantic records and approval
 
-| State | Evidence |
-| --- | --- |
-| `hidden` | An observed node or ancestor has `visible=false`. |
-| `transparent` | An observed node or ancestor has `opacity=0`, with no observed hidden ancestor. |
-| `unknown` | Opacity is missing along the observed chain, or an ancestor outside the capture is not the page boundary, without known hidden/zero-opacity evidence. |
-| `potential` | Visibility and positive opacity are observed along the chain to the page boundary. Actual pixel contribution remains unverified. |
+An `Annotation` has independent ID, scope ID, name, role, document BBox, nullable
+semantic `parentId`, zero-to-many source references, human/AI origin, proposed/
+approved/rejected status and per-record revision. Children are **derived** from
+parent links; there is no stored `childIds` field. Each reference includes scope
+ID, node ID, match type (`exact`, `contained`, `partial`, `aggregate`) and optional
+geometric coverage in [0,1]. One source may support multiple annotations and one
+annotation may reference multiple sources. The semantic parent graph is acyclic;
+spatial overlap is allowed.
 
-Hidden evidence takes precedence over transparency; either takes precedence over
-unknown evidence. Tiny positive values are not multiplied into a false zero.
-Automatic geometry matching excludes hidden and transparent subtrees. Their IDs,
-geometry, exact text and rendering fields remain stored and manually selectable.
-Clipping, masks, blending, external overlays and design age are not inferred from
-these states. The scope and remaining limits are defined in
-[ADR 0002](adr/0002-rendering-evidence-grounding.md).
+`sourceReview` records up to 200 candidate diagnostics, ambiguity, warnings,
+optional rendering-review requirement, `unconfirmed|confirmed` and confirmation
+time. Geometric candidate scores are not semantic confidence. A new collection-
+backed annotation needs complete verified backing, selected references and
+explicit source-set confirmation before approval. A legacy Snapshot needs
+confirmation when geometric or rendering evidence calls for it. Changing a
+reference set, BBox or source scope invalidates its confirmation. A stale
+project/annotation revision cannot confirm an old decision. AI proposals cannot
+provide source confirmation or silently overwrite approved human work.
 
-## Implemented source review addition
+A `Specification` contains 1–100,000 code units of verbatim original text,
+one-to-many source references, many-to-many typed relations to annotations,
+origin, review status and revision. A new approved specification needs approved
+targets and reviewed relations. Exact text is checked against its saved source
+records; display formatting does not replace it. Approved-context packaging
+withholds an approved child beneath an unapproved semantic ancestor and a spec
+without an exportable approved target. It reports unresolved/truncated output
+instead of presenting omitted data as complete.
 
-The runtime contract in `src/shared/contracts.ts` adds optional
-`Annotation.sourceReview`: up to 200 geometric candidates (node ID, coverage, IoU,
-reason), ambiguity, warnings, optional `renderingReviewRequired`,
-`unconfirmed | confirmed` status and a nullable confirmation time. The annotation's
-snapshot, BBox and source references identify the evidence and chosen set.
-Rendering review is separate from geometric ambiguity and semantic `reviewStatus`.
+## Large and selective observations outside Project JSON
 
-Only an explicit human confirmation operation can create confirmed evidence;
-project and annotation revisions reject stale decisions. A changed source set,
-BBox or snapshot invalidates it. Approval requires confirmation when either
-`ambiguous` or `renderingReviewRequired` is true. Manually selected hidden or
-transparent references require rendering review. Unknown references also require
-it when the snapshot carries the new rendering evidence; legacy unknown captures
-retain their previous approval behavior.
+Collection packets are preorder records with root/bounds/file/page identity,
+timestamps, ordered sequence, per-node direct-child counts and a closed-frontier
+completion flag. Each packet is at most 500 nodes/1 MB; one collection is at most
+200,000 nodes/64 MB. The store validates unique IDs, ancestry, exact counts,
+bytes, order and complete traversal before exposing a descriptor. There are at
+most twelve cached collections/256 MB locally. Pause takes effect after a durable
+packet; same-session resume is time-limited. A server restart or changed plugin
+session cannot rehydrate a live Figma cursor as an unchanged source revision.
 
-Every new transition to approved recalculates rendering review from captured
-references, including legacy pending annotations with already-saved diagnostics.
-A name-only edit cannot bypass that check. Unchanged geometry and references retain
-an existing human source confirmation. Already-approved records remain unchanged
-on load or export. AI proposals cannot supply source confirmation. See
-[ADR 0002](adr/0002-rendering-evidence-grounding.md) for the rendering limitations.
+Selective inspection pins one file/page/root and stores immutable, digest-checked
+unreviewed observations separately from Project. Explicit-ID reads request up to
+100 IDs with metadata or exact text, at most 1 MB per observation. Immediate-child
+reads return up to 100 text-free records and 96 KB per page, with an ordered cursor
+and explicit `childrenComplete` only after all direct children were received.
+An ID read does not establish child coverage; an immediate-child inventory does
+not establish descendant coverage. An explicit branch collection covers only that
+branch. Stored inspection history is bounded (twelve inspections/32 MB total).
+The proposed general cross-observation coverage ledger in
+[ADR 0009](adr/0009-selective-source-acquisition.md) is not implemented.
 
-## Transient current node export
+For complete collections, local metadata queries return at most 200 records per
+request under a 96 KB response-page budget. They omit original text but include
+its length. Exact text is requested by node ID in up-to-4,000-code-unit segments;
+offsets do not split a UTF-16 surrogate pair. Selected full source records can be
+resolved under a separate bounded response. These pages are views of verified
+storage, not a claim that the browser loaded every node.
 
-`POST /api/projects/:id/source-preview` accepts only `expectedRevision`,
-`annotationId`, `expectedSessionId` and `nodeId`. The annotation must be saved and
-the node must belong to its captured snapshot. The server derives file/page/node
-identity from that snapshot and sends one `preview_node` plugin command. The
-command exports that node and its descendants with `contentsOnly=true` and
-`useAbsoluteBounds=true`; it does not traverse descendant metadata, modify source
-nodes, change selection or load another page. PAGE, DOCUMENT, SLICE and SECTION
-are excluded from current node export. A SECTION capture still preserves bounded
-metadata, but stores `preview=null` with an unsupported-mapping warning; an inner
-Frame must be explicitly captured for an image. Old snapshots are not rewritten.
+## Transfer, previews and trust
 
-`SourcePreviewResult` contains project/revision/annotation/snapshot/session IDs
-and a `NodePreviewResult`: file/page IDs, the observed `SourceNode`, `observedAt`,
-PNG `preview` and warnings. The saved crop uses `snapshot.source.capturedAt`;
-the returned image is a separate current observation, not a replacement or
-historical rendering of that snapshot.
+The legacy capture-bundle format moves one or two bounded Snapshots in a compact
+JSON file (10,000 aggregate nodes, 4 MB node JSON, 15 MB file). Import creates a
+**new workspace** with no annotations, specs, proposals or approval. The separate
+source-transfer NDJSON format moves one complete collection, exact text and an
+available overview (80 MB file maximum). Import verifies each chunk, checksum,
+footer, EOF and complete coverage before adding a fresh unreviewed scope to the
+**current workspace**. Neither digest establishes authorship, permission or
+agreement with today's Figma pixels. See [ADR 0003](adr/0003-portable-capture-bundles.md)
+and [ADR 0008](adr/0008-collection-backed-editor.md).
 
-The plugin checks current identity, ancestry and node metadata before and after
-export. The server compares name, type, parent, BBox, exact text, visibility and
-captured opacity when present, then rechecks project revision and session. Sibling
-order is not re-read. This is not a style or subtree fingerprint: changes to
-descendants, paints and external ancestors may remain undetected. Outside siblings
-are excluded from export; ancestor opacity, clipping, masks, blending and actual
-pixel contribution or occlusion remain unverified.
+A current-node PNG comparison is a transient read, not persisted in Project or
+approved context. It verifies current file/page/session, saved node membership
+and selected metadata, with a 1,024-pixel-per-dimension, 2 MB PNG and cooperative
+5-second limit. It does not fingerprint descendants, paints or external ancestors,
+and native export cannot be preempted before completion. Comparison never changes
+references, revision, confirmation or semantic approval.
 
-Limits are one explicit export, at most 1,024 pixels per dimension, 2,000,000 PNG
-bytes before base64, and a cooperative 5-second deadline within broker cancellation
-and timeout handling. Native export memory and runtime cannot be bounded or
-preempted before completion; late/cancelled results are discarded. Unsupported
-transforms and dimension mismatches are rejected, without guessed offsets.
-
-No result is persisted to a project, snapshot, source review or history; project
-revision, references, confirmation and semantic approval remain unchanged. Bundles
-and approved MCP context exclude the result. The web view clears it on project,
-capture, annotation, revision or plugin-session change and ignores stale responses.
-See [ADR 0002](adr/0002-rendering-evidence-grounding.md) for the evidence boundaries.
-
-## Implemented capture bundle
-
-`src/shared/capture-bundle.ts` defines the strict portable capture contract:
-
-```ts
-interface CaptureBundle {
-  kind: "figma-semantic-bridge.capture-bundle";
-  version: "1.0.0";
-  exportedAt: string;
-  snapshots: Array<{ snapshot: Snapshot; sha256: string }>;
-}
-```
-
-One compact UTF-8 JSON file contains one or two explicitly selected snapshots.
-Each Snapshot uses the existing runtime contract in `src/shared/contracts.ts` and
-is preserved unchanged: IDs, file/page/root provenance, capture time, nullable
-revision, BBoxes, exact text, visibility, optional rendering evidence, PNG bytes or
-`null`, completeness and warnings.
-Copied files retain their own provenance. The format has no semantic annotation,
-specification, proposal, approval or credential fields; unknown fields are rejected.
-
-The codec in `src/server/capture-bundle.ts` hashes each snapshot's recursively
-key-sorted JSON with SHA-256, preserving array order and scalar values. It validates
-the digests, existing project identity/ancestry/completeness invariants, root BBox
-equality with snapshot bounds, and PNG base64/header dimensions. This checks data
-integrity, not authenticity, permission, rendering fidelity or live source freshness.
-The aggregate limits are 10,000 nodes, 4,000,000 UTF-8 bytes of serialized node arrays
-and 15,000,000 UTF-8 bytes for the complete serialized bundle.
-
-Export is read-only and requires an expected project revision. Import always creates
-a new local project identity at revision 0 with empty annotations, specifications
-and proposals; it cannot merge into or replace an existing workspace. Consumers
-need a running, paired local server, but no Figma connection or Dev seat for import
-and local review. Approved-context export remains a separate contract. See
-[ADR 0003](adr/0003-portable-capture-bundles.md) for the route contracts and boundaries.
+The local pairing token, original text, PNGs and backups are sensitive. Project
+revisions and strict schemas protect consistency, not human identity. Approved
+operations are authorized by the local token holder; a scripted API confirmation
+is not proof that a person understood the design. Figma content is untrusted data
+for both optional model calls and downstream coding agents.

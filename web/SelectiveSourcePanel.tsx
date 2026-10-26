@@ -43,7 +43,7 @@ const statusLabels: Record<CollectionView['status'], MessageKey> = {
 export function SelectiveSourcePanel({ token, project, sessionId, connected, busy, dirty }: {
   token: string; project: Project | null; sessionId: string | null; connected: boolean; busy: boolean; dirty: boolean;
 }) {
-  const { t, renderMessage, formatNumber, formatDate } = useLocale();
+  const { t, errorText, renderMessage, formatNumber, formatDate } = useLocale();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [summaries, setSummaries] = useState<z.infer<typeof SummarySchema>[]>([]);
@@ -250,85 +250,85 @@ export function SelectiveSourcePanel({ token, project, sessionId, connected, bus
   const shown = inspection && !inspections.some(item => item.id === inspection.id) ? [inspection, ...inspections] : inspections;
   const childComplete = child && child.nextOffset === null;
   return <details className="collection-panel selective-source-panel">
-    <summary>{t('Selective source inspection')}{inspection && <span> · {inspection.source.name} · {formatNumber(inspection.observationCount)} {t('Observed source records')}</span>}</summary>
-    <p className="small muted">{t('Read explicit IDs or immediate children without loading a whole page. Results are unreviewed live observations.')}</p>
-    <button className="wide" disabled={!project || !sessionId || !connected || busy || dirty || !!action} onClick={prepare}>{t('Prepare selected inspection')}</button>
-    {shown.length > 0 && <label>{t('Inspection history')}<select value={inspection?.id ?? ''} disabled={!!action}
+    <summary>{t('Read selected source nodes')}{inspection && <span> · {inspection.source.name} · {formatNumber(inspection.observationCount)} {t('readings')}</span>}</summary>
+    <p className="small muted">{t('Read only the node IDs you need, or list the children of a chosen node. These results are for inspection and do not approve annotations.')}</p>
+    <button className="wide" disabled={!project || !sessionId || !connected || busy || dirty || !!action} onClick={prepare}>{t('Use selected Figma area')}</button>
+    {shown.length > 0 && <label>{t('Source reading history')}<select value={inspection?.id ?? ''} disabled={!!action}
       onChange={event => setInspection(shown.find(item => item.id === event.target.value) ?? null)}>
       {shown.map(item => <option key={item.id} value={item.id}>{item.source.name} · {formatDate(item.createdAt)}</option>)}</select></label>}
-    {!inspection && <p className="small muted">{t('Select an inspection first.')}</p>}
+    {!inspection && <p className="small muted">{t('Select an area in Figma, then choose Use selected Figma area.')}</p>}
     {error && <p className="small error" role="alert">{renderMessage(error)}</p>}
     {inspection && <div className="collection-detail">
-      <p className="small muted">{t('Pinned inspection scope: {name} ({type}) · {id}', { name: inspection.source.name,
+      <p className="small muted">{t('Reading within: {name} ({type}) · {id}', { name: inspection.source.name,
         type: inspection.source.type, id: inspection.source.nodeId })}</p>
-      <p className="small muted">{t('No subtree coverage is implied by these records.')}</p>
-      <p className="small muted">{t('Explicit-ID reads: at most 100 IDs and 1 MB per observation. Original text is never shortened.')}</p>
+      <p className="small muted">{t('Reading specific nodes does not collect the full source structure.')}</p>
+      <p className="small muted">{t('Read up to 100 node IDs and 1 MB at a time. Original text is preserved.')}</p>
       <label>{t('Node IDs (comma or space separated)')}<textarea value={nodeIds} maxLength={16100}
         onChange={event => setNodeIds(event.target.value)} /></label>
       <label>{t('Fields')}<select value={fields} onChange={event => setFields(event.target.value as 'metadata' | 'text')}>
-        <option value="metadata">{t('Metadata only')}</option><option value="text">{t('Metadata and original text')}</option></select></label>
-      <button className="wide" disabled={!canLive || !nodeIds.trim()} onClick={inspectNodes}>{t('Read explicit nodes')}</button>
-      <p className="small muted">{t('Immediate children: at most 100 records and 96 KB per page. Figma still allocates the native child list.')}</p>
-      <label>{t('Immediate parent ID')}<input value={parentId} maxLength={160} disabled={!!child && child.nextOffset !== null}
+        <option value="metadata">{t('Node details only')}</option><option value="text">{t('Node details and text')}</option></select></label>
+      <button className="wide" disabled={!canLive || !nodeIds.trim()} onClick={inspectNodes}>{t('Read these nodes')}</button>
+      <p className="small muted">{t('Read up to 100 child nodes and 96 KB at a time. A parent with many children can still use substantial Figma memory.')}</p>
+      <label>{t('Parent node ID')}<input value={parentId} maxLength={160} disabled={!!child && child.nextOffset !== null}
         onChange={event => { setParentId(event.target.value); setChild(null); }} /></label>
       <button className="wide" disabled={!canLive || !parentId.trim() || !!childComplete} onClick={readChildren}>
-        {child?.nodes.length ? t('Continue child page') : child ? t('Retry child page') : t('Read immediate children')}</button>
+        {child?.nodes.length ? t('Next child nodes') : child ? t('Retry child nodes') : t('Read child nodes')}</button>
       {child && child.nodes.length > 0 && <>
-        <p className="small muted">{t('Immediate children {from}–{to} of {total}; descendants are not included.', {
+        <p className="small muted">{t('Child nodes {from}–{to} of {total}. Deeper layers are not included.', {
           from: child.offset + 1, to: child.offset + child.nodes.length, total: formatNumber(child.totalChildren) })}</p>
         <ul className="collection-nodes">{child.nodes.map(node => <li key={node.id}><span><strong>{node.name}</strong>
           <small>{node.type} · {node.id}</small></span>{containers.has(node.type) &&
-          <button className="text-button" disabled={!!action} onClick={() => setBranchNodeId(node.id)}>{t('Use as branch root')}</button>}</li>)}</ul>
+          <button className="text-button" disabled={!!action} onClick={() => setBranchNodeId(node.id)}>{t('Choose this nested area')}</button>}</li>)}</ul>
       </>}
-      {summaries.length > 0 && <div className="collection-inspection"><strong>{t('Observation history')}</strong>
+      {summaries.length > 0 && <div className="collection-inspection"><strong>{t('Reading results')}</strong>
         <ul className="collection-nodes">{summaries.map(item => <li key={item.id}><span><strong>{item.kind}</strong>
           <small>{formatDate(item.observedAt)} · {formatNumber(item.recordCount)} {t('nodes')}</small></span>
-          <button className="text-button" disabled={!!action} onClick={() => loadRecords(item.id)}>{t('Inspect first node page')}</button></li>)}</ul>
+          <button className="text-button" disabled={!!action} onClick={() => loadRecords(item.id)}>{t('Browse source nodes')}</button></li>)}</ul>
         <div className="collection-page-actions"><button disabled={summaryOffset===0||!!action}
           onClick={() => loadSummaries(Math.max(0,summaryOffset-20))}>{t('Previous page')}</button>
           <button disabled={summaryNext===null||!!action} onClick={() => summaryNext!==null&&loadSummaries(summaryNext)}>{t('Next page')}</button></div>
       </div>}
-      {records && <div className="collection-inspection"><p className="small muted">{t('Unreviewed nodes {from}–{to} of {total}', {
+      {records && <div className="collection-inspection"><p className="small muted">{t('Nodes {from}–{to} of {total} · not reviewed', {
         from: records.records.length ? records.offset+1 : 0, to: records.offset+records.records.length,
         total: formatNumber(records.total) })}</p>
         <ul className="collection-nodes">{records.records.map(record => <li key={record.node.id}><span><strong>{record.node.name}</strong>
-          <small>{record.node.type} · {record.node.id}{record.textLength===null?'':` · ${t('text length {count}',{count:formatNumber(record.textLength)})}`}</small></span>
+          <small>{record.node.type} · {record.node.id}{record.textLength===null?'':` · ${t('{count} text characters',{count:formatNumber(record.textLength)})}`}</small></span>
           {record.textLength!==null && <button className="text-button" disabled={!!action}
             onClick={() => loadText(record.node.id,records.observationId)}>{t('Read exact text')}</button>}
           {containers.has(record.node.type) && <button className="text-button" disabled={!!action}
-            onClick={() => setBranchNodeId(record.node.id)}>{t('Use as branch root')}</button>}</li>)}</ul>
+            onClick={() => setBranchNodeId(record.node.id)}>{t('Choose this nested area')}</button>}</li>)}</ul>
         <div className="collection-page-actions"><button disabled={records.offset===0||!!action}
           onClick={() => loadRecords(records.observationId,Math.max(0,records.offset-20))}>{t('Previous page')}</button>
           <button disabled={records.nextOffset===null||!!action}
           onClick={() => records.nextOffset!==null&&loadRecords(records.observationId,records.nextOffset)}>{t('Next page')}</button></div>
       </div>}
-      {textView && <div className="collection-text"><strong>{t('Exact source text')}</strong>
+      {textView && <div className="collection-text"><strong>{t('Original source text')}</strong>
         <pre>{textView.text}</pre><p className="small muted">{t('Loaded {loaded} of {total} characters · unreviewed', {
           loaded: formatNumber(textView.text.length), total: formatNumber(textView.totalLength) })}</p>
         {textView.nextOffset!==null && <button className="wide" disabled={!!action}
-          onClick={() => loadText(textView.nodeId,textView.observationId,textView.nextOffset!)}>{t('Load next text segment')}</button>}</div>}
-      <label>{t('Choose a descendant container to prepare a branch.')}<input value={branchNodeId} maxLength={160}
+          onClick={() => loadText(textView.nodeId,textView.observationId,textView.nextOffset!)}>{t('Load more text')}</button>}</div>}
+      <label>{t('Nested frame or group ID')}<input value={branchNodeId} maxLength={160}
         onChange={event => setBranchNodeId(event.target.value)} /></label>
-      <p className="small muted">{t('Branch collection covers only this node and its descendants.')}</p>
-      <p className="small collection-warning">{t('Limit: 200,000 nodes and 64 MB. Each batch reads at most 500 nodes or 1 MB; work pauses cooperatively after about 5 minutes. Actual total size and native memory use are unknown.')}</p>
-      <p className="small collection-warning">{t('A very wide Figma parent may allocate child references before a bounded batch returns; native peak memory is not known.')}</p>
+      <p className="small muted">{t('Collect this node and all layers inside it, without reading the rest of the selected area.')}</p>
+      <p className="small collection-warning">{t('Up to 200,000 nodes and 64 MB. Work is saved in small parts and pauses after about 5 minutes. The total size and Figma memory use cannot be predicted.')}</p>
+      <p className="small collection-warning">{t('Layers with many children can use substantial Figma memory. Select a smaller area if Figma becomes unresponsive.')}</p>
       <button className="wide" disabled={!canLive || dirty || !branchNodeId.trim() || branchNodeId===inspection.source.nodeId}
-        onClick={prepareBranch}>{t('Prepare branch collection')}</button>
-      {branches.length > 0 && <label>{t('Branch collections')}<select value={branch?.id ?? ''} disabled={!!action}
+        onClick={prepareBranch}>{t('Prepare nested area collection')}</button>
+      {branches.length > 0 && <label>{t('Nested area collections')}<select value={branch?.id ?? ''} disabled={!!action}
         onChange={event => setBranch(branches.find(item => item.id === event.target.value) ?? null)}>
         {branches.map(item => <option key={item.id} value={item.id}>{item.source.name} · {t(statusLabels[item.status])} · {formatDate(item.createdAt)}</option>)}</select></label>}
       {branch && <div className="collection-detail"><strong>{branch.source.name} · {t(statusLabels[branch.status])}</strong>
         <p className="small muted">{formatNumber(branch.nodeCount)} {t('nodes')}</p>
         {branch.status==='prepared' && <button className="wide" disabled={!canLive||dirty}
-          onClick={() => branchAction('start')}>{t('Start source collection')}</button>}
+          onClick={() => branchAction('start')}>{t('Start collection')}</button>}
         {branch.status==='running' && <><progress aria-label={t('Collection progress')} />
           <button className="wide" disabled={!!action||branch.pauseRequested}
-            onClick={() => branchAction('stop')}>{t('Pause after current batch')}</button></>}
+            onClick={() => branchAction('stop')}>{t('Pause collection')}</button></>}
         {branch.status==='paused' && <button className="wide" disabled={!canLive||dirty}
           onClick={() => branchAction('resume')}>{t('Resume collection')}</button>}
-        {branch.error && <p className="small error" role="alert">{branch.error.message}</p>}
+        {branch.error && <p className="small error" role="alert">{errorText(branch.error)}</p>}
       </div>}
-      <button className="wide" disabled={!!action||busy} onClick={removeInspection}>{t('Remove inspection')}</button>
+      <button className="wide" disabled={!!action||busy} onClick={removeInspection}>{t('Delete reading record')}</button>
     </div>}
   </details>;
 }

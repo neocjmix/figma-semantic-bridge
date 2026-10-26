@@ -1,6 +1,10 @@
 # ADR 0001: local product runtime and provisional Desktop transport
 
-Status: implemented incrementally; Figma Desktop transport acceptance remains pending.
+Status: historical first-slice decision, implemented incrementally. Its original
+Desktop-transport-pending wording below was superseded by later bounded native
+verification; current v3 transport and pinned desktop trust are in
+[ADR 0010](0010-plugin-mutual-authentication.md) and
+[ADR 0011](0011-pinned-desktop-service.md). This does not mark every F0–F6 gate passed.
 
 The product responsibilities in `docs/architecture.md` remain unchanged. This ADR
 records implementation decisions needed for the first executable vertical slice.

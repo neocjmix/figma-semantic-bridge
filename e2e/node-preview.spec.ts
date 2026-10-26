@@ -99,7 +99,7 @@ async function openReview(page: Page, app: AppFixture) {
   }, { token: app.token, projectId: app.initial.id });
   await page.goto(app.url);
   await page.locator('.component-list').getByRole('button', { name: 'Search review', exact: true }).click();
-  await expect(page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' })).toBeEnabled();
+  await expect(page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' })).toBeEnabled();
 }
 
 async function imagePixel(page: Page): Promise<number[]> {
@@ -113,7 +113,7 @@ async function imagePixel(page: Page): Promise<number[]> {
 
 test('closing a pending export cancels the broker request and permits a fresh export', async ({ page, app }) => {
   await openReview(page, app);
-  const before = await app.read(), compare = page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' });
+  const before = await app.read(), compare = page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' });
   app.pausePreviews(); await compare.click();
   await expect(page.getByText('Requesting this node from Figma…', { exact: true })).toBeVisible();
   await expect.poll(() => app.previewRequests.length).toBe(1);
@@ -132,7 +132,7 @@ test('choosing another annotation cancels its pending export and discards a late
   await openReview(page, app);
   const before = await app.read();
   app.pausePreviews();
-  await page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' }).click();
+  await page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' }).click();
   await expect.poll(() => app.previewRequests.length).toBe(1);
   const otherAnnotation = page.locator('.component-list').getByRole('button', { name: 'Original approved region', exact: true });
   await expect(otherAnnotation).toBeEnabled({ timeout: 2_000 });
@@ -141,7 +141,7 @@ test('choosing another annotation cancels its pending export and discards a late
   app.resumePreviews();
   await expect(page.getByLabel('Current node export comparison')).toHaveCount(0);
   await page.locator('.component-list').getByRole('button', { name: 'Search review', exact: true }).click();
-  await page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' }).click();
+  await page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' }).click();
   await expect(page.locator('.node-export-image img')).toBeVisible();
   expect(app.previewRequests).toHaveLength(2);
   expect(await app.read()).toEqual(before);
@@ -152,7 +152,7 @@ test('saving cancels a pending export while retaining the normal mutation lock',
   await openReview(page, app);
   const before = await app.read();
   app.pausePreviews();
-  const compare = page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' });
+  const compare = page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' });
   await compare.click();
   await expect.poll(() => app.previewRequests.length).toBe(1);
   let release!: () => void, received = false;
@@ -187,7 +187,7 @@ test('current exports compare distinct node images without changing captured or 
   await openReview(page, app);
   const before = await app.read(), comparison = page.getByLabel('Current node export comparison');
   expect(app.previewRequests).toEqual([]);
-  await page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' }).click();
+  await page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' }).click();
   await expect(comparison.getByRole('img', { name: 'Current node export: Search field (search-bg)', exact: true })).toBeVisible();
   await expect(comparison.locator('time').first()).toHaveAttribute('datetime', '2026-10-23T00:00:00.000Z');
   await expect(comparison.locator('time').last()).toHaveAttribute('datetime', '2026-10-24T00:00:00.000Z');
@@ -200,7 +200,7 @@ test('current exports compare distinct node images without changing captured or 
   expect(await imagePixel(page)).toEqual([20, 60, 220, 255]);
   expect(await comparison.locator('.source-crop image').getAttribute('href')).toBe(capturedImage);
   await expect(page.locator('.node-export-image img')).toHaveCount(1);
-  await expect(comparison).toContainText('does not prove pixel contribution or occlusion');
+  await expect(comparison).toContainText('cannot show whether those layers covered it in the saved capture');
   const enlarge = comparison.getByRole('button', { name: 'Enlarge comparison', exact: true });
   const originalExport = await comparison.locator('.node-export-image img').getAttribute('src');
   await enlarge.click();
@@ -240,7 +240,7 @@ test('current exports compare distinct node images without changing captured or 
 test('manual blank exports do not select sources and changed metadata prompts recapture', async ({ page, app }) => {
   await openReview(page, app);
   const before = await app.read();
-  await page.getByText('Adjust source references manually', { exact: true }).click();
+  await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('hidden-source');
   const manual = page.locator('.manual-source').filter({ hasText: 'Hidden manual source' });
   await expect(manual.getByRole('checkbox')).not.toBeChecked();
@@ -263,7 +263,7 @@ test('manual blank exports do not select sources and changed metadata prompts re
 
 test('a successful response delayed across a new plugin session cannot restore an old image', async ({ page, app }) => {
   await openReview(page, app);
-  const before = await app.read(), compare = page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' });
+  const before = await app.read(), compare = page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' });
   await compare.click();
   await expect(page.locator('.node-export-image img')).toBeVisible();
   let releaseResponse!: () => void, responseReady!: () => void;
@@ -289,7 +289,7 @@ test('a successful response delayed across a new plugin session cannot restore a
 
 test('exports clear after a saved revision change and remain unavailable for an unsaved annotation', async ({ page, app }) => {
   await openReview(page, app);
-  await page.getByLabel('Selected source references').getByRole('button', { name: 'Compare current export' }).click();
+  await page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' }).click();
   await expect(page.locator('.node-export-image img')).toBeVisible();
   await page.getByRole('textbox', { name: 'Component name', exact: true }).fill('Renamed review');
   await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
@@ -299,7 +299,7 @@ test('exports clear after a saved revision change and remain unavailable for an 
   expect(after.annotations.find(annotation => annotation.id === 'original-approved')).toEqual(app.initial.annotations.find(annotation => annotation.id === 'original-approved'));
   expect(after.snapshots).toEqual(app.initial.snapshots);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
-  await page.getByText('Adjust source references manually', { exact: true }).click();
+  await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('hidden-source');
   await expect(page.locator('.manual-sources').getByRole('button', { name: 'Compare current export' })).toBeDisabled();
 });

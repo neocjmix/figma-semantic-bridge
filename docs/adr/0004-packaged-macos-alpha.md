@@ -1,6 +1,10 @@
 # ADR 0004: packaged macOS alpha runtime
 
-Status: accepted for implementation of the user-requested 0.1.0 alpha.
+Status: historical 0.1.0 alpha packaging decision, subsequently implemented.
+The published 0.1.1 baseline is MIT licensed; the 0.2.0 candidate's pinned native
+transport and release verification are described in [ADR 0011](0011-pinned-desktop-service.md)
+and [release readiness](../release-readiness.md). The original decision text below
+is retained as its dated scope, not a description of the current native channel.
 
 ## Scope and acceptance
 

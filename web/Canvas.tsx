@@ -116,7 +116,7 @@ export function Canvas({ scope, fetchedNodes = [], annotations, selectedId, draf
       onPointerUp={pointerUp} onPointerCancel={() => { gesture.current = null; setDrawing(null); }}>
       <rect x={b.x} y={b.y} width={b.width} height={b.height} fill="white" />
       {scope.preview ? <image href={`data:image/png;base64,${scope.preview.base64}`} x={b.x} y={b.y} width={b.width} height={b.height} preserveAspectRatio="none" />
-        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>{inlineScope(scope) ? t("Preview unavailable · metadata remains editable") : t('No overview image · draw from source bounds')}</text></g>}
+        : <g className="missing-preview"><text x={b.x + b.width / 2} y={b.y + b.height / 2} textAnchor="middle" fontSize={Math.max(b.width / 45, 10)}>{inlineScope(scope) ? t("No preview image · you can still annotate regions") : t('No overview image · use source bounds to draw regions')}</text></g>}
       {showSources && sourceNodes.filter(n => n.bbox && n.visible).slice(0, 2000).map(n => <rect key={n.id} {...n.bbox!} fill="none" stroke="#8b5cf6" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.35} pointerEvents="none" />)}
       {visible.map(a => <g key={a.id} data-annotation-id={a.id} className={`region ${a.id === selectedId ? 'selected' : ''} status-${a.reviewStatus}`}>
         <rect {...a.bbox} fill={a.id === selectedId ? '#00a89925' : '#126ad316'} stroke={a.reviewStatus === 'approved' ? '#14846b' : '#2876c8'} strokeWidth={a.id === selectedId ? 2.5 : 1.5} vectorEffect="non-scaling-stroke" />
@@ -127,6 +127,6 @@ export function Canvas({ scope, fetchedNodes = [], annotations, selectedId, draf
     </svg>
     <div className="canvas-footer"><span>{inlineScope(scope)
       ? t('{nodes} source nodes · {regions} regions', { nodes: formatNumber(scope.nodes.length), regions: formatNumber(annotations.length) })
-      : t('{nodes} source nodes · {loaded} loaded bounds · {regions} regions', { nodes: formatNumber(scopeNodeCount(scope)), loaded: formatNumber(fetchedNodes.length), regions: formatNumber(annotations.length) })}</span><span>{mode === 'draw' ? t("Drag to mark a component. Save it in the inspector.") : t("Drag a selected region to move · corner handle to resize · Alt + drag to pan")}</span></div>
+      : t('{nodes} source nodes · {loaded} bounds shown · {regions} regions', { nodes: formatNumber(scopeNodeCount(scope)), loaded: formatNumber(fetchedNodes.length), regions: formatNumber(annotations.length) })}</span><span>{mode === 'draw' ? t("Drag to mark a component. Save it in the inspector.") : t("Drag a selected region to move · corner handle to resize · Alt + drag to pan")}</span></div>
   </div>;
 }

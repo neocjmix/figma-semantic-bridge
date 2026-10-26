@@ -1,3 +1,4 @@
+import { guideImageNames, loadGuideImages, upgradeAppendix } from './guide-assets.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, X509Certificate } from 'node:crypto';
@@ -100,7 +101,7 @@ try {
   assert.equal(pluginChecksumBytes.toString().trim(), `${assetSha256[`${pluginName}.zip`]}  ${pluginName}.zip`, 'Plugin ZIP checksum sidecar differs from the verified archive.');
   const expectedPluginFiles = ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt',
     'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md',
-    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/unreleased-upgrade.md', ...(projectLicense.bytes ? ['LICENSE'] : [])];
+    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/upgrade-guide.md', ...guideImageNames.map(name => `docs/images/${name}`), ...(projectLicense.bytes ? ['LICENSE'] : [])];
   // List and read only allowlisted entries without extracting an archive path.
   // unzip independently checks ZIP structure and CRC; SHA checks bind every byte.
   assert.ok((await stat(pluginZip)).size <= 10_000_000, 'Plugin ZIP exceeds its bounded production package size.');
@@ -142,8 +143,18 @@ try {
   assert.deepEqual(release.locales, ['ko', 'en']);
   await verifyApplicationLicense(resources, projectLicense);
   for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(resources, 'plugins/semantic-bridge', name)), `Plugin ZIP and app differ: ${name}`);
+  const guideImages = await loadGuideImages();
+  const upgradeMarkdown = await readFile(join(resources, 'docs/upgrade-guide.md'), 'utf8');
   const guideAssets = new Map();
-  for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) {
+  for (const name of guideImageNames) {
+    const content = await readFile(join(resources, 'docs/images', name));
+    assert.deepEqual(content, await readFile(join('docs/images', name)));
+    assert.deepEqual(content, pluginFiles.get(`docs/images/${name}`));
+    assert.deepEqual(content, await readFile(join(resources, 'images', name)));
+    guideAssets.set(`docs/images/${name}`, sha(content));
+    guideAssets.set(`images/${name}`, sha(content));
+  }
+  for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) {
     const content = await readFile(join(resources, 'docs', file));
     assert.equal(sha(content), sha(await readFile(join('docs', file))));
     assert.equal(sha(content), sha(pluginFiles.get(`docs/${file}`)));
@@ -153,14 +164,16 @@ try {
     const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
     for (const [kind, file] of [['setup', setupFile], ['user', `user-guide.${locale}.md`]]) {
       const html = await readFile(join(resources, `${kind}-guide-${locale}.html`), 'utf8');
-      assert.ok(Buffer.byteLength(html) <= 256_000, 'Offline guide exceeds native host limit.');
+      assert.ok(Buffer.byteLength(html) <= 4_000_000, 'Offline guide exceeds native host limit.');
       assert.ok(html.includes(`<html lang="${locale}">`));
-      assert.ok(!/<(?:script|iframe|img|a|link|object)\b/i.test(html), 'Offline guides must not fetch resources or execute scripts.');
+      assert.ok(!/<(?:script|iframe|a|link|object)\b/i.test(html), 'Offline guides must not fetch resources or execute scripts.');
       const markdown = await readFile(join(resources, 'docs', file), 'utf8');
       assert.equal(sha(markdown), sha(await readFile(join('docs', file))));
       assert.equal(sha(pluginFiles.get(`docs/${file}`)), sha(markdown), 'Plugin and app guides differ.');
       const title = `Figma Semantic Bridge ${pkg.version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
-      assert.equal(html, renderOfflineGuide(title, markdown, { locale, kind }), 'Offline HTML must render the exact packaged Markdown.');
+      const appendix = kind === 'setup' ? upgradeAppendix(upgradeMarkdown, locale)
+        : '\n\n---\n\n' + await readFile(join(resources, `docs/acquisition-workflow.${locale}.md`), 'utf8');
+      assert.equal(html, renderOfflineGuide(title, markdown + appendix, { locale, kind, images: guideImages }), 'Offline HTML must render the packaged guide and matching workflow or update instructions.');
       const alias = kind === 'user' ? `USER-GUIDE.${locale}.md` : locale === 'ko' ? 'INSTALLATION.md' : 'INSTALLATION.en.md';
       assert.equal(sha(await readFile(join(resources, alias))), sha(markdown));
       assert.equal(sha(await readFile(join(releaseDir, `figma-semantic-bridge-${pkg.version}-${alias}`))), sha(markdown));

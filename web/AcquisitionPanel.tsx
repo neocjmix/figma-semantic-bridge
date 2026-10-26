@@ -3,16 +3,16 @@ import { AcquisitionViewSchema, type AcquisitionPlan, type AcquisitionView } fro
 import { NodePreviewResultSchema, type Project, type NodePreviewResult } from '../src/shared/contracts.js';
 import { request } from './api.js';
 import { useLocale } from './i18n.js';
-import { errorMessage, message, type MessageKey, type UIMessage } from './locale.js';
+import { errorMessage, message, UIError, type MessageKey, type UIMessage } from './locale.js';
 
 type Action = 'prepare' | 'start' | 'load_structure' | 'cancel' | 'retry' | 'commit' | 'visual' | 'remove';
 type Step = 'preview' | 'structure';
 
 const plans: { value: AcquisitionPlan; label: MessageKey; description: MessageKey }[] = [
-  { value: 'overview_then_structure', label: 'Overview, then structure', description: 'See the image first, then read bounded source records.' },
-  { value: 'structure_then_overview', label: 'Structure, then overview', description: 'Read bounded source records first, then render the image.' },
-  { value: 'overview', label: 'Overview only', description: 'View an image without a saved, source-grounded capture.' },
-  { value: 'structure', label: 'Structure only', description: 'Read source records without requesting an overview image.' },
+  { value: 'overview_then_structure', label: 'Overview, then structure', description: 'See the image first, then read its source structure.' },
+  { value: 'structure_then_overview', label: 'Structure, then overview', description: 'Read the source structure first, then load its image.' },
+  { value: 'overview', label: 'Overview only', description: 'Start with an image. You can draft regions before collecting their source structure.' },
+  { value: 'structure', label: 'Structure only', description: 'Read the source structure without loading an image.' },
 ];
 const statusLabels: Record<AcquisitionView['status'], MessageKey> = {
   prepared: 'Prepared', running: 'Working', ready: 'Ready to save', partial: 'Incomplete', failed: 'Failed',
@@ -21,7 +21,7 @@ const statusLabels: Record<AcquisitionView['status'], MessageKey> = {
 const statusLabel = (view: AcquisitionView): MessageKey => view.status === 'ready' && view.plan === 'overview'
   ? 'Overview ready' : statusLabels[view.status];
 const stageLabels: Record<AcquisitionView['stage'], MessageKey> = {
-  prepared: 'Preparing', preview: 'Rendering overview', structure: 'Reading structure', saving: 'Saving observations', done: 'Finished',
+  prepared: 'Preparing', preview: 'Creating overview', structure: 'Reading source structure', saving: 'Saving results', done: 'Finished',
 };
 const stepLabels: Record<AcquisitionView['preview']['status'], MessageKey> = {
   idle: 'Not requested', running: 'Working', ready: 'Ready', partial: 'Incomplete', failed: 'Failed',
@@ -42,7 +42,7 @@ function OverviewPreview({ result, sourceName }: { result: NodePreviewResult; so
   const src = `data:image/png;base64,${result.preview.base64}`;
   return <>
     <figure className="acquisition-preview"><img src={src} alt={t('Figma overview image')} />
-      <figcaption>{t('Overview image is available. Source grounding remains separate until the required structure is complete.')}
+      <figcaption>{t('The image is ready. Complete the source structure before confirming sources or approving annotations.')}
         <button ref={enlargeButton} className="text-button" onClick={() => setExpanded(true)}>{t('Enlarge overview')}</button>
       </figcaption></figure>
     <dialog ref={dialog} className="node-comparison-dialog acquisition-overview-dialog" aria-labelledby={titleId}
@@ -61,7 +61,7 @@ export function AcquisitionPanel({ token, project, sessionId, connected, busy, d
   beginProjectMutation(): (() => void) | null;
   onCommitted(next: Project): void; onVisualCreated(next: Project): void;
 }) {
-  const { t, renderMessage, formatNumber, formatDate } = useLocale();
+  const { t, systemText, errorText, renderMessage, formatNumber, formatDate } = useLocale();
   const [task, setTask] = useState<AcquisitionView | null>(null);
   const [recent, setRecent] = useState<AcquisitionView[]>([]);
   const [preview, setPreview] = useState<{ taskId: string; observedAt: string; result: NodePreviewResult } | null>(null);
@@ -143,7 +143,7 @@ export function AcquisitionPanel({ token, project, sessionId, connected, busy, d
       .then(value => {
         const result = NodePreviewResultSchema.parse(value);
         if (result.fileKey !== source.fileKey || result.pageId !== source.pageId || result.node.id !== source.nodeId || result.observedAt !== observedAt)
-          throw new Error(t('The overview does not match the prepared Figma source. Check the connection and try again.'));
+          throw new UIError(message('The overview does not match the prepared Figma source. Check the connection and try again.'));
         if (generation.current === current) setPreview({ taskId: id, observedAt, result });
       })
       .catch(cause => { if (generation.current === current && !controller.signal.aborted) setError(errorMessage(cause)); })
@@ -243,69 +243,69 @@ export function AcquisitionPanel({ token, project, sessionId, connected, busy, d
   const scope = task?.source;
   const largeOverview = !!scope && Math.max(scope.bounds.width, scope.bounds.height) > 2048;
 
-  return <section className="acquisition-panel" aria-label={t('Figma acquisition')}>
+  return <section className="acquisition-panel" aria-label={t('Import from Figma')}>
     <button className="primary wide" disabled={!canPrepare} onClick={prepare}>{t('Capture Figma selection')}</button>
-    {displayedTasks.length > 0 && <label>{t('Recent acquisition jobs')}<select value={task?.id ?? ''} disabled={!!action} onChange={event => {
+    {displayedTasks.length > 0 && <label>{t('Recent imports')}<select value={task?.id ?? ''} disabled={!!action} onChange={event => {
       setTask(displayedTasks.find(value => value.id === event.target.value) ?? null); setPreview(null); setError(null);
     }}>{displayedTasks.map(value => <option key={value.id} value={value.id}>{value.source.name} · {t(statusLabel(value))} · {formatDate(value.createdAt)}</option>)}</select></label>}
-    {!connected && <p className="small muted">{t('Launch the development plugin and pair it with this server.')}</p>}
+    {!connected && <p className="small muted">{t('Open Semantic Bridge in Figma and connect it with your pairing token.')}</p>}
     {dirty && <p className="small acquisition-warning">{t('Save your unsaved work before starting or saving a capture.')}</p>}
     {error && <p className="error small" role="alert">{renderMessage(error)}</p>}
     {task && <div className="acquisition-detail">
-      <div className="acquisition-heading"><strong>{t('Selected Figma scope')}</strong><span className={`acquisition-status ${task.status}`}>{t(statusLabel(task))}</span></div>
+      <div className="acquisition-heading"><strong>{t('Selected in Figma')}</strong><span className={`acquisition-status ${task.status}`}>{t(statusLabel(task))}</span></div>
       <p className="small acquisition-source">{scope?.name} <span>{scope?.type}</span></p>
       <p className="small muted">{t('Document bounds: x {x}, y {y}, width {width}, height {height}', {
         x: scope?.bounds.x ?? 0, y: scope?.bounds.y ?? 0, width: scope?.bounds.width ?? 0, height: scope?.bounds.height ?? 0,
       })}</p>
-      <p className="small muted">{t('Total nodes, completion time and memory use are unknown until observed. The selection is pinned to this Figma connection.')}</p>
+      <p className="small muted">{t('This uses the selection shown above. Large designs may take longer; the total size and time are not known yet.')}</p>
       {(!sameSession || !sameRevision) && task.status !== 'committed' && !(task.status === 'ready' && task.structure.complete && requiredReady)
         && <p className="small acquisition-warning">{t('The Figma connection or workspace changed. Check the selection again before continuing.')}</p>}
       {task.status === 'prepared' && <div className="acquisition-plan">
-        <label>{t('Acquisition plan')}<select value={plan} onChange={event => setPlan(event.target.value as AcquisitionPlan)} disabled={!!action || busy || dirty || !sameSession || !sameRevision}>
+        <label>{t('What to bring in')}<select value={plan} onChange={event => setPlan(event.target.value as AcquisitionPlan)} disabled={!!action || busy || dirty || !sameSession || !sameRevision}>
           {plans.map(option => <option key={option.value} value={option.value}>{t(option.label)}</option>)}
         </select></label>
         <p className="small muted">{t(plans.find(option => option.value === plan)?.description ?? plans[0]!.description)}</p>
-        <p className="small acquisition-budget">{t('Bounded structure read: up to 5,000 nodes, 2 MB of metadata and a 5 s traversal budget. Native image export may take longer.')}</p>
-        {needsPreview(plan) && <p className="small acquisition-warning">{t('Overview limit: 2,048 px on the longest side and 8 MB. A native Figma export already running cannot stop immediately.')}</p>}
-        {needsPreview(plan) && largeOverview && <p className="small acquisition-warning">{t('This selection is {width} × {height} document units. The overview will be scaled down, so small text may be hard to read.', {
+        <p className="small acquisition-budget">{t('This read allows up to 5,000 nodes, 2 MB of source details and 5 seconds of reading. For larger designs, use Collect source structure.')}</p>
+        {needsPreview(plan) && <p className="small acquisition-warning">{t('The overview is limited to 2,048 px on its longest side and 8 MB. An image export already running in Figma may take longer and cannot stop immediately.')}</p>}
+        {needsPreview(plan) && largeOverview && <p className="small acquisition-warning">{t('This selection is {width} × {height}. The overview is scaled down, so small text may be hard to read.', {
           width: scope?.bounds.width ?? 0, height: scope?.bounds.height ?? 0,
         })}</p>}
-        {needsPreview(plan) && needsStructure(plan) && <p className="small acquisition-warning">{t('Image and structure are separate live observations, so they may not reflect one unchanged Figma revision.')}</p>}
-        <p className="small muted">{t('Acquisition reads the selection without editing the Figma document.')}</p>
-        <button className="wide" disabled={!connected || !sameSession || !sameRevision || busy || dirty || !!action} onClick={start}>{t('Start acquisition')}</button>
+        {needsPreview(plan) && needsStructure(plan) && <p className="small acquisition-warning">{t('The image and structure are read at different times. Avoid editing the Figma design while they are loading.')}</p>}
+        <p className="small muted">{t('Your Figma design is not changed.')}</p>
+        <button className="wide" disabled={!connected || !sameSession || !sameRevision || busy || dirty || !!action} onClick={start}>{t('Start import')}</button>
       </div>}
       {task.status !== 'prepared' && <div className="acquisition-progress">
-        <p className="small" aria-live="polite">{t('Stage: {stage} · {seconds} s elapsed', { stage: t(stageLabels[task.stage]), seconds: (task.progress.elapsedMs / 1000).toFixed(1) })}</p>
-        {(task.status === 'running' || task.status === 'cancel_requested') && <progress aria-label={t('Acquisition progress')} />}
-        <p className="small muted">{t('Observed: {nodes} nodes · {bytes} metadata bytes. Total work remains unknown.', {
+        <p className="small" aria-live="polite">{t('{stage} · {seconds} s elapsed', { stage: t(stageLabels[task.stage]), seconds: (task.progress.elapsedMs / 1000).toFixed(1) })}</p>
+        {(task.status === 'running' || task.status === 'cancel_requested') && <progress aria-label={t('Figma import progress')} />}
+        <p className="small muted">{t('Read so far: {nodes} nodes · {bytes} bytes. Total size is not yet known.', {
           nodes: formatNumber(task.progress.nodes), bytes: formatNumber(task.progress.bytes),
         })}</p>
         <dl className="acquisition-steps"><div><dt>{t('Overview image')}</dt><dd>{t(stepLabels[task.preview.status])}</dd></div>
           <div><dt>{t('Source structure')}</dt><dd>{t(stepLabels[task.structure.status])}{task.structure.status === 'ready' && !task.structure.complete ? ` · ${t('Incomplete')}` : ''}</dd></div></dl>
       </div>}
       {previewResult && <OverviewPreview key={`${task.id}:${task.preview.observedAt}`} result={previewResult} sourceName={scope?.name ?? scope?.nodeId ?? ''} />}
-      {task.structure.reason && <p className="small acquisition-warning">{t('Structure is incomplete: {reason}', { reason: task.structure.reason })}</p>}
-      {task.preview.error && <p className="small acquisition-warning">{t('Overview failed: {reason}', { reason: task.preview.error.message })}</p>}
-      {task.structure.error && <p className="small acquisition-warning">{t('Structure failed: {reason}', { reason: task.structure.error.message })}</p>}
-      {task.error && <p className="small acquisition-warning">{t('Acquisition stopped: {reason}', { reason: task.error.message })}</p>}
-      {task.warnings.length > 0 && <ul className="acquisition-warnings">{task.warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}</ul>}
-      {task.status === 'cancel_requested' && <p className="small acquisition-warning">{t('Stop requested. A native Figma export already in progress may finish before the job stops.')}</p>}
-      {task.status === 'cancelled' && <p className="small muted">{t('This job stopped. Previously validated observations remain available.')}</p>}
-      {(task.status === 'partial' || task.status === 'failed' || task.status === 'interrupted') && <p className="small acquisition-warning">{t('This acquisition is incomplete. It cannot be saved as a source-grounded capture.')}</p>}
-      {task.plan === 'overview' && task.status === 'ready' && <p className="small muted">{t('An overview-only result is for viewing and cannot be saved as a source-grounded capture.')}</p>}
+      {task.structure.reason && <p className="small acquisition-warning">{t('Source structure is incomplete: {reason}', { reason: systemText(task.structure.reason) })}</p>}
+      {task.preview.error && <p className="small acquisition-warning">{t('Could not load the overview: {reason}', { reason: errorText(task.preview.error) })}</p>}
+      {task.structure.error && <p className="small acquisition-warning">{t('Could not read the source structure: {reason}', { reason: errorText(task.structure.error) })}</p>}
+      {task.error && <p className="small acquisition-warning">{t('Import stopped: {reason}', { reason: errorText(task.error) })}</p>}
+      {task.warnings.length > 0 && <ul className="acquisition-warnings">{task.warnings.map((warning, index) => <li key={`${index}-${warning}`}>{systemText(warning)}</li>)}</ul>}
+      {task.status === 'cancel_requested' && <p className="small acquisition-warning">{t('Stopping after the current Figma image export finishes.')}</p>}
+      {task.status === 'cancelled' && <p className="small muted">{t('Import stopped. Results already received are still available.')}</p>}
+      {(task.status === 'partial' || task.status === 'failed' || task.status === 'interrupted') && <p className="small acquisition-warning">{t('This import is incomplete. Finish reading the source structure before saving a complete capture.')}</p>}
+      {task.plan === 'overview' && task.status === 'ready' && <p className="small muted">{t('An overview can be used for drafts. Source confirmation and approval need the complete source structure.')}</p>}
       {task.plan === 'overview' && task.status === 'ready' && <><button className="wide" disabled={visualLinked || !previewResult || busy || dirty || !!action}
-        onClick={createVisualDraft}>{t(visualLinked ? 'Visual draft already in workspace' : 'Use overview as visual draft')}</button>
-        <p className="small muted">{t('This saves the image as a visual-only scope. Draw proposed regions now; source confirmation and approval remain unavailable until a complete collection is attached.')}</p></>}
+        onClick={createVisualDraft}>{t(visualLinked ? 'Image draft already added' : 'Create draft from overview')}</button>
+        <p className="small muted">{t('Save the image and start drawing regions. Attach the complete source structure before confirming sources or approving annotations.')}</p></>}
       {task.plan === 'overview' && task.status === 'ready' && <><button className="wide" disabled={!connected || !sameSession || !sameRevision || busy || dirty || !!action} onClick={loadStructure}>{t('Load source structure')}</button>
-        <p className="small muted">{t('The overview is reused. This starts a bounded structure read without rendering the image again.')}</p></>}
-      {task.status === 'running' && <button className="wide" disabled={!!action} onClick={cancel}>{t('Stop acquisition')}</button>}
+        <p className="small muted">{t('Read the source structure using the image already loaded.')}</p></>}
+      {task.status === 'running' && <button className="wide" disabled={!!action} onClick={cancel}>{t('Stop import from Figma')}</button>}
       {(task.preview.status === 'failed' || task.preview.status === 'partial') && <button className="wide" disabled={!canRetry} onClick={() => retry('preview')}>{t('Retry overview')}</button>}
-      {(task.structure.status === 'failed' || task.structure.status === 'partial') && <button className="wide" disabled={!canRetry} onClick={() => retry('structure')}>{t('Retry structure from the beginning')}</button>}
+      {(task.structure.status === 'failed' || task.structure.status === 'partial') && <button className="wide" disabled={!canRetry} onClick={() => retry('structure')}>{t('Restart structure read')}</button>}
       {task.status !== 'prepared' && task.status !== 'committed' && <button className="approve wide" disabled={!canCommit} onClick={commit}>{t('Save complete capture')}</button>}
-      <button className="text-button acquisition-remove" disabled={task.status === 'running' || task.status === 'cancel_requested' || visualLinked || !!action || busy} onClick={remove}>{t('Remove acquisition record')}</button>
-      {visualLinked && <p className="small muted">{t('This acquisition backs a workspace visual draft and cannot be removed here.')}</p>}
-      <p className="small muted">{t('Removing this job deletes its acquisition observations. Saved captures and annotations stay in the workspace.')}</p>
-      {task.status === 'cancelled' && <p className="small muted">{t('A native export may still occupy the plugin briefly after a stop. Try removal again once it settles.')}</p>}
+      <button className="text-button acquisition-remove" disabled={task.status === 'running' || task.status === 'cancel_requested' || visualLinked || !!action || busy} onClick={remove}>{t('Delete import record')}</button>
+      {visualLinked && <p className="small muted">{t('This image is used by a workspace draft, so its import record cannot be deleted here.')}</p>}
+      <p className="small muted">{t('Deleting this record keeps saved captures and annotations in your workspace.')}</p>
+      {task.status === 'cancelled' && <p className="small muted">{t('Figma may still be finishing an image export. Wait briefly, then try deleting the record again.')}</p>}
     </div>}
   </section>;
 }

@@ -68,7 +68,7 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
       const link = document.createElement('a'); link.href = url;
       link.download = `${fileBase(project.name)}-${fileBase(selected.name)}-source.ndjson`;
       try { link.click(); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
-      setNotice(message('Source evidence file downloaded. Its raw source text and any overview image require careful handling.'));
+      setNotice(message('Source file downloaded. Share its design images and original text only with permission.'));
     } catch (cause) {
       if (!controller.signal.aborted && currentOperation()) setError(errorMessage(cause));
     } finally {
@@ -93,11 +93,11 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
       const next = ProjectSchema.parse(await response.json());
       if (controller.signal.aborted || !currentOperation()) return;
       if (context.current.revision !== expected.revision) {
-        setError(message('The workspace changed during import. Refresh it to find the verified source scope.'));
+        setError(message('The workspace changed during import. Refresh it to find the imported sources.'));
         return;
       }
       onImported(next); setFile(null); if (fileInput.current) fileInput.current.value = '';
-      setNotice(message('Verified source evidence imported as a new, unreviewed scope. Add human annotations and confirm source sets before approval.'));
+      setNotice(message('Source file imported. Add annotations, check the source nodes and confirm them before approval.'));
     } catch (cause) {
       if (!controller.signal.aborted && currentOperation()) setError(errorMessage(cause));
     } finally {
@@ -107,32 +107,32 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
   }
 
   return <details className="source-transfer-panel">
-    <summary>{t('Source evidence transfer')}</summary>
-    <p className="small muted">{t('One complete collection and its available overview image are transferred as a local NDJSON file. Exact original text is included. Annotations, approvals and specifications are not transferred.')}</p>
+    <summary>{t('Source files')}</summary>
+    <p className="small muted">{t('Share complete source structure, original text and any overview image in one file. Annotations, specifications and approvals are not included.')}</p>
     <p className="small source-transfer-warning">{t('The file can contain sensitive design images and original text. Keep it in an appropriate local location and share it only with permission.')}</p>
-    <p className="small muted">{t('80 MB maximum. No Figma connection is needed. Import adds a new, unreviewed source scope to this workspace only after the checksum, end marker and complete coverage are verified.')}</p>
-    {complete.length > 0 && <label>{t('Complete source scope')}<select value={selected?.id ?? ''} disabled={!!action || busy}
+    <p className="small muted">{t('Files can be up to 80 MB. No Figma connection is needed. The file is checked for damage and completeness before adding its sources to this workspace for review.')}</p>
+    {complete.length > 0 && <label>{t('Source structure to share')}<select value={selected?.id ?? ''} disabled={!!action || busy}
       onChange={event => setPreferredId(event.target.value)}>{complete.map(scope => <option key={scope.id} value={scope.id}>{scope.name} · {formatNumber(scope.collection!.nodeCount)} {t('nodes')}</option>)}</select></label>}
-    {!complete.length && <p className="small muted">{t('Complete a source collection and add it as a scope before exporting.')}</p>}
-    <button className="wide" disabled={!selected || !!action || busy} onClick={() => void exportScope()}>{t('Download source evidence')}</button>
+    {!complete.length && <p className="small muted">{t('Complete a source collection and add it to your workspace before downloading a source file.')}</p>}
+    <button className="wide" disabled={!selected || !!action || busy} onClick={() => void exportScope()}>{t('Download source file')}</button>
     {action === 'export' && <><p role="status" className="small muted">{t('Downloaded {bytes} bytes of at most 80 MB', { bytes: formatNumber(bytes) })}</p>
-      <progress aria-label={t('Source export progress')} /><button className="text-button" onClick={() => pending.current?.abort()}>{t('Stop download')}</button></>}
+      <progress aria-label={t('Source download progress')} /><button className="text-button" onClick={() => pending.current?.abort()}>{t('Stop download')}</button></>}
     <form onSubmit={event => { event.preventDefault(); void importFile(); }}>
-      <label>{t('Source evidence NDJSON')}<input ref={fileInput} type="file" accept=".ndjson,application/x-ndjson,text/plain" disabled={!!action || busy}
+      <label>{t('Source file (.ndjson)')}<input ref={fileInput} type="file" accept=".ndjson,application/x-ndjson,text/plain" disabled={!!action || busy}
         onChange={event => { const value = event.target.files?.[0] ?? null; setNotice(null);
           if (value && (!value.size || value.size > SOURCE_TRANSFER_MAX_BYTES)) {
-            setFile(null); event.target.value = ''; setError(message('Choose a nonempty source evidence file no larger than 80 MB.'));
+            setFile(null); event.target.value = ''; setError(message('Choose a source file of 80 MB or less. Empty files cannot be imported.'));
           } else { setFile(value); setError(null); }
         }} /></label>
       {file && <p className="small muted">{t('Selected file: {name} · {bytes} bytes', { name: file.name, bytes: formatNumber(file.size) })}</p>}
-      {dirty && <p className="small source-transfer-warning">{t('Save unsaved editor work before importing source evidence.')}</p>}
-      {action === 'import' && <><progress aria-label={t('Source import and verification progress')} />
-        <p role="status" className="small muted">{t('Uploading and verifying the complete file. Progress is indeterminate until the server responds.')}</p>
+      {dirty && <p className="small source-transfer-warning">{t('Save your changes before importing a source file.')}</p>}
+      {action === 'import' && <><progress aria-label={t('Source file import progress')} />
+        <p role="status" className="small muted">{t('Checking and importing the file on this computer. Please wait for confirmation.')}</p>
         <button className="text-button" type="button" onClick={() => {
           pending.current?.abort();
-          setNotice(message('Import stop requested. A scope may already have been committed; refresh this workspace to verify.'));
+          setNotice(message('Import stopped. The sources may already have been saved; refresh this workspace to check.'));
         }}>{t('Stop import')}</button></>}
-      <button className="wide" disabled={!project || !file || !!action || busy || dirty} type="submit">{t('Import source evidence')}</button>
+      <button className="wide" disabled={!project || !file || !!action || busy || dirty} type="submit">{t('Import source file')}</button>
     </form>
     {error && <p className="small error" role="alert">{renderMessage(error)}</p>}
     {notice && <p className="small" role="status">{renderMessage(notice)}</p>}

@@ -1,15 +1,28 @@
 # Release readiness
 
-Updated 2026-10-25 for the 0.1.1 macOS alpha release. The standalone
-application, prebuilt local Figma plugin and installed-app update workflow have
-been exercised. The [public alpha](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha)
-is MIT licensed. Open security findings are disclosed as limitations of
-non-sensitive-use evaluation. This partial security review is not certification
-or enterprise deployment approval.
-Executed test/native results remain in the [validation log](product-validation.md);
-[completion status](completion-status.md) separates remaining work from blockers.
+Current version: **0.2.0 alpha**. Current setup and workflow instructions are in
+[the installation guide](alpha-installation.en.md) and [user guide](user-guide.en.md).
+The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md) documents
+source/interface and installed-candidate checks. Exact release provenance comes
+from the verification JSON attached to the final clean-commit package.
 
-## Observed compatibility
+## 0.2.0 release boundary
+
+The app and plugin must be updated together; MCP uses the bundled runtime and
+pinned HTTPS origin. The [upgrade guide](upgrade-guide.md) covers backup, path
+preservation, matched plugin replacement and recovery. Current source includes
+the authentication/encryption and capture-input fixes tracked in #11–#13.
+Versioned 0.1.1 assets remain unchanged and carry their original limitations.
+
+For every release, run the full source gates, rebuild a clean commit and verify
+ZIP, mounted DMG, plugin, source revision, hashes, bundled licenses and signing
+state. Do not reuse a previous package report for different bytes. This alpha
+uses ad-hoc signing without Apple notarization. Organization approval, Dev-only
+can-view access, native production-scale memory and independent human evaluations
+remain separate adoption/claim gates. Historical tables below describe their
+stated older versions rather than superseding this current summary.
+
+## Observed compatibility — published 0.1.1 baseline
 
 These rows describe recorded execution, not blanket support for every later version.
 
@@ -63,7 +76,7 @@ The table and pre-publication findings below describe **published 0.1.1**.
 Subsequent source changes add native/MCP certificate pinning, encrypted plugin
 messages and capture-input preflight bounds. They require their own complete
 verification and a new release; issue closure does not update installed binaries.
-See [source upgrade notes](unreleased-upgrade.md).
+See [candidate upgrade notes](upgrade-guide.md).
 
 Assets include exact source text, PNGs, provenance, human review state/history,
 the local pairing token and an optional model API key. Figma source data and
@@ -183,16 +196,16 @@ Publication record and remaining fixes:
   mutually authenticated encrypted plugin records, early collection bounds and
   the compatible Zod upgrade. Focused regressions and independent bypass review
   are recorded in the [current validation log](product-validation.md).
-- [ ] Publish a new version containing these fixes after its own clean-commit
-  package verification. The existing 0.1.1 download assets remain affected;
+- The fixes are included in 0.2.0. Its clean-commit package verification is
+  recorded with that release. Existing 0.1.1 download assets remain affected;
   closing a source-fix issue does not update an installed application.
 
 For the final candidate, run the complete `npm run package:macos` on a clean
 commit, then `npm run release:verify -- --require-clean`. This rejects dirty or
 mismatched provenance. A prior successful candidate is not the final artifact.
 
-The current candidate is version `0.1.1`; npm's private flag does not mean the macOS
-application is unimplemented. Company installation/data/egress approval,
+The historical baseline is `0.1.1`; the current version is `0.2.0`. npm's
+private flag does not mean the macOS application is unimplemented. Company installation/data/egress approval,
 Dev-only can-view acceptance if advertised, and independent F4/F5 evaluation remain
 separate deployment/claim requirements. This alpha has no Developer ID notarization
 or Community listing; these declared limits are not silently treated as completed.

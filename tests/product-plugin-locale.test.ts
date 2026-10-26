@@ -62,9 +62,9 @@ test('plugin locale uses the first browser language, preserves token input, and 
 test('plugin locale keeps local errors actionable in both languages', () => {
   const app = ui();
   app.elements.get('#connect')!.onclick!();
-  assert.match(app.elements.get('#status')!.textContent, /32.*1024/);
+  assert.match(app.elements.get('#status')!.textContent, /Copy the pairing token again/);
   app.change('ko');
-  assert.match(app.elements.get('#status')!.textContent, /페어링 토큰/);
+  assert.match(app.elements.get('#status')!.textContent, /연결 토큰/);
   app.change('en');
   assert.match(app.elements.get('#status')!.textContent, /pairing token/);
 });

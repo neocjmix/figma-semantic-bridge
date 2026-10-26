@@ -107,7 +107,7 @@ final class RuntimeController {
         let deadline = Date().addingTimeInterval(12)
         do {
             while Date() < deadline {
-                guard process.isRunning else { throw HostFailure("The bundled local service could not start. Another service may have taken port 4177. Check the earlier service, then choose Retry.") }
+                guard process.isRunning else { throw HostFailure("The bundled local service could not start. Another service may be using port 4177 or 4178. Check the earlier service, then choose Retry.") }
                 token = try readTokenIfPresent()
                 if trust == nil { trust = try DesktopTrust.readIfPresent(dataDirectory: dataDirectory) }
                 if try await probe(token: token) { ready = true; return }

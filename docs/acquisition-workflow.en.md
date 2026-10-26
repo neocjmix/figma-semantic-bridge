@@ -1,138 +1,138 @@
-# Acquiring images and structure separately — development version
+# Bring in only the source you need
 
-[한국어](acquisition-workflow.ko.md) · [Existing user guide](user-guide.en.md) · [Design and remaining scope](adr/0006-image-first-lazy-acquisition.md)
+[한국어](acquisition-workflow.ko.md) · [User guide](user-guide.en.md) · [Install](alpha-installation.en.md)
 
-This workflow was implemented in the working tree by 2026-10-26. It is **not in the
-published 0.1.1 app or plugin**. Build the server, web editor and plugin from the
-same source before using it. Existing alpha security and data-handling cautions
-still apply.
+Choose the scope and evidence your task needs. View the image first and read its
+structure later, or read only known nodes or a chosen branch. **Unread nodes are
+not treated as absent, and partial results are never marked complete.**
 
-The priority is completing the requested work without omissions. An available image
-and fully acquired structure are distinct outcomes. Required reads can be deferred;
-unread data cannot be treated as absent or complete.
+## Choose a path
 
-## Recommended sequence
-
-1. Open a workspace and save unsaved edits. Select one permitted container in the
-   connected Figma file, then choose **Capture Figma selection**. This preparation
-   reads selection identity and bounds only; it does not walk descendants or render an image.
-2. Check the source name, type and bounds, then choose the acquisition order. Total
-   nodes and duration are still unknown. Frame dimensions alone do not establish
-   precise time or memory estimates.
-3. Read the cost and limitation notices and choose **Start acquisition**. The task
-   stays pinned to that source. Selecting another node in Figma does not silently
-   change the task's target.
-4. Inspect the stage, elapsed time and observed node/byte counts. There is no
-   completion percentage when total work is unknown. Use **Enlarge overview** to
-   inspect the received image; enlargement does not request another Figma export.
-5. After an overview-only acquisition, either choose **Use overview as visual draft**
-   to draw and save proposed regions now, or choose **Load source structure** for the
-   bounded capture path. Loading structure reuses the PNG. A visual draft cannot be
-   matched, confirmed or approved until a complete collection is explicitly attached.
-6. For the bounded path, choose **Save complete capture** after all required steps
-   finish. For a larger source, use **Raw source collection** and attach its complete
-   result to the matching visual draft, or add the collection as a source-only scope.
-   Image and structure remain separately timed observations in either case.
-
-## Choosing the order
-
-| Plan | When to use it | Result |
+| Task | Use | What completion covers |
 | --- | --- | --- |
-| Overview, then structure | Inspect the screen first; structure from the same scope is also needed | Structure reading continues after the image arrives |
-| Structure, then overview | Original text and node information are needed first | Structure is read before rendering the image |
-| Overview only | Inspect the image before deciding to acquire structure | Only the visual observation is cached; structure can be added later |
-| Structure only | Original text and structure are sufficient without an image | No PNG export; complete structure can be saved |
+| Review a small screen and its nodes | Capture Figma selection | The selected container's full subtree within the read limits |
+| Mark regions on a large screen first | Overview only → Create draft from overview | Image observation only; source confirmation and approval remain unavailable |
+| Read all structure under a large area | Collect source structure | The selected root and every descendant, excluding outside siblings |
+| Inspect a few known nodes | Read selected source nodes | Only requested IDs and fields |
+| Discover a parent's immediate children | Read child nodes | Direct children only, excluding further descendants |
+| Read one needed branch completely | Prepare nested area collection | The chosen branch root and all descendants |
 
-A successful step remains available when the other fails. **Retry overview** or
-**Retry structure from the beginning** repeats only that step. Structure retry is
-not continuation. Repeating an unchanged request that reaches the same limit will
-not complete the full scope.
+When narrowing a read, record that narrower task scope. Completing one branch
+does not complete a request for the original larger screen.
 
-**Stop acquisition** cancels waiting and cooperative reads. It cannot forcibly
-interrupt Figma's in-flight native rendering. The plugin may remain busy briefly
-after the app marks its task stopped. Reloading or closing the editor is not a
-replacement for Stop; started jobs remain on the server.
+## 1. Import a small screen or overview
 
-Use **Recent acquisition jobs** to revisit cached results. **Remove acquisition
-record** deletes that task's cached observations. It leaves captures and annotations
-already saved in the workspace intact. The cache holds at most 12 jobs across the
-server; switch to another workspace to manage its cached jobs.
+1. Open a workspace and save unsaved edits. Connect the Figma plugin, select one
+   container in Figma and choose **Capture Figma selection**.
+2. Check its name, bounds and import guidance. Structure has not been counted or
+   rendered yet, so total nodes and time are unknown. Canvas dimensions alone
+   cannot provide a reliable time estimate.
+3. Choose **What to bring in**, then **Start import**.
 
-## Collecting a large source and reading only the parts needed
+| Choice | When to use it |
+| --- | --- |
+| Overview, then structure | View the screen first and read the same area's structure |
+| Structure, then overview | Original text and node information come first |
+| Overview only | Decide which structure you need after seeing the image |
+| Structure only | Work from original text and structure without an image |
 
-Use the workspace's **Raw source collection** panel. Its output is unreviewed raw
-source, stored separately from existing captures, annotations and approved context.
+The job stays bound to the source shown in its preparation panel. Changing the
+Figma selection does not redirect it. Image and structure are separate
+observations; avoid editing the design during import and compare the two results.
 
-1. Select a Figma container and prepare the collection. Check its scope, the
-   200,000-node/64 MB limits and uncertain native cost before starting.
-2. The plugin reads and saves at most 500 nodes/1 MB per batch. Resume does not
-   reread acknowledged batches. Progress shows observed counts, bytes and elapsed
-   time; no full count is performed merely to estimate a percentage.
-3. Pause takes effect after the current batch is durable. A five-minute run budget
-   pauses between batches. Resume is available within the same session, but a
-   ten-minute idle expiry, source/page change or reconnect requires a new collection.
-4. Once coverage, unique IDs and parent relationships pass validation, browse node
-   metadata by page. Request exact source text only when needed; continue through
-   long text explicitly. MCP also supports specific IDs, immediate children and
-   separate text continuations.
-5. History survives browser reload. Restarting the app does not resume a live Figma
-   cursor. Incomplete data never becomes a queryable or approved complete source.
+The panel shows the stage, elapsed time, nodes and bytes received. It does not
+show a completion percentage when the total is unknown. **Enlarge overview**
+uses the image already received and does not ask Figma to render again.
 
-This path **collects the selected Figma subtree in full, then reads selected parts
-from local storage**. To avoid whole-subtree acquisition when the task needs only
-known IDs or a particular branch, use **Selective source inspection**. It can read
-up to 100 explicit IDs with metadata or requested exact text, list one parent's
-immediate children in bounded packets, and prepare a complete collection of a
-chosen descendant container. An ID read proves only those IDs and fields; a child
-inventory excludes descendants; a branch collection is complete only under that
-branch. Native access to a wide parent's `children` may still allocate the full
-array before a response packet is returned.
+- When the required stages are complete, choose **Save complete capture**. A
+  structure-only capture can be saved without an image.
+- After an overview-only import, use **Create draft from overview** to mark
+  proposed regions. Matching, confirmation and approval need complete source
+  structure attached later.
+- **Load source structure** reuses the PNG but uses the small-capture limits.
+  For a larger structure, use **Collect source structure** below.
 
-After a collection completes, choose **Add collection as source scope** to annotate
-its document bounds without inventing an image, or **Attach to current visual draft**
-when file, page, root and bounds match. A visual draft keeps its image and proposed
-regions. The editor pages collection metadata, resolves selected source references
-and original TEXT on demand, and marks the number of loaded bounds separately from
-the full node count. Save a reference set, choose **Confirm sources** yourself, then
-review the semantic annotation. Image/structure agreement is not assumed. A visual
-draft cannot be approved before complete source attachment; a collection-backed
-annotation always requires explicit human source confirmation before approval.
+A successful stage remains available if another fails. **Retry overview** or
+**Restart structure read** reruns only that stage. Structure retries start from
+the beginning. If the same limit keeps cutting off the read, choose an explicit
+smaller scope or switch to structure collection rather than repeating it.
 
-**Source evidence transfer** downloads one complete collection-backed scope as an
-NDJSON file of at most 80 MB, with exact original text and an overview image if one
-exists. Import verifies the checksum, end marker and full coverage before adding a
-new, unreviewed scope to the current workspace. Annotations, specifications and
-approvals are excluded. This is separate from the smaller Capture transfer bundle.
-The file can contain sensitive source material; transfer it only through permitted
-channels. The smaller embedded Snapshot path retains the limits below.
+## 2. Collect larger structures and attach an image
 
-The server holds at most twelve collections/256 MB. Inspect errors instead of
-repeating the same failed request. Capacity limits remain incomplete; timeout/busy
-errors await manual resume. Failed cursor release retains the record so removal
-can be retried or the plugin reconnected.
+Open **Collect source structure** and check the selected Figma container. Read
+the node/data limits and native Figma cost guidance before starting.
 
-## Existing capture limits and what completion means
+- Save up to **500 nodes or 1 MB per part**, with **200,000 nodes and 64 MB total**.
+  No up-front full count is performed; progress uses received nodes, bytes and time.
+- Pause takes effect after the current part is saved. One run pauses between
+  parts after five minutes. Resume does not reread parts already saved.
+- Resume requires the same valid plugin session and source. Ten minutes idle,
+  page changes, reconnection or app restart can lose the traversal state and
+  require a new collection.
+- Completion requires coverage, uniqueness and parent-relation checks. Only a
+  completed structure can support workspace source matching, confirmation and approval.
 
-- The editor's structure read allows at most 5,000 nodes, 2 MB of metadata and a
-  cooperative five-second traversal. Reaching a limit means **incomplete**. That
-  result cannot be saved as a complete capture or receive a new approval.
-- Overview PNGs allow a 2,048 px long edge and 8 MB. Small text in a large table may
-  remain unreadable. Rendering has an independent time budget, but its actual
-  native cost cannot be guaranteed beforehand.
-- Image and structure are observations at different times. Unchanged position and
-  name do not prove unchanged descendants or one immutable version. Avoid source
-  edits during acquisition and compare the observations before review.
-- An overview-only result can become a visual draft with proposed regions. Matching,
-  source confirmation and approval remain locked until a matching complete collection
-  is attached and the saved source set is reviewed by a person.
-- Section images are unsupported. Choose structure only, or explicitly select an
-  inner Frame for a separate image task. Reducing scope does not complete the
-  originally requested whole-scope task.
-- A complete collection can back the editor without making a fake inline Snapshot.
-  Legacy Capture transfer does not carry it; use Source evidence transfer. Collection
-  completion proves its chosen subtree, not unseen siblings or one immutable Figma
-  revision. A real 105,837-node source remains unverified in native Figma.
+Use **Add source structure to workspace** to work without an image, or **Attach to
+current image draft** when file, page, root and bounds match. The image and region
+drafts remain, but matching metadata does not prove the same design version.
+Every annotation attached to a collection needs explicit human **Confirm sources**
+on its saved node set before approval.
 
-See the [current collection-backed validation record](evaluation/collection-backed-workflow.md)
-and the [earlier acquisition baseline](evaluation/independent-acquisition.md).
-Synthetic browser checks do not establish real Figma large-frame performance.
+Browse the saved node list in pages and load original text only when selecting
+a node. Loaded canvas boundaries and the total collected node count are shown
+separately. A boundary absent from the current view is not necessarily missing
+from the stored structure.
+
+## 3. Read specific nodes and branches
+
+Prepare an inspection under **Read selected source nodes**.
+
+- **Node details only** reads metadata for up to 100 IDs. Choose **Node details and
+  text** to include the requested TEXT content.
+- **Read child nodes** takes a parent ID and lets you request subsequent pages.
+  Each response includes up to 100 direct children, not their descendants.
+- **Prepare nested area collection** completely reads the chosen container's subtree. Once
+  complete, it can be used as source structure like the larger collection above.
+
+A cached identical request can be reused without rereading Figma. Cache reuse is
+not proof of the current design; start a new inspection after changes. Figma can
+allocate a wide parent's entire native `children` array internally, so response
+pagination does not impose the same bound on Figma's native memory.
+
+## Stop, recover and clean up
+
+**Stop import from Figma** stops waiting and cooperative reads. A Figma image
+export already running cannot stop immediately. Late results are ignored, and
+the plugin may remain busy briefly. Closing or refreshing the window does not
+replace the stop action.
+
+Find previous results in **Recent imports**. **Delete import record** removes
+that cache, keeping saved captures and annotations. A record used by an image
+draft or a collection referenced by a workspace cannot be deleted. Collection
+storage is limited to 12 records and 256 MB across the server; import records
+are limited to 12. Open another workspace to clean up its unused records.
+
+If cursor release is unconfirmed, the app retains the record needed for retry.
+Retry release/removal for that job or reconnect the plugin and start again. Do
+not repeatedly retry a size limit, damaged data or changed session as if it were
+only a slow response.
+
+## Limits and decisions
+
+| Item | Limit or boundary |
+| --- | --- |
+| Small-capture structure | Default 5,000 nodes, 2 MB and cooperative 5 seconds; exceeding a limit stays incomplete |
+| Overview | Longest side 2,048 px, 8 MB; use original text for fine text in a large table |
+| Current-node comparison | 1,024 px, 2 MB and cooperative 5 seconds; outside siblings excluded |
+| Source file | One complete structure and optional image, up to 80 MB NDJSON; no annotations, specifications or approvals |
+| Small-capture transfer | Up to two captures, 10,000 nodes and 4 MB node metadata combined, 15 MB file |
+| Section or transformed root | Keep structure without an unsupported image, or explicitly select an unrotated inner Frame |
+
+Application time and response limits do not guarantee Figma page-loading time,
+render duration or peak memory. This workflow does not need Figma REST API or a
+PAT. REST alternatives or concurrent native renders are not applied automatically.
+
+Use **Source files** for source transfers. Import checks hashes, the final marker
+and complete structure before adding an unreviewed source area. This does not
+transfer approvals or back up a workspace. Continue with the
+[user guide](user-guide.en.md) for source review and approval.

@@ -24,11 +24,11 @@ test('unpaired users can select and persist a language before entering a token',
   await page.goto(app.url);
   const selector = page.getByLabel('Language / 언어', { exact: true });
   await expect(selector).toHaveValue('ko');
-  await expect(page.getByRole('button', { name: '서버 연결', exact: true })).toBeVisible();
-  await page.getByLabel('페어링 토큰', { exact: true }).fill('unsaved-token-input');
+  await expect(page.getByRole('button', { name: '연결', exact: true })).toBeVisible();
+  await page.getByLabel('연결 토큰', { exact: true }).fill('unsaved-token-input');
   await selector.selectOption('en');
   await expect(page.getByLabel('Pairing token', { exact: true })).toHaveValue('unsaved-token-input');
-  await expect(page.getByRole('button', { name: 'Pair server', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('fsb-locale'))).toBe('en');
   await page.reload();
   await expect(selector).toHaveValue('en');
@@ -100,7 +100,7 @@ test('storage denial still permits session language changes and the narrow heade
   await page.goto(app.url);
   const selector = page.getByLabel('Language / 언어', { exact: true });
   await expect(selector).toHaveValue('ko');
-  await expect(page.getByRole('button', { name: '연결 해제', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '편집기 연결 해제', exact: true })).toBeVisible();
   for (const locale of ['ko', 'en']) {
     await selector.selectOption(locale);
     const layout = await page.evaluate(() => {

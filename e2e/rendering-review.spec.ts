@@ -55,7 +55,7 @@ async function openRegion(page: Page, app: AppFixture, name: string, captureName
   // Choose the capture first because the component list is scoped to that capture.
   await page.locator('.snapshot-list').getByRole('button', { name: captureName }).click();
   await page.locator('.component-list').getByRole('button', { name, exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Source grounding', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Source connections', exact: true })).toBeVisible();
 }
 
 async function save(page: Page) {
@@ -70,24 +70,24 @@ test('excluded transparent and hidden sources remain selectable and require expl
   await openRegion(page, app, 'Rendering review');
   const approve = page.getByRole('button', { name: 'Approve annotation', exact: true });
   await expect(approve).toBeEnabled();
-  await expect(page.getByLabel('Selected source references')).toContainText('Potential within captured scope');
-  await expect(page.getByLabel('Source grounding review')).toContainText('not occlusion');
+  await expect(page.getByLabel('Selected source nodes')).toContainText('May be visible in this capture');
+  await expect(page.getByLabel('Review source connections')).toContainText('Other layers, masks and clipping may cover it');
   await expect(page.locator('.source-candidate').filter({ hasText: 'Transparent alternative' })).toHaveCount(0);
   await expect(page.locator('.source-candidate').filter({ hasText: 'Hidden alternative' })).toHaveCount(0);
-  await page.getByText('Adjust source references manually', { exact: true }).click();
+  await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('transparent-source');
   const transparent = page.locator('.manual-sources').getByRole('checkbox', { name: /Transparent alternative/ });
   await expect(transparent).toBeEnabled();
-  await expect(page.locator('.manual-sources')).toContainText('Observed opacity: 0');
-  await expect(page.locator('.manual-sources')).toContainText('Sibling index: 18');
+  await expect(page.locator('.manual-sources')).toContainText('Captured opacity: 0');
+  await expect(page.locator('.manual-sources')).toContainText('Layer order: 18');
   await transparent.check();
-  await expect(page.getByLabel('Selected source references')).toContainText('Transparent');
+  await expect(page.getByLabel('Selected source nodes')).toContainText('Transparent');
   await save(page);
   let current = (await app.read()).annotations.find(annotation => annotation.id === 'review-region')!;
   expect(current.sourceReview?.ambiguous).toBe(false);
   expect(current.sourceReview?.renderingReviewRequired).toBe(true);
   await expect(approve).toBeDisabled();
-  await expect(page.getByText('Rendering evidence requires source confirmation', { exact: true })).toBeVisible();
+  await expect(page.getByText('Check source visibility before confirming', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm sources', exact: true }).click();
   await expect(approve).toBeEnabled();
   current = (await app.read()).annotations.find(annotation => annotation.id === 'review-region')!;
@@ -100,7 +100,7 @@ test('excluded transparent and hidden sources remain selectable and require expl
   await expect(hidden).toBeEnabled();
   await hidden.check();
   await save(page);
-  await expect(page.getByLabel('Selected source references')).toContainText('Hidden');
+  await expect(page.getByLabel('Selected source nodes')).toContainText('Hidden');
   await expect(approve).toBeDisabled();
   const after = await app.read();
   current = after.annotations.find(annotation => annotation.id === 'review-region')!;
@@ -109,14 +109,14 @@ test('excluded transparent and hidden sources remain selectable and require expl
   expect(current.reviewStatus).toBe('proposed');
   expect(after.annotations.find(annotation => annotation.id === 'original-approved')).toEqual(app.initial.annotations.find(annotation => annotation.id === 'original-approved'));
   expect(after.snapshots).toEqual(app.initial.snapshots);
-  await page.getByText('Rendering evidence requires source confirmation', { exact: true }).scrollIntoViewIfNeeded();
+  await page.getByText('Check source visibility before confirming', { exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('rendering-source-review.png'), fullPage: true });
   expect(errors).toEqual([]);
 });
 
 test('new unknown evidence requires confirmation while legacy unknown keeps its prior approval behavior', async ({ page, app }) => {
   await openRegion(page, app, 'Unknown rendering review');
-  const selected = page.getByLabel('Selected source references');
+  const selected = page.getByLabel('Selected source nodes');
   await expect(selected).toContainText('Unknown');
   await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
   const unknown = (await app.read()).annotations.find(annotation => annotation.id === 'unknown-region')!;
@@ -127,7 +127,7 @@ test('new unknown evidence requires confirmation while legacy unknown keeps its 
   await page.locator('.snapshot-list').getByRole('button', { name: /Workspace \/ Members/ }).click();
   await page.locator('.component-list').getByRole('button', { name: 'Legacy pending region', exact: true }).click();
   await expect(selected).toContainText('Unknown');
-  await expect(page.locator('.rendering-legacy-note')).toContainText('existing approvals are preserved');
+  await expect(page.locator('.rendering-legacy-note')).toContainText('existing approvals are kept');
   await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
   await expect(page.locator('.inspector-content > .section-title .badge')).toHaveText('approved');
@@ -143,8 +143,8 @@ test('legacy pending hidden sources require confirmation even without a stored r
   expect(original.sourceReview?.renderingReviewRequired).toBeUndefined();
   await openRegion(page, app, 'Legacy hidden pending region', /Workspace \/ Members/);
   const approve = page.getByRole('button', { name: 'Approve annotation', exact: true });
-  await expect(page.getByLabel('Selected source references')).toContainText('Hidden');
-  await expect(page.getByText('Rendering evidence requires source confirmation', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Selected source nodes')).toContainText('Hidden');
+  await expect(page.getByText('Check source visibility before confirming', { exact: true })).toBeVisible();
   await expect(approve).toBeDisabled();
   expect((await app.read()).annotations.find(annotation => annotation.id === original.id)).toEqual(original);
 

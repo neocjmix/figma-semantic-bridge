@@ -4,6 +4,13 @@ This log records executed evidence rather than changing the requirements in the
 architecture, pipeline or roadmap. The branch builds an executable local product;
 this log does not certify release readiness or every Figma Desktop acceptance gate.
 
+## 0.2.0 interface and release verification, 2026-10-26
+
+See the [0.2.0 acceptance record](evaluation/release-0.2.0-acceptance.md) for the
+latest source/interface and installed-update observations. Final package
+provenance is bound by the verification JSON attached to that release. Entries
+below retain their original pre-release status, versions and executed counts.
+
 ## Unreleased security candidate, 2026-10-26
 
 The current source uses pinned local TLS for the native app/MCP and the
@@ -12,7 +19,7 @@ travels in the plugin handshake; every subsequent application record is sealed
 with a directional, session-bound key and strict sequence counter. The exact
 localhost manifest permission remains because actual Figma rejected a numeric-IP
 allowlist. [ADR 0010](adr/0010-plugin-mutual-authentication.md) records that decision
-and the remaining threat-model limits; [source upgrade instructions](unreleased-upgrade.md)
+and the remaining threat-model limits; [candidate upgrade instructions](upgrade-guide.md)
 describe the matched app/plugin update. Published and installed 0.1.1 binaries
 do not include these changes.
 

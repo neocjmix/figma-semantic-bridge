@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const { renderOfflineGuide } = await import(new URL('../scripts/render-offline-guide.mjs', import.meta.url).href) as {
-  renderOfflineGuide(title: string, markdown: string, options?: { locale?: string; kind?: string }): string;
+  renderOfflineGuide(title: string, markdown: string, options?: { locale?: string; kind?: string; images?: Record<string, string> }): string;
 };
 const body = (markdown: string) => renderOfflineGuide('설치 <안내> & 도움말', markdown);
 
@@ -78,12 +78,24 @@ test('offline guide never turns raw HTML, links or images into executable or net
   assert.match(html, /default-src 'none'/);
 });
 
+test('offline guide embeds only explicitly supplied PNGs and keeps unknown images inert', () => {
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  const markdown = '![A "safe" screenshot](images/workflow.en.png)\n\n![Remote](https://example.invalid/a.png)';
+  const html = renderOfflineGuide('Guide', markdown, { images: { 'images/workflow.en.png': png } });
+  assert.match(html, /<img class="guide-image" src="data:image\/png;base64,iVBORw0KGgo=" alt="A &quot;safe&quot; screenshot">/);
+  assert.equal((html.match(/<img /g) ?? []).length, 1);
+  assert.match(html, /img-src data:/);
+  for (const data of ['https://example.invalid/a.png', 'data:image/svg+xml,<svg/>', png + '" onerror="bad()', png + 'A'.repeat(1_400_000)]) {
+    assert.throws(() => renderOfflineGuide('Guide', markdown, { images: { 'images/workflow.en.png': data } }), /bounded bundled PNG/);
+  }
+});
+
 test('the shipped installation guide becomes structured, self-contained HTML', async () => {
   const markdown = await readFile(new URL('../docs/alpha-installation.md', import.meta.url), 'utf8');
   const html = renderOfflineGuide('Figma Semantic Bridge 설치 안내', markdown);
-  assert.ok((html.match(/<h2>/g) ?? []).length >= 10);
-  assert.ok((html.match(/<table>/g) ?? []).length >= 3);
-  assert.ok((html.match(/<ol(?: start="\d+")?>/g) ?? []).length >= 5);
+  assert.match(html, /<h2>1\. 환경과 배포 파일 확인<\/h2>/);
+  assert.match(html, /<table>/);
+  assert.match(html, /<ol>/);
   assert.match(html, /<pre><code>\[mcp_servers\.figma_semantic_bridge\]/);
   assert.match(html, /@media/);
   assert.doesNotMatch(html, /<a\b|<script\b|<link\b|<img\b/i);

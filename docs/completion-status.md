@@ -1,20 +1,39 @@
 # Completion status
 
-Current status reviewed: 2026-10-26 KST; earlier native experiments retain their
-2026-10-24 observation dates. This separates remaining implementation and verification
-from external dependencies and future scope. It does not certify release readiness.
-The [validation log](product-validation.md) records executed native observations;
-the [roadmap](roadmap.md) and [feasibility gates](feasibility.md) remain requirements.
-Historical fixture manifests keep their original observation dates. The released
-baseline is [0.1.1 alpha](releases/0.1.1.md), published under MIT. The subsequent
-[large-source workflow](evaluation/collection-backed-workflow.md) is implemented
-and locally verified but remains an unreleased source change.
+Current version: **0.2.0 alpha**. The [user guide](user-guide.en.md),
+[한국어 가이드](user-guide.ko.md) and [upgrade guide](upgrade-guide.md) describe
+current use. The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md)
+separates source/browser checks, installed-candidate observations and final
+artifact provenance. Earlier sections below retain their original dates and
+version boundaries.
 
-## Unreleased security candidate, 2026-10-26
+## Completed 0.2.0 scope
 
-The current source adds pinned local TLS for the native app/MCP and a mutually
+Image-first drafts, complete large-source collection, selective ID/child/branch
+reads, collection-backed review and source-only transfer are implemented. Local
+transport and input-validation fixes for #11–#13 are included. User-facing Korean
+and English text, guides, screenshots and product/spec descriptions have been
+aligned with those capabilities. The installed candidate passed bounded owned
+Figma/MCP use and bilingual offline-guide checks while preserving existing data.
+
+The release workflow rebuilds from a clean commit and verifies exact app/plugin
+versions, source revision, assets, licenses and signatures. Consult its attached
+verification report for the final uploaded bytes. Older 0.1.1 downloads retain
+their historical security limitations; source issue closure does not alter them.
+
+## Remaining external acceptance
+
+The original large work file and native memory profile, effective Dev-only access
+to another owner's view-only file, target-organization approval and independent
+human semantic/productivity studies remain the external dependencies described
+below. They are not unfinished local installation or documentation work, and
+are not claimed complete by the alpha release.
+
+## Dated 2026-10-26 security-source evidence
+
+The 0.2.0 source adds pinned local TLS for the native app/MCP and a mutually
 authenticated, encrypted v3 Figma bridge. The published and installed 0.1.1
-binaries remain unchanged; use the [source upgrade guide](unreleased-upgrade.md)
+binaries remain unchanged; use the [candidate upgrade guide](upgrade-guide.md)
 for the transport and matched app/plugin update requirements.
 
 The rebuilt v3 plugin connected in actual Figma Desktop. An isolated owned
@@ -49,11 +68,11 @@ This closes the selected experiments, not every feasibility gate or release
 claim. In particular, the observed scopes do not satisfy the proposed ten-screen
 representative corpus, independent semantic labels or human productivity study.
 
-The actual application already uses atomic JSON storage; the architecture's open
-SQLite/JSON wording is historical. Likewise, original Desktop-transport-pending
-headings must be read alongside the later successful bounded capture/navigation
-evidence. General pipeline ideas such as full style acquisition and reconciliation
-are not implemented merely because the pipeline lists them.
+The actual application uses atomic JSON storage, as the current
+[architecture](architecture.md) now states. Original Desktop-transport-pending
+headings in dated ADRs must be read alongside later bounded capture/navigation
+evidence. Future pipeline ideas such as full style acquisition and automatic
+reconciliation are not implemented merely because an older proposal listed them.
 
 Documentation preparation is complete in [release readiness](release-readiness.md):
 observed compatibility, runtime/security boundaries, source-data risks and a release

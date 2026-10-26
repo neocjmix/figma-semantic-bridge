@@ -1,40 +1,102 @@
-# Processing Pipeline
+# Processing pipeline — implemented and proposed stages
 
-## Implemented large-source path (unreleased, 2026-10-26)
+The current source implements a local, human-first pipeline. Published 0.1.1
+assets contain the earlier bounded-capture path; 0.2.0 adds the
+explicit image/collection/selective paths below. The
+[collection-backed verification](evaluation/collection-backed-workflow.md) records
+which paths ran through synthetic browser tests, scripted native-plugin calls and
+packaged UI. These are not interchangeable forms of acceptance.
 
-An overview can be saved first and used for proposed annotation drafts. Prepare an explicit selective inspection when only known IDs or immediate children are needed. Choose a descendant container for complete branch capture, or collect the selected root in acknowledged chunks. A complete collection is explicitly attached to an equal-source visual draft or opened as its own scope. All chunks participate in matching; selected exact text and metadata are loaded only on demand. Human source confirmation precedes approval. Approved context remains bounded; a separate source-only NDJSON stream carries large collections without flattening them into legacy snapshots. See [the current verification](evaluation/collection-backed-workflow.md).
+## 1. Pin a permitted source
 
-Each stage has independently testable inputs, outputs and fallback behavior.
+The user chooses one current-page Figma container. A lightweight selection read
+records file, page, root ID, type and document bounds before heavy work. The
+server requires the active plugin session and a project revision; the adapter
+does not modify the document. Unavailable private-plugin file identity prevents
+provenance-dependent new acquisition. A page change, reconnect or changed source
+invalidates a live cursor rather than silently changing the task target.
 
-## Stage 1 — Bounded acquisition
-**Input:** selected Figma frame/page or explicit region. **Method:** export preview, extract lightweight node IDs/types/parents/BBoxes/text/visibility, chunk and cache; preserve coordinate transform. **Output:** preview + source scope + node index. Never require complete JSON dump.
+## 2. Acquire only the evidence the task needs
 
-## Stage 2 — Human annotation
-**Input:** preview and existing annotations. **Method:** rectangles, pan/zoom, snap, name, split/merge, hierarchy edits, undo/redo. Geometric containment suggests hierarchy but does not dictate it. **Output:** editable semantic tree.
+| Path | Implemented output | Limit and incompleteness rule |
+| --- | --- | --- |
+| Bounded capture | Legacy `Snapshot` with inline node array and optional PNG. | Default 5,000 nodes/2 MB/5 s; ceilings 10,000/4 MB/15 s. A limit-hit prefix stays incomplete and cannot support new approval. |
+| Independent acquisition | Overview, structure or either order, with stage status, elapsed/observed counts, cancellation and retry. An overview-only result can become a visual draft; a fully complete bounded structure can be committed as a Snapshot. | Preview has 2,048 px default long-edge and 8 MB PNG budget. Native export may continue after cancellation; image and structure have separate times. |
+| Chunked collection | Complete selected subtree or explicit descendant branch, stored as acknowledged immutable chunks. | 500 nodes/1 MB per packet; 200,000 nodes/64 MB total. Cooperative pause follows a durable packet; same-session resume expires after idle/source change. A partial collection is not queryable complete source. |
+| Selective inspection | Explicit IDs with metadata or requested original text; one parent's immediate children in pages. | Up to 100 IDs and 1 MB per observation; up to 100 direct-child records/96 KB per page. No sibling/descendant coverage is implied. |
 
-## Stage 3 — AI draft (optional)
-**Input:** bounded image, text/geometry, approved annotations and requested granularity. **Method:** multimodal structured proposal for UI/spec/ignore regions, names, parents and ambiguities. Convert image to document coordinates. Validate schema, bounds and cycles. Propose patches, never silently replace approved human decisions. **Output:** reviewable AI suggestions. **Fallback:** manual mode.
+Native Figma may allocate a wide parent's entire `children` array before the
+plugin can page its response. A TEXT value must fit the exact source schema; it is
+never shortened into apparently complete evidence. Work on another page and a
+whole-document JSON dump are not implicit fallbacks. See [ADR 0006](adr/0006-image-first-lazy-acquisition.md),
+[ADR 0007](adr/0007-chunked-source-collections.md) and
+[ADR 0009](adr/0009-selective-source-acquisition.md).
 
-## Stage 4 — Deterministic source grounding
-**Input:** annotation BBoxes and original source tree/index. **Method:** spatial indexing (R-tree or equivalent), tolerant containment, IoU/coverage, original ancestry tie-breaks, equal-box cycle guards, candidate scoring. Prefer one fitting node when valid; otherwise a minimal covering set of nodes. **Output:** zero-to-many original node references and ambiguity diagnostics. Geometric score is not semantic confidence.
+## 3. Bind complete evidence to an editor scope
 
-## Stage 5 — Specification extraction and linking
-**Input:** marked spec regions and exact source text. **Method:** separate UI copy from explanatory notes using geometry, visual context and optional LLM; preserve verbatim text; propose many-to-many describes/behavior/constraint/interaction/dependency edges. Proximity is a hint, not proof. **Output:** spec records, relations and unresolved questions.
+An overview can become a **visual-only scope**: people may draw and save proposed
+regions, but matching, confirmation and approval are unavailable. A complete
+collection can create a source-only scope or attach to a visual draft only when
+file, page, root and bounds match. The visual observation is preserved. No partial
+chunk prefix is converted to a complete Snapshot or combined with an image as one
+atomic Figma version. Existing approved annotations remain intact; attaching
+structure to a visual draft resets its proposed regions' source review.
 
-## Stage 6 — Human review
-**Input:** proposed boundaries, source matches and spec links. **Method:** accept/reject/edit, highlight source nodes, batch approve, maintain history, validate hierarchy and references. **Output:** approved model with explicit unresolved items.
+The editor pages metadata and shows loaded overlay bounds versus the collection's
+full count. Exact TEXT and chosen source records are resolved on demand. Cached
+selective observations remain separate from project annotations and cannot be
+promoted into full-subtree evidence merely because their requested IDs returned.
 
-## Stage 7 — Context packaging
-**Input:** approved model and selected source details. **Method:** versioned schema validation, provenance, normalized coordinates and compact exports; styles/assets loaded on demand. **Output:** component hierarchy, specification graph, source mapping and open questions.
+## 4. Build and ground a semantic interpretation
 
-## Stage 8 — MCP exposure
-**Input:** persisted model and optional active plugin. **Method:** bounded read tools for scopes, components, specs, node details and previews; controlled proposal-writing tools with review requirements. **Output:** stable context for Codex and other clients. Disconnected live queries fail explicitly.
+A person draws, resizes, names, splits, merges and reparents regions; semantic
+hierarchy is independent of Figma ancestry. Deterministic geometry computes
+overlap, coverage and IoU candidates using axis-aligned document bounds. For a
+collection, matching streams **all** verified chunks, including descendants whose
+bounds lie outside a parent's box. It keeps a bounded candidate summary and
+signals ambiguity or candidate overflow. The score is geometric fit, not a
+calibrated semantic probability.
 
-## Stage 9 — Change reconciliation
-**Input:** prior approved model and refreshed source. **Method:** stable node IDs first, then bounded geometry/text fingerprints; flag stale, missing and uncertain references; human approves repairs. **Output:** reviewable diff. Not guaranteed automatic synchronization.
+Observed hidden or zero-opacity subtrees are excluded from automatic candidates
+but remain stored and explicitly selectable. Missing opacity, external overlays,
+masks, clipping, blend effects and actual paint contribution remain uncertain.
+The user may inspect a current node export or navigate to a source node without
+changing source content; that export is a new transient observation, not the
+saved capture image.
 
-## Stage 10 — Implementation handoff
-**Input:** approved semantic contract and unknowns. **Method:** export JSON and readable implementation context with provenance and source references; targeted MCP follow-up. **Output:** developer/agent-ready design context, not automatically generated production code.
+## 5. Confirm sources, specifications and meaning
 
-## Algorithm cautions
-Tolerance can make containment non-antisymmetric; use deterministic tie-breaking. Meaning is continuous and hierarchical, not a universal binary boundary. Earlier bottom-up text aggregation may remain a bounded heuristic, not the only segmentation mechanism.
+The user saves an intended reference set and, where required, explicitly invokes
+**Confirm sources**. Every new collection-backed annotation requires complete
+backing, at least one selected source reference and this confirmation before
+approval. Legacy snapshots require confirmation for geometric ambiguity or
+rendering uncertainty. Changing geometry/references invalidates review; AI cannot
+supply source confirmation. Approval is a separate semantic decision.
+
+Specifications preserve verbatim original TEXT, may link to multiple components,
+and require reviewed relations to approved targets before approval. A visual-only
+scope or incomplete source cannot satisfy those gates. Undo/redo and revision
+checks prevent stale edits from silently replacing newer decisions.
+
+## 6. Share reviewed context
+
+JSON/Markdown and MCP approved-context reads include eligible approved regions,
+reviewed specification relations, provenance and explicit unresolved/truncation
+information. A child under an unapproved ancestor is withheld from the approved
+hierarchy. MCP also offers bounded targeted source reads and a proposal-writing
+path, but not semantic approval or arbitrary file/shell access.
+
+Capture bundles move up to two bounded Snapshots into a fresh workspace. Source
+transfer streams one complete collection and optional overview as an at-most-80 MB
+NDJSON file into a fresh unreviewed scope in the current workspace. Both preserve
+source material, not human annotations, specifications or approval. Digests and
+coverage checks establish local integrity, not origin permission or freshness.
+
+## Optional and future work
+
+A configured local or explicitly consented external model may generate validated
+proposals for bounded source scopes. Manual work remains available without a
+provider, and proposals never overwrite approved human records. Automatic
+source-change reconciliation, version-pinned multi-observation acquisition,
+independent semantic quality measurement and guaranteed complete product-flow
+reconstruction are **future work**, not hidden steps of the implemented pipeline.

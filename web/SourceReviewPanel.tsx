@@ -29,20 +29,20 @@ export type NodePreviewState = { nodeId: string } & (
 );
 
 function RenderingEvidenceInfo({ node, evidence }: { node: SourceNode | undefined; evidence: RenderingEvidence | undefined }) {
-  const { t } = useLocale();
+  const { t, systemText } = useLocale();
   const status = evidence?.status ?? 'unknown';
   return <span className={`rendering-evidence rendering-${status}`}>
-    <span className="rendering-state">{status === 'potential' ? t("Potential within captured scope") : status === 'transparent' ? t("Transparent") : status === 'hidden' ? t("Hidden") : t("Unknown")}</span>
-    <span className="rendering-reason">{evidence?.reason ?? t("Rendering evidence is unavailable for this source.")}</span>
-    {evidence?.sourceNodeId && <small>{t("Evidence node:")} <code>{evidence.sourceNodeId}</code></small>}
-    {node?.rendering?.opacity !== undefined && <small>{t('Observed opacity: {opacity}', { opacity: node.rendering.opacity })}</small>}
-    {node?.rendering?.siblingIndex !== undefined && <small>{t('Sibling index: {index} · within its source parent', { index: node.rendering.siblingIndex })}</small>}
+    <span className="rendering-state">{status === 'potential' ? t("May be visible in this capture") : status === 'transparent' ? t("Transparent") : status === 'hidden' ? t("Hidden") : t("Unknown")}</span>
+    <span className="rendering-reason">{(evidence ? systemText(evidence.reason) : t("Visibility details are unavailable for this source."))}</span>
+    {evidence?.sourceNodeId && <small>{t("Source node:")} <code>{evidence.sourceNodeId}</code></small>}
+    {node?.rendering?.opacity !== undefined && <small>{t('Captured opacity: {opacity}', { opacity: node.rendering.opacity })}</small>}
+    {node?.rendering?.siblingIndex !== undefined && <small>{t('Layer order: {index} · within the same parent', { index: node.rendering.siblingIndex })}</small>}
   </span>;
 }
 
 /** This is a crop of the captured composite, never an isolated-node render. */
 function CapturedArea({ snapshot, bounds, label }: { snapshot: Snapshot; bounds: Rect | null; label: string }) {
-  const { t } = useLocale();
+  const { t, systemText } = useLocale();
   const clipId = `source-crop-${useId().replaceAll(':', '')}`;
   if (!bounds || !snapshot.preview) return <p className="small muted">{t('Captured preview unavailable for {label}.', { label })}</p>;
   const source = snapshot.bounds;
@@ -65,7 +65,7 @@ function CapturedArea({ snapshot, bounds, label }: { snapshot: Snapshot; bounds:
 function NodePreviewContent({ snapshot, node, preview, descriptionId }: {
   snapshot: Snapshot; node: SourceNode; preview: NodePreviewState; descriptionId?: string;
 }) {
-  const { t, renderMessage, formatDate } = useLocale();
+  const { t, systemText, renderMessage, formatDate } = useLocale();
   const label = `${node.name || node.type} (${node.id})`;
   return <>
     <div className="node-preview-comparison">
@@ -78,14 +78,14 @@ function NodePreviewContent({ snapshot, node, preview, descriptionId }: {
         {preview.status === 'ready' && <>
           <time dateTime={preview.result.observedAt}>{formatDate(preview.result.observedAt)}</time>
           <figure className="node-export-image"><img alt={t('Current node export: {label}', { label })} src={`data:image/png;base64,${preview.result.preview.base64}`} width={preview.result.preview.width} height={preview.result.preview.height} />
-            <figcaption>{t("Node and its descendants · current observation")}</figcaption>
+            <figcaption>{t("Node and child layers · current image")}</figcaption>
           </figure>
         </>}
       </div>
     </div>
-    <p id={descriptionId} className="small muted">{t("These images were observed at different times. Current export excludes outside siblings and does not prove pixel contribution or occlusion in the capture.")}</p>
+    <p id={descriptionId} className="small muted">{t("These images were taken at different times. The current node image leaves out neighboring layers, so it cannot show whether those layers covered it in the saved capture.")}</p>
     <p className="small muted">{t("A transparent export may look blank. Its cause is not determined, and source visibility is never changed.")}</p>
-    {preview.status === 'ready' && preview.result.warnings.length > 0 && <ul className="small muted" aria-label={t("Current export warnings")}>{preview.result.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{warning}</li>)}</ul>}
+    {preview.status === 'ready' && preview.result.warnings.length > 0 && <ul className="small muted" aria-label={t("Current export warnings")}>{preview.result.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{systemText(warning)}</li>)}</ul>}
   </>;
 }
 
@@ -93,7 +93,7 @@ function NodeExportComparison({ snapshot, node, preview, canNavigate, onShowInFi
   snapshot: Snapshot; node: SourceNode; preview: NodePreviewState; canNavigate: boolean;
   onShowInFigma(nodeId: string): void; onClose(): void;
 }) {
-  const { t } = useLocale();
+  const { t, systemText } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null), enlargeButton = useRef<HTMLButtonElement>(null);
   const titleId = useId(), descriptionId = useId();
@@ -119,7 +119,7 @@ function NodeExportComparison({ snapshot, node, preview, canNavigate, onShowInFi
 
 export function SourceReviewPanel({ annotation, snapshot, renderingEvidence, renderingReviewRequired, nodePreview, saved, dirty, busy, connected, sessionId,
   onMatch, onAddCurrent, onConfirm, onReferencesChange, onShowInFigma, onPreviewNode, onCloseNodePreview }: Props) {
-  const { t, formatDate, formatNumber } = useLocale();
+  const { t, systemText, formatDate, formatNumber } = useLocale();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [candidatePage, setCandidatePage] = useState(0);
@@ -147,29 +147,29 @@ export function SourceReviewPanel({ annotation, snapshot, renderingEvidence, ren
     const remaining = annotation.sourceRefs.filter(ref => ref.nodeId !== nodeId);
     onReferencesChange(checked ? [...remaining, { snapshotId: snapshot.id, nodeId, matchType: 'partial' }] : remaining);
   }
-  return <section className="source-review" aria-label={t("Source grounding review")}>
-    <div className="section-title"><h2>{t("Source grounding")}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
-    <p className="small muted">{t("Inspect in Figma, add each intended node, save the set, then confirm sources. Annotation approval is a separate decision.")}</p>
-    <p className="small muted">{t("Potential does not prove that a node contributes visible pixels. Masks, clipping and outside layers remain uncertain. Sibling indices describe order under one parent, not occlusion.")}</p>
-    {!hasObservedRendering && <p className="small muted rendering-legacy-note">{t("This older capture has no observed opacity. Missing evidence stays unknown; existing approvals are preserved.")}</p>}
+  return <section className="source-review" aria-label={t("Review source connections")}>
+    <div className="section-title"><h2>{t("Source connections")}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
+    <p className="small muted">{t("Check the intended nodes in Figma, add them here and save the annotation. Then confirm sources before deciding whether to approve.")}</p>
+    <p className="small muted">{t("A visible setting does not guarantee that a layer appears in the image. Other layers, masks and clipping may cover it; check in Figma.")}</p>
+    {!hasObservedRendering && <p className="small muted rendering-legacy-note">{t("This capture has no opacity information. Check visibility in Figma; existing approvals are kept.")}</p>}
     <button className="wide" disabled={busy || !saved || dirty} onClick={onMatch}>{t("Match source")}</button>
     <button className="wide" disabled={busy || !saved || !connected || !sessionId} onClick={onAddCurrent}>{t("Add current Figma selection")}</button>
     {!saved && <p className="small muted">{t("Save this annotation before adding the current Figma selection.")}</p>}
-    {!connected && <p className="small muted">{t("Connect the plugin to add a native selection. Saved references remain available.")}</p>}
-    <p className="small muted">{t("Compare current export requests one node image from Figma. Save the annotation and connect the source file first. Viewing an export does not add or confirm a source.")}</p>
-    <CapturedArea snapshot={snapshot} bounds={annotation.bbox} label={t("Semantic region")} />
+    {!connected && <p className="small muted">{t("Connect the Figma plugin to add the current selection. Saved sources are still available.")}</p>}
+    <p className="small muted">{t("Compare current export loads one node image from Figma. Save the annotation and connect the original file first. Viewing the image does not add or confirm a source.")}</p>
+    <CapturedArea snapshot={snapshot} bounds={annotation.bbox} label={t("Annotated region")} />
     {nodePreview && exportedNode && <NodeExportComparison key={exportedNode.id} snapshot={snapshot} node={exportedNode} preview={nodePreview} canNavigate={canNavigate} onShowInFigma={onShowInFigma} onClose={onCloseNodePreview} />}
     {(review || renderingReviewRequired) && <div className={`source-review-state ${requiresConfirmation ? 'needs-review' : ''}`}>
-      <strong>{dirty ? t("Unsaved changes — save to refresh source review") : review?.status === 'confirmed' ? t("Sources confirmed by a human") : renderingReviewRequired ? t("Rendering evidence requires source confirmation") : review?.ambiguous ? t("Ambiguous sources — confirmation required") : t("Sources not confirmed")}</strong>
+      <strong>{dirty ? t("Unsaved changes — save to refresh source review") : review?.status === 'confirmed' ? t("Sources confirmed by a human") : renderingReviewRequired ? t("Check source visibility before confirming") : review?.ambiguous ? t("Ambiguous sources — confirmation required") : t("Sources not confirmed")}</strong>
       {review?.confirmedAt && <p className="small muted">{t(dirty ? 'Previously saved source set confirmed {date}. Current draft changes are not confirmed.' : 'Confirmed {date}', { date: formatDate(review.confirmedAt) })}</p>}
-      {review && review.warnings.length > 0 && <ul aria-label={t("Source matching warnings")}>{review.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{warning}</li>)}</ul>}
+      {review && review.warnings.length > 0 && <ul aria-label={t("Source matching warnings")}>{review.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{systemText(warning)}</li>)}</ul>}
     </div>}
-    <div className="source-references" aria-label={t("Selected source references")}>
+    <div className="source-references" aria-label={t("Selected source nodes")}>
       {annotation.sourceRefs.map(ref => {
         const node = nodesById.get(ref.nodeId);
         return <div key={ref.nodeId}>
           <strong>{node?.name || node?.type || ref.nodeId}</strong><code>{ref.nodeId}</code>
-          <span>{t(ref.matchType)}{ref.coverage !== undefined ? ` · ${t('{coverage}% geometric coverage', { coverage: Math.round(ref.coverage * 100) })}` : ''}</span>
+          <span>{t(ref.matchType)}{ref.coverage !== undefined ? ` · ${t('{coverage}% area coverage', { coverage: Math.round(ref.coverage * 100) })}` : ''}</span>
           <RenderingEvidenceInfo node={node} evidence={renderingEvidence.get(ref.nodeId)} />
           <div className="source-row-actions">
             <button className="text-button" disabled={!canNavigate} onClick={() => onShowInFigma(ref.nodeId)}>{t("Show in Figma")}</button>
@@ -183,22 +183,22 @@ export function SourceReviewPanel({ annotation, snapshot, renderingEvidence, ren
     {annotation.sourceRefs.length > 0 && <button className="text-button" disabled={busy} onClick={() => onReferencesChange([])}>{t("Clear selected sources")}</button>}
     {preview && <div className="candidate-preview"><CapturedArea snapshot={snapshot} bounds={preview.bbox} label={`${preview.name || preview.type} (${preview.id})`} /><button className="text-button" onClick={() => setPreviewId(null)}>{t("Close candidate preview")}</button></div>}
     {candidates.length > 0 && <details className="source-candidates" open={requiresConfirmation}>
-      <summary>{t('Compare {count} geometric candidates', { count: formatNumber(candidates.length) })}</summary>
-      <p className="small muted">{t("Automatic matching excludes observed hidden and zero-opacity nodes. Other candidates may still be covered. Use native Figma inspection to choose the intended source set.")}</p>
+      <summary>{t('Compare {count} matching candidates', { count: formatNumber(candidates.length) })}</summary>
+      <p className="small muted">{t("Automatic matching skips hidden and fully transparent nodes. Other nodes may still be covered by layers. Check in Figma before choosing sources.")}</p>
       {candidates.slice(currentCandidatePage * PAGE_SIZE, (currentCandidatePage + 1) * PAGE_SIZE).map(candidate => {
         const node = nodesById.get(candidate.nodeId);
         return <article className="source-candidate" key={candidate.nodeId}>
-          <label className="checkbox"><input type="checkbox" checked={selectedIds.has(candidate.nodeId)} disabled={busy} onChange={event => toggleReference(candidate.nodeId, event.target.checked)} /><span>{node?.name || node?.type || candidate.nodeId}<small>{candidate.nodeId} · {candidate.reason}</small></span></label>
-          <p className="small muted">{t('Coverage {coverage}% · IoU {iou}% · geometry only', { coverage: Math.round(candidate.coverage * 100), iou: Math.round(candidate.iou * 100) })}</p>
+          <label className="checkbox"><input type="checkbox" checked={selectedIds.has(candidate.nodeId)} disabled={busy} onChange={event => toggleReference(candidate.nodeId, event.target.checked)} /><span>{node?.name || node?.type || candidate.nodeId}<small>{candidate.nodeId} · {systemText(candidate.reason)}</small></span></label>
+          <p className="small muted">{t('Area coverage {coverage}% · overlap {iou}% · position only', { coverage: Math.round(candidate.coverage * 100), iou: Math.round(candidate.iou * 100) })}</p>
           <RenderingEvidenceInfo node={node} evidence={renderingEvidence.get(candidate.nodeId)} />
           <div className="source-row-actions"><button className="text-button" disabled={!canNavigate} onClick={() => onShowInFigma(candidate.nodeId)}>{t("Show in Figma")}</button><button className="text-button" disabled={!node?.bbox} onClick={() => setPreviewId(candidate.nodeId)}>{t("Preview captured area")}</button><button className="text-button" disabled={!canExport} onClick={() => compareNode(candidate.nodeId)}>{t("Compare current export")}</button></div>
         </article>;
       })}
       {candidatePageCount > 1 && <div className="source-pagination"><button disabled={currentCandidatePage === 0} onClick={() => setCandidatePage(currentCandidatePage - 1)}>{t("Previous candidates")}</button><span>{currentCandidatePage + 1} / {candidatePageCount}</span><button disabled={currentCandidatePage + 1 >= candidatePageCount} onClick={() => setCandidatePage(currentCandidatePage + 1)}>{t("Next candidates")}</button></div>}
     </details>}
-    <details><summary>{t("Adjust source references manually")}</summary>
+    <details><summary>{t("Choose source nodes manually")}</summary>
       <p className="small muted">{t("Search all captured nodes. Changes remain in this draft until Save annotation.")}</p>
-      <p className="small muted">{t("Hidden and transparent sources remain selectable for explicit human review. Their metadata is preserved even when automatic matching excludes them.")}</p>
+      <p className="small muted">{t("You can still select hidden or transparent nodes manually after checking them in Figma.")}</p>
       <label>{t("Search captured nodes")}<input value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} placeholder={t("Name, node ID or type")} /></label>
       <p className="small muted">{t('{count} captured nodes · page {page} of {pages}', { count: formatNumber(filtered.length), page: currentPage + 1, pages: pageCount })}</p>
       <div className="manual-sources">{filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map(node => <div className="manual-source" key={node.id}>
@@ -208,7 +208,7 @@ export function SourceReviewPanel({ annotation, snapshot, renderingEvidence, ren
       <div className="source-pagination"><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t("Previous nodes")}</button><button disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>{t("Next nodes")}</button></div>
     </details>
     <button className="wide" disabled={busy || !saved || dirty || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t("Confirm sources")}</button>
-    {dirty && <p className="small muted">{t("Save annotation before confirming this source set.")}</p>}
-    {requiresConfirmation && <p className="small source-confirmation-required">{t("Approval is unavailable until you explicitly confirm the saved source set.")}</p>}
+    {dirty && <p className="small muted">{t("Save the annotation before confirming its source nodes.")}</p>}
+    {requiresConfirmation && <p className="small source-confirmation-required">{t("Confirm the saved source nodes before approving the annotation.")}</p>}
   </section>;
 }

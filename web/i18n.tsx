@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { isLocale, renderMessage, resolveLocale, translate, type Locale, type MessageKey, type MessageParams, type UIMessage } from './locale.js';
+import { isLocale, renderMessage, resolveLocale, systemMessage, apiErrorMessage, translate, type Locale, type MessageKey, type MessageParams, type UIMessage } from './locale.js';
 
 declare global {
   interface Window {
@@ -18,6 +18,8 @@ interface LocaleContextValue {
   setLocale(value: Locale): void;
   t(key: MessageKey, params?: MessageParams): string;
   renderMessage(value: UIMessage): string;
+  systemText(value: string): string;
+  errorText(value: { code: string; message: string }): string;
   formatNumber(value: number): string;
   formatDate(value: string): string;
 }
@@ -41,6 +43,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const value = useMemo<LocaleContextValue>(() => ({ locale, setLocale,
     t: (key, params) => translate(locale, key, params), renderMessage: value => renderMessage(locale, value),
+    systemText: value => renderMessage(locale, systemMessage(value)),
+    errorText: value => renderMessage(locale, apiErrorMessage(value.code, value.message)),
     formatNumber: value => value.toLocaleString(locale === 'ko' ? 'ko-KR' : 'en-US'),
     formatDate: value => new Date(value).toLocaleString(locale === 'ko' ? 'ko-KR' : 'en-US'),
   }), [locale, setLocale]);

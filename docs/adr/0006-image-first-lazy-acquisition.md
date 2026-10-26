@@ -1,11 +1,13 @@
 # ADR 0006 — Correctness-first acquisition with optional lazy reads
 
-Status: accepted direction; first bounded acquisition slice implemented in the
-working tree on 2026-10-25. Later delivery slices remain proposed.
-Not released. The independent path has now passed an owned synthetic native Figma
-check; [ADR 0007](0007-chunked-source-collections.md) adds separate chunked source
-collections. Read that ADR for the later implemented boundary; the small Snapshot
-workflow described here retains its existing limits.
+Status: historical 2026-10-25 first bounded acquisition slice, later implemented
+in the source build. The later visual-draft editor, collection-backed scopes and
+selective reads are implemented under [ADR 0008](0008-collection-backed-editor.md)
+and [ADR 0009](0009-selective-source-acquisition.md). Statements below that they
+are "not implemented yet" describe this dated slice, not the 0.2.0 candidate.
+The independent path passed an owned synthetic native Figma check;
+[ADR 0007](0007-chunked-source-collections.md) describes the subsequent chunked
+slice. The small Snapshot path retains its own limits.
 
 ## Implemented boundary
 

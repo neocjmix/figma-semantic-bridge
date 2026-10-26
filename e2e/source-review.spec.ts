@@ -72,7 +72,7 @@ test('native selections accumulate only in the draft, then save, confirm and app
   await openReview(page, app);
   const initial = await app.read();
   await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
-  await expect(page.getByLabel('Source matching warnings')).toContainText('Equal or near-equal');
+  await expect(page.getByLabel('Source matching warnings')).toContainText('Several nodes have the same');
   const candidate = page.locator('.source-candidate').filter({ hasText: 'Legacy search layer' });
   await candidate.getByRole('button', { name: 'Preview captured area' }).click();
   const crop = page.getByRole('img', { name: 'Captured area: Legacy search layer (legacy-search)', exact: true });
@@ -129,17 +129,17 @@ test('wrong file and outside-capture selections show errors without changing the
   const before = await app.read();
   app.select('search-bg', 'different-source-file');
   await addSelection(page);
-  await expect(page.getByRole('alert')).toContainText('different source file');
+  await expect(page.getByRole('alert')).toContainText('WRONG_FILE');
   app.select('uncaptured');
   await addSelection(page);
-  await expect(page.getByRole('alert')).toContainText('outside this captured scope');
+  await expect(page.getByRole('alert')).toContainText('SOURCE_OUTSIDE_CAPTURE');
   await expect(page.locator('.source-references > div')).toHaveCount(0);
   expect(await app.read()).toEqual(before);
 });
 
 test('manual search reaches later captured nodes and supports removing a staged reference', async ({ page, app }) => {
   await openReview(page, app);
-  await page.getByText('Adjust source references manually', { exact: true }).click();
+  await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByRole('button', { name: 'Next nodes', exact: true }).click();
   await expect(page.getByText(/captured nodes · page 2 of/)).toBeVisible();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('late-source');

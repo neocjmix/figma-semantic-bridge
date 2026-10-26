@@ -93,7 +93,7 @@ test('collection UI drives real HTTP, WebSocket and disk through pause, resume a
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  const prepare = page.getByRole('button', { name: 'Prepare selected source collection' });
+  const prepare = page.getByRole('button', { name: 'Choose selected area' });
   await expect(prepare).toBeEnabled();
   const preparedResponse = page.waitForResponse(response => response.request().method() === 'POST' &&
     new URL(response.url()).pathname === `/api/projects/${app.projectId}/collections`);
@@ -102,35 +102,35 @@ test('collection UI drives real HTTP, WebSocket and disk through pause, resume a
   const prepared = CollectionViewSchema.parse(await preparedHttp.json());
   expect(prepared.status).toBe('prepared'); expect(prepared.source.nodeId).toBe(root.id);
   expect(app.commands.map(command => command.type)).toEqual(['get_selection']);
-  await expect(page.getByText('Limit: 200,000 nodes and 64 MB.', { exact: false })).toBeVisible();
-  await expect(page.getByText('A paused cursor can resume for 10 minutes', { exact: false })).toBeVisible();
+  await expect(page.getByText('Up to 200,000 nodes and 64 MB.', { exact: false })).toBeVisible();
+  await expect(page.getByText('You can resume within 10 minutes', { exact: false })).toBeVisible();
   expect(await app.manifest(prepared.id)).toMatchObject({ view: { status: 'prepared', nodeCount: 0 }, chunks: [] });
   expect(await app.readProject()).toEqual(app.initial);
 
-  await page.getByRole('button', { name: 'Start source collection' }).click();
+  await page.getByRole('button', { name: 'Start collection' }).click();
   await expect.poll(() => app.commands.filter(command => command.type === 'read_structure_chunk')
     .map(command => command.type === 'read_structure_chunk' && command.sequence)).toEqual([0]);
   await expect(page.getByRole('progressbar', { name: 'Collection progress' })).toBeVisible();
-  await page.getByRole('button', { name: 'Pause after current batch' }).click();
-  await expect(page.getByText('Pause requested. The current batch must finish and be saved before work pauses.')).toBeVisible();
+  await page.getByRole('button', { name: 'Pause collection' }).click();
+  await expect(page.getByText('Pausing after the current part is read and saved.')).toBeVisible();
   app.releaseFirst();
   await expect(page.getByRole('button', { name: 'Resume collection' })).toBeEnabled();
   expect(await app.manifest(prepared.id)).toMatchObject({ view: { status: 'paused', nodeCount: 1 }, chunks: [{ sequence: 0 }] });
   expect(app.commands.filter(command => command.type === 'read_structure_chunk')).toHaveLength(1);
-  await expect(page.getByRole('button', { name: 'Inspect first node page' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Browse source nodes' })).toHaveCount(0);
   expect(await app.readProject()).toEqual(app.initial);
 
   await page.getByRole('button', { name: 'Resume collection' }).click();
   await expect.poll(() => app.commands.filter(command => command.type === 'read_structure_chunk')
     .map(command => command.type === 'read_structure_chunk' && command.sequence)).toEqual([0, 1]);
-  await expect(page.getByRole('button', { name: 'Inspect first node page' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Browse source nodes' })).toBeEnabled();
   expect(await app.manifest(prepared.id)).toMatchObject({ view: { status: 'complete', nodeCount: 2 },
     chunks: [{ sequence: 0 }, { sequence: 1 }] });
-  await page.getByRole('button', { name: 'Inspect first node page' }).click();
-  await expect(page.getByText('Unreviewed nodes 1–2 of 2')).toBeVisible();
+  await page.getByRole('button', { name: 'Browse source nodes' }).click();
+  await expect(page.getByText('Nodes 1–2 of 2 · not reviewed')).toBeVisible();
   await page.getByRole('button', { name: 'Read exact text' }).click();
   await expect(page.getByText('Loaded 4,000 of 6,000 characters · unreviewed')).toBeVisible();
-  await page.getByRole('button', { name: 'Load next text segment' }).click();
+  await page.getByRole('button', { name: 'Load more text' }).click();
   await expect(page.getByText('Loaded 6,000 of 6,000 characters · unreviewed')).toBeVisible();
   await expect(page.locator('.collection-text pre')).toHaveText(exactText);
   expect(await app.readProject()).toEqual(app.initial);
@@ -138,8 +138,8 @@ test('collection UI drives real HTTP, WebSocket and disk through pause, resume a
 
   await page.reload();
   await page.locator('details.raw-collection-panel summary').click();
-  await expect(page.getByLabel('Collection history').locator('option')).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Inspect first node page' })).toBeEnabled();
+  await expect(page.getByLabel('Structure collection history').locator('option')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Browse source nodes' })).toBeEnabled();
   expect(await app.reopenCollection(prepared.id)).toEqual({ status: 'complete', nodeCount: 2 });
   expect(await app.readProject()).toEqual(app.initial);
   expect(errors).toEqual([]);

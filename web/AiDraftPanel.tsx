@@ -42,17 +42,17 @@ export function AiDraftPanel({ token, project, currentSnapshotId, onGenerated }:
   return <section className="ai-panel" aria-label={t("Optional AI draft")}>
     <div className="section-title"><h2>{t("Generate a draft")}</h2><span className="mini-label">{t("OPTIONAL")}</span></div>
     {!status && !error && <p className="small muted">{t("Checking local model configuration…")}</p>}
-    {status && !status.enabled && <p className="small muted">{t("AI is disabled. Configure a model on your local server to enable draft generation. Manual annotation and JSON import remain available.")}</p>}
+    {status && !status.enabled && <p className="small muted">{t("AI drafting is not configured. You can annotate manually or paste a draft for review.")}</p>}
     {status?.enabled && <>
       <dl className="provider-details"><div><dt>{t("Destination")}</dt><dd>{status.endpointOrigin}</dd></div><div><dt>{t("Model")}</dt><dd>{status.model}</dd></div></dl>
-      <p className="small muted">{t('Select up to two captures. Their previews, node metadata and original text will be processed {destination}.', { destination: t(status.external ? 'by this external provider' : 'at this local endpoint') })}</p>
+      <p className="small muted">{t('Select up to two captures. Their images, node details and original text will be processed {destination}.', { destination: t(status.external ? 'by this external provider' : 'at this local model address') })}</p>
       <div className="ai-scopes">{project?.snapshots.map(snapshot => <label className="checkbox" key={snapshot.id}><input type="checkbox" checked={scopeIds.includes(snapshot.id)} disabled={busy || (!scopeIds.includes(snapshot.id) && scopeIds.length >= 2)} onChange={event => {
         setScopeIds(current => event.target.checked ? [...current, snapshot.id] : current.filter(id => id !== snapshot.id)); setConsent(false);
       }} /><span>{snapshot.name}<small>{t('{count} source nodes', { count: formatNumber(snapshot.nodes.length) })}</small></span></label>)}</div>
-      <p className="small muted">{t('Up to {nodes} nodes and {megabytes} MB per request. Oversized scopes are rejected; source text is not silently shortened.', { nodes: formatNumber(status.limits.nodes), megabytes: formatNumber(status.limits.requestBytes / 1_000_000) })}</p>
+      <p className="small muted">{t('Up to {nodes} nodes and {megabytes} MB per request. Larger selections are rejected so the original text stays complete.', { nodes: formatNumber(status.limits.nodes), megabytes: formatNumber(status.limits.requestBytes / 1_000_000) })}</p>
       {status.external && <label className="checkbox transfer-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /><span>{t('I allow this request to send the selected images and source text to {destination}.', { destination: status.endpointOrigin ?? '' })}</span></label>}
       <button className="wide" disabled={busy || !project || scopeIds.length === 0 || (status.external && !consent)} onClick={() => void generate()}>{busy ? t("Generating draft…") : t("Generate draft for review")}</button>
-      <p className="small muted">{t("Generated content enters the review queue. Human approval is always separate.")}</p>
+      <p className="small muted">{t("Generated drafts wait for your review. Applying a draft does not approve it.")}</p>
     </>}
     {error && <p className="error" role="alert">{renderMessage(error)}</p>}
   </section>;

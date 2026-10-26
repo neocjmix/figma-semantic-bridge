@@ -60,8 +60,8 @@ export async function loadEvidenceText(token: string, projectId: string, scopeId
 function PageControls({ offset, page, loading, previous, next }: {
   offset: number; page: NodePage | null; loading: boolean; previous(): void; next(): void;
 }) {
-  const { t, formatNumber } = useLocale();
-  return <><p className="small muted">{page ? t('Unreviewed nodes {from}–{to} of {total}', {
+  const { t, systemText, formatNumber } = useLocale();
+  return <><p className="small muted">{page ? t('Nodes {from}–{to} of {total} · not reviewed', {
     from: page.nodes.length ? offset + 1 : 0, to: offset + page.nodes.length, total: formatNumber(page.total),
   }) : t('Loading source nodes…')}</p>
     <div className="collection-page-actions"><button disabled={offset === 0 || loading} onClick={previous}>{t('Previous page')}</button>
@@ -75,7 +75,7 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
   onMatch(): void; onAddCurrent(): void; onConfirm(): void; onReferencesChange(refs: SourceReference[]): void;
   onShowInFigma(nodeId: string): void; onPreviewNode(nodeId: string): void; onCloseNodePreview(): void;
 }) {
-  const { t, renderMessage, formatDate, formatNumber } = useLocale();
+  const { t, systemText, renderMessage, formatDate, formatNumber } = useLocale();
   const complete = scope.kind === 'collection';
   const [browseOpen, setBrowseOpen] = useState(false);
   const browser = useNodePage(token, projectId, scope.id, false, complete && browseOpen);
@@ -89,19 +89,19 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
     onReferencesChange(checked ? [...remaining, { snapshotId: scope.id, nodeId, matchType: 'partial' }] : remaining);
   }
   const preview = nodePreview?.status === 'ready' ? nodePreview.result : null;
-  return <section className="source-review evidence-source-review" aria-label={t('Source grounding review')}>
-    <div className="section-title"><h2>{t('Source grounding')}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
-    {scope.kind === 'visual' ? <p className="small evidence-warning">{t('Visual draft only. Save proposed regions now; collect and attach the complete source before matching, confirming or approving.')}</p> : <>
-      <p className="small muted">{t('This scope uses a complete cached collection. Image and structure were observed separately; inspect exact nodes and confirm the saved source set before approval.')}</p>
-      <p className="small muted">{t('Only one bounded page is loaded at a time. Geometry and rendering evidence do not prove which pixels are visible.')}</p>
+  return <section className="source-review evidence-source-review" aria-label={t('Review source connections')}>
+    <div className="section-title"><h2>{t('Source connections')}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
+    {scope.kind === 'visual' ? <p className="small evidence-warning">{t('This draft has an image only. Save your regions, then attach complete source structure to match nodes, confirm sources and approve.')}</p> : <>
+      <p className="small muted">{t('All source nodes have been collected. Compare them with the image, then save and confirm your chosen sources before approval.')}</p>
+      <p className="small muted">{t('Nodes are loaded a page at a time. Matching positions alone cannot tell you which overlapping layer is visible.')}</p>
       <button className="wide" disabled={busy || !saved || dirty} onClick={onMatch}>{t('Match source')}</button>
       <button className="wide" disabled={busy || !saved || !connected || !sessionId} onClick={onAddCurrent}>{t('Add current Figma selection')}</button>
       {review && <div className={`source-review-state ${review.status === 'confirmed' ? '' : 'needs-review'}`}>
         <strong>{dirty ? t('Unsaved changes — save to refresh source review') : review.status === 'confirmed' ? t('Sources confirmed by a human') : t('Sources not confirmed')}</strong>
         {review.confirmedAt && <p className="small muted">{t('Confirmed {date}', { date: formatDate(review.confirmedAt) })}</p>}
-        {review.warnings.map((warning, index) => <p className="small muted" key={`${index}:${warning}`}>{warning}</p>)}
+        {review.warnings.map((warning, index) => <p className="small muted" key={`${index}:${warning}`}>{systemText(warning)}</p>)}
       </div>}
-      <div className="source-references" aria-label={t('Selected source references')}>{annotation.sourceRefs.map(ref => <div key={ref.nodeId}>
+      <div className="source-references" aria-label={t('Selected source nodes')}>{annotation.sourceRefs.map(ref => <div key={ref.nodeId}>
         <strong>{ref.nodeId}</strong><span>{t(ref.matchType)}</span>
         <div className="source-row-actions"><button className="text-button" disabled={!connected || busy} onClick={() => onShowInFigma(ref.nodeId)}>{t('Show in Figma')}</button>
           <button className="text-button" disabled={!connected || !saved || busy} onClick={() => onPreviewNode(ref.nodeId)}>{t('Compare current export')}</button>
@@ -111,13 +111,13 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
         {nodePreview.status === 'loading' && <p role="status" className="small muted">{t('Requesting this node from Figma…')}</p>}
         {nodePreview.status === 'error' && <p role="alert" className="small error">{renderMessage(nodePreview.message)}</p>}
         {preview && <figure className="node-export-image"><img alt={t('Current node export: {label}', { label: nodePreview.nodeId })}
-          src={`data:image/png;base64,${preview.preview.base64}`} /><figcaption>{t('Current Figma observation; it does not confirm the stored source set.')}</figcaption></figure>}
+          src={`data:image/png;base64,${preview.preview.base64}`} /><figcaption>{t('This is the current Figma image. Viewing it does not confirm your saved sources.')}</figcaption></figure>}
         <button className="text-button" onClick={onCloseNodePreview}>{t('Close current export')}</button></div>}
-      {candidates.length > 0 && <details className="source-candidates"><summary>{t('Compare {count} geometric candidates', { count: formatNumber(candidates.length) })}</summary>
+      {candidates.length > 0 && <details className="source-candidates"><summary>{t('Compare {count} matching candidates', { count: formatNumber(candidates.length) })}</summary>
         {candidates.slice(candidateOffset, candidateOffset + 25).map(candidate => <article className="source-candidate" key={candidate.nodeId}>
           <label className="checkbox"><input type="checkbox" checked={selectedIds.has(candidate.nodeId)} disabled={busy}
-            onChange={event => toggle(candidate.nodeId, event.target.checked)} /><span>{candidate.nodeId}<small>{candidate.reason}</small></span></label>
-          <p className="small muted">{t('Coverage {coverage}% · IoU {iou}% · geometry only', { coverage: Math.round(candidate.coverage * 100), iou: Math.round(candidate.iou * 100) })}</p>
+            onChange={event => toggle(candidate.nodeId, event.target.checked)} /><span>{candidate.nodeId}<small>{systemText(candidate.reason)}</small></span></label>
+          <p className="small muted">{t('Area coverage {coverage}% · overlap {iou}% · position only', { coverage: Math.round(candidate.coverage * 100), iou: Math.round(candidate.iou * 100) })}</p>
         </article>)}
         <div className="collection-page-actions"><button disabled={candidatePage === 0} onClick={() => setCandidatePage(value => value - 1)}>{t('Previous candidates')}</button>
           <button disabled={candidateOffset + 25 >= candidates.length} onClick={() => setCandidatePage(value => value + 1)}>{t('Next candidates')}</button></div>
@@ -137,7 +137,7 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
           next={() => { if (browser.page?.nextOffset !== null && browser.page) browser.setOffsets(value => [...value, browser.page!.nextOffset!]); }} />
       </details>
       <button className="wide" disabled={busy || !saved || dirty || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t('Confirm sources')}</button>
-      {review?.status !== 'confirmed' && <p className="small evidence-warning">{t('Approval is unavailable until you explicitly confirm the saved source set.')}</p>}
+      {review?.status !== 'confirmed' && <p className="small evidence-warning">{t('Confirm the saved source nodes before approving the annotation.')}</p>}
     </>}
   </section>;
 }
@@ -146,7 +146,7 @@ export function EvidenceTextPicker({ token, projectId, scope, selected, busy, on
   token: string; projectId: string; scope: EvidenceScope; selected: ReadonlySet<string>; busy: boolean;
   onPick(value: ChosenEvidenceText): void;
 }) {
-  const { t, renderMessage, formatNumber } = useLocale();
+  const { t, systemText, renderMessage, formatNumber } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const browser = useNodePage(token, projectId, scope.id, true, expanded);
   const [reading, setReading] = useState<string | null>(null);
@@ -162,16 +162,16 @@ export function EvidenceTextPicker({ token, projectId, scope, selected, busy, on
     } catch (cause) { if (!controller.signal.aborted) setError(errorMessage(cause)); }
     finally { if (pending.current === controller) pending.current = null; setReading(null); }
   }
-  return <details className="evidence-text-picker" onToggle={event => setExpanded(event.currentTarget.open)}><summary>{t('Choose exact text from this collection')}</summary>
-    <p className="small muted">{t('Only the chosen TEXT node is fetched. Original characters and selection order are preserved.')}</p>
+  return <details className="evidence-text-picker" onToggle={event => setExpanded(event.currentTarget.open)}><summary>{t('Choose original text')}</summary>
+    <p className="small muted">{t('Only the text you choose is loaded. Its original wording and selection order are preserved.')}</p>
     <form onSubmit={event => { event.preventDefault(); browser.setOffsets([0]); browser.setSearched(browser.query.trim()); }}>
       <label>{t('Search source text nodes')}<input value={browser.query} maxLength={300} onChange={event => browser.setQuery(event.target.value)} /></label>
       <button disabled={browser.loading}>{t('Search')}</button></form>
     {(error || browser.error) && <p role="alert" className="small error">{renderMessage(error ?? browser.error!)}</p>}
     <ul className="collection-nodes">{browser.page?.nodes.map(node => <li key={node.id}>
-      <span><strong>{node.name || node.type}</strong><small>{node.id} · {t('text length {count}', { count: formatNumber(node.textLength ?? 0) })}</small></span>
+      <span><strong>{node.name || node.type}</strong><small>{node.id} · {t('{count} text characters', { count: formatNumber(node.textLength ?? 0) })}</small></span>
       <button className="text-button" disabled={busy || !!reading || !node.textLength || selected.has(JSON.stringify([scope.id, node.id]))}
-        onClick={() => void choose(node)}>{reading === node.id ? t('Loading source text…') : t('Use exact text')}</button>
+        onClick={() => void choose(node)}>{reading === node.id ? t('Loading source text…') : t('Use original text')}</button>
     </li>)}</ul>
     <PageControls offset={browser.offset} page={browser.page} loading={browser.loading}
       previous={() => browser.setOffsets(value => value.slice(0, -1))}

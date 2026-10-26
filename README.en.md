@@ -1,271 +1,100 @@
-# Figma Semantic Bridge 0.1.1 Alpha
+# Figma Semantic Bridge 0.2.0 Alpha
 
-**Unreleased development changes (2026-10-26):** Image-first drafts, selective node/branch reads, chunked-source review and approval, and large source transfers are implemented in the working tree. The 0.1.1 downloads do not contain these changes. See the [acquisition guide](docs/acquisition-workflow.en.md) and [verification record](docs/evaluation/collection-backed-workflow.md).
+[한국어](README.md) · [Install](docs/alpha-installation.en.md) · [User guide](docs/user-guide.en.md) · [Upgrade](docs/upgrade-guide.md)
 
-[한국어](README.md) · [User guide — English](docs/user-guide.en.md) · [사용자 가이드 — 한국어](docs/user-guide.ko.md)
+**Turn a Figma design into implementation context that people have reviewed.**
 
-**A local app for people to annotate the meaning and requirements of Figma screens,
-then share approved context with coding agents.**
+Choose a source, mark meaningful components, connect their exact Figma nodes and
+specification text, then give a coding agent the approved result through MCP.
+Figma Semantic Bridge runs locally and keeps this interpretation separate from
+the original design. It does not generate application code or infer product intent
+as fact.
 
-The Apple Silicon (M1 or later) app targets macOS 13 or later and includes official
-Node.js 22.23.4, the production local server, web editor, MCP server and a prebuilt
-Figma plugin. Users do not need Node.js, npm, a source checkout or a separate
-development server. The actual 0.1.1 local update and execution were exercised on macOS 26.6.2;
-execution on macOS 13 has not been verified.
+![Synthetic workspace showing a selected source, semantic regions and review controls](docs/images/workflow.en.png)
 
-**The [0.1.1 bilingual alpha release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha) is published.** The project carries the [MIT license](LICENSE). This public alpha has
-known, unresolved local-service authentication and capture-import validation issues.
-Until fixed, evaluate it only with your own synthetic or non-sensitive files, not
-corporate or client designs. See [desktop authentication #11](https://github.com/neocjmix/figma-semantic-bridge/issues/11),
-[plugin authentication #12](https://github.com/neocjmix/figma-semantic-bridge/issues/12),
-[capture validation #13](https://github.com/neocjmix/figma-semantic-bridge/issues/13)
-and the [release boundaries](docs/release-readiness.md).
+## Start here
 
-The unreleased source's authenticated, encrypted connection passed an actual
-Figma check with an owned synthetic file. The 0.1.1 downloads remain unchanged;
-final review and package verification are separate gates. See the
-[source upgrade and validation scope](docs/unreleased-upgrade.md).
+1. Install the **0.2.0 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
+   The Apple Silicon app includes its runtime, local service, editor, MCP server
+   and prebuilt Figma plugin. No Node.js installation is needed.
+2. Open the app, choose **Bridge → Reveal Figma Plugin**, and import its
+   `manifest.json` in Figma Desktop. Use **Bridge → Copy Pairing Token** to connect
+   the plugin. The app's own editor connects automatically.
+3. Open a workspace, select a permitted Frame in Figma, and choose
+   **Capture Figma selection**. Choose whether to acquire an image, structure or both.
+4. Save a region, review its source nodes, confirm them when required, then approve
+   its meaning. Share through **Export JSON**, **Markdown** or MCP.
 
-[Detailed installation and setup](docs/alpha-installation.en.md)
-· [한국어 설치 가이드](docs/alpha-installation.md)
-· [Release notes](docs/releases/0.1.1.md)
-· [0.1.1 update acceptance aggregate](docs/evaluation/release-0.1.1-acceptance.json)
+[Detailed installation and MCP setup](docs/alpha-installation.en.md) covers
+checksums, Figma access, macOS prompts and connection checks. Already using an
+older version? [Update the app and plugin together](docs/upgrade-guide.md).
+The 0.1.1 downloads do not contain the 0.2.0 workflow or transport changes.
 
-## What the app does
+## Choose how much source to read
 
-1. Capture an image and source-node observations from a selected, bounded Figma Frame.
-2. Mark meaningful regions and define their names and semantic hierarchy.
-3. Connect exact Figma nodes and original specification text. Inspect ambiguous or
-   overlapping sources in Figma and compare individual node images when needed.
-4. Review and approve the meaning, requirements and provenance, then export
-   JSON/Markdown or provide the approved context to coding agents through MCP.
-
-The app does not edit the source Figma design or generate finished application
-code. Geometry does not determine semantic correctness. AI proposals cannot
-overwrite human approvals.
-
-## Interface language
-
-Choose **English** or **한국어** with **Language / 언어** at the top right.
-The browser remembers an explicit choice; its initial default follows `navigator`
-language, and unavailable storage falls back to the current session. The macOS app
-initially uses the OS's first preferred language and synchronizes its native menu
-with the embedded editor. The Figma plugin saves its own independent choice.
-
-**Language changes only interface text. Project names, human annotations, Figma
-node names, original text, specifications and approved content are never translated
-or changed by the language switch.** Follow the [English](docs/user-guide.en.md) or
-[Korean](docs/user-guide.ko.md) user guide for the complete review workflow.
-
-The 0.1.1 installed-candidate checks covered language persistence, live switching,
-all four offline guides and preservation of existing data. See the
-[0.1.1 acceptance record](docs/evaluation/release-0.1.1-acceptance.json)
-for the actual observations and limitations.
-
-## Installation files
-
-| File | Purpose |
+| Your next task | Use |
 | --- | --- |
-| `figma-semantic-bridge-0.1.1-macos-arm64.dmg` | Installation image for copying the app to Applications |
-| `figma-semantic-bridge-0.1.1-macos-arm64.zip` | ZIP distribution of the same app |
-| `figma-semantic-bridge-plugin-0.1.1.zip` | Prebuilt plugin for local import into Figma Desktop |
-| `figma-semantic-bridge-0.1.1-INSTALLATION.md` | Offline installation guide for users and agents |
-| `figma-semantic-bridge-0.1.1-INSTALLATION.en.md` | English installation and MCP setup guide |
-| `figma-semantic-bridge-0.1.1-USER-GUIDE.ko.md` / `figma-semantic-bridge-0.1.1-USER-GUIDE.en.md` | Korean and English workflow guides |
-| `SHA256SUMS` | SHA-256 values for the downloaded artifacts |
-| `figma-semantic-bridge-0.1.1-release.json` | Version, platform, runtime and signing metadata |
+| Review a small screen and its source nodes | Acquire image and structure, then save the complete capture |
+| Sketch component boundaries before reading a large structure | Acquire the image only and use it as a visual draft; attach a complete matching collection before approval |
+| Collect a larger selected subtree | Collect and save structure in batches, then add it to the editor or attach it to a matching image |
+| Inspect known IDs or discover one parent's children | Selective source inspection; collect only the chosen branch when needed |
+| Work without a live Figma connection | Load the demo or import a permitted source file, then review the cached observations |
 
-GitHub's automatically generated **Source code** archive is not the end-user
-installer. Intel Mac, Windows and Linux desktop apps are outside this alpha.
+[Acquisition guide](docs/acquisition-workflow.en.md) explains each path, limits,
+pause/resume and incomplete results. Reading one branch does not establish what
+exists in its unvisited siblings.
 
-The app is ad-hoc signed and **has no Apple Developer ID distribution signature or
-notarization**. macOS or organizational policy may prevent execution. Installation
-agents must not disable Gatekeeper or remove quarantine attributes. A person must
-perform any required OS confirmation; stop if organizational policy prohibits use.
+## Review before sharing
 
-## First use
+- **Source confirmation** records the exact saved node set you reviewed.
+- **Annotation approval** records your judgment about a component's meaning,
+  boundary, role and parent. Geometry alone cannot make that judgment.
+- **Specifications** preserve selected original TEXT and connect it to components.
+- **Approved export and MCP** expose reviewed implementation context. Raw source
+  transfer is separate and never carries approvals into the receiving workspace.
 
-If 0.1.0 is already installed, skip repeated first-time setup and follow the
-[0.1.0 → 0.1.1 update procedure](docs/alpha-installation.en.md#9-backup-update-and-restore).
-Keep the existing application directory in place, quit normally before replacing
-its contents, and preserve projects, the token, language choices and Figma's plugin path.
+The [user guide](docs/user-guide.en.md) walks through overlapping layers, current
+node previews, exact text and the final coding-agent handoff. The manual workflow
+needs no model provider. Optional AI output stays a proposal for human review.
 
-1. Obtain the artifacts and `SHA256SUMS` from the
-   [0.1.1 alpha release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.1.1-alpha),
-   then verify their checksums.
-2. Open the DMG, copy `Figma Semantic Bridge.app` to `/Applications`, and launch it.
-   Its embedded editor pairs automatically; no separate browser token entry is needed.
-3. Use **Load demo** to check the editor, saving and restart without a Figma account.
-4. Choose **Reveal Figma Plugin**, or extract the plugin ZIP to a stable location.
-   In Figma Desktop, use **Plugins → Development → Import plugin from manifest**
-   and select that folder's `manifest.json`.
-5. Use the app's **Copy Pairing Token**, paste it into the plugin's **Pairing token**
-   field, then choose **Connect**. Treat the token as a password; never put it in
-   chat, logs or URLs.
-6. Select a small Frame in a Figma file you may use, then choose
-   **Capture Figma selection** in the app.
-7. Draw and save a region, inspect its source candidates, add exact nodes as needed,
-   and save again. **Confirm sources** records a person's review of the source set.
-   **Approve annotation** is the separate review of its meaning and structure.
-8. Connect exact specification text and reviewed relations, then export approved
-   context or connect a coding agent through MCP below.
+## Connect a coding agent
 
-The [user guide](docs/user-guide.en.md) covers ambiguity, distant layer branches,
-old or hidden variants, stale captures and offline review. The
-[installation guide](docs/alpha-installation.en.md) covers Figma menu differences,
-existing-service conflicts, import/export, backups, updates and removal.
+Keep the app running and choose **Bridge → Copy MCP Configuration**. Add that
+configuration to your MCP client without replacing its other settings. It uses
+the app's bundled executable and local credentials; do not paste a pairing token
+into the configuration.
 
-**Plugin distribution:** this alpha uses local Figma Desktop development import.
-Users do not compile the plugin. Its source-file identity implementation depends
-on Figma private-plugin APIs; it is not presented as a published Community plugin.
-Organizational internal distribution requires separate registration and permission checks.
+Verify an actual `list_projects` call, then read `get_approved_context`,
+`list_components` or `get_component` for a reviewed workspace. Cached reads do
+not require Figma. Live source reads require the connected plugin. MCP can submit
+proposals but has no approval tool.
 
-## Ask an AI agent to install it
+## Alpha boundaries
 
-Provide this request together with the repository or eventual release link:
+The app targets **Apple Silicon, macOS 13 or later**. macOS 26.6.2 has been exercised;
+macOS 13 execution, Developer ID notarization and Figma Community distribution
+are not established. The plugin is imported locally in Figma Desktop. Effective
+Dev-only access to another owner's view-only file remains a separate permission
+check; an owned-file test does not prove it.
 
-> Install Figma Semantic Bridge 0.1.1 Alpha and prepare it for use. Read README.en.md
-> and docs/alpha-installation.en.md first. Inspect my OS/CPU, existing installation,
-> data and port 4177 use. Verify the release artifact checksums, then install the app
-> and prebuilt Figma plugin. Preserve projects and existing MCP configuration, and
-> never print pairing tokens. Actually check demo save/restart, a read-only capture
-> of a permitted Figma Frame, JSON export/capture import, and MCP project listing
-> and approved-context reads. Do not send company designs to external AI or approve
-> meaning or sources for me. Ask me only for required OS confirmation, login or file
-> access. Record successful steps, real blockers, data location and how to restart.
+Bounded synthetic workflows have run in actual Figma. A full real-world
+106,000-node capture, universal large-file performance and an independent human
+productivity study are not claimed. Incomplete source reads cannot be approved
+as complete. The app reads design content; **Show in Figma** explicitly changes
+selection and viewport, not design properties.
 
-Copying files alone is not installation acceptance. Run the guide's checklist and
-leave unverified steps marked as unverified.
+Local app/MCP connections verify a private certificate; plugin messages are
+mutually authenticated and encrypted. Saved source text, images and backups are
+not encrypted at rest. Use only files you are permitted to inspect and share;
+external model transfer requires separate authorization.
 
-## MCP connection
+## Documentation and development
 
-Keep the app running and register this command and argument in your MCP client.
-No system Node installation or token copied into the configuration is required.
+[Installation](docs/alpha-installation.en.md) · [User guide](docs/user-guide.en.md)
+· [Acquisition](docs/acquisition-workflow.en.md) · [Upgrade and backup](docs/upgrade-guide.md)
+· [Developer quickstart](docs/product-quickstart.md) · [Architecture](docs/architecture.md)
+· [Validation boundaries](docs/product-validation.md) · [Release readiness](docs/release-readiness.md)
 
-```json
-{
-  "mcpServers": {
-    "figma-semantic-bridge": {
-      "command": "/Applications/Figma Semantic Bridge.app/Contents/Resources/runtime/node",
-      "args": ["/Applications/Figma Semantic Bridge.app/Contents/Resources/app/mcp.mjs"]
-    }
-  }
-}
-```
-
-This JSON is an example for clients using that format. The
-[installation guide](docs/alpha-installation.en.md) includes Codex TOML, preserving
-existing configuration and checking actual tool calls. The MCP server reads the
-token from the default data directory. Start with `list_projects` and
-`get_approved_context`; an empty context before approval can be expected.
-
-## Data and alpha boundaries
-
-- Projects, images, original text and review history are stored in
-  `~/.figma-semantic-bridge`. Replacing the app does not delete that folder.
-  Backups include sensitive source content and the token; protect them locally.
-- The authenticated service binds only to `127.0.0.1:4177`. Do not expose it to
-  the network or place it behind a public proxy.
-- Capture is bounded by the selected scope. It does not require whole-file JSON
-  dumps or full-page preloading. Reviewing imported captures requires neither
-  Figma nor Dev Mode.
-- SECTION captures are metadata-only. Use an unrotated inner Frame for an image.
-  Overlap, nonzero opacity or a single-node export cannot establish the latest
-  variant or actual pixel contribution.
-- Another owner's view-only file with a Dev-only account remains an unverified
-  access combination. Success on owned test files does not establish that permission case.
-- Independent user accuracy/productivity studies, company policy approval,
-  Apple notarization and Figma Community publication are not claimed complete.
-  The packaged app keeps external AI generation disabled by default.
-
-[Validation record](docs/product-validation.md)
-· [Completion status and external dependencies](docs/completion-status.md)
-· [Release boundaries and security notes](docs/release-readiness.md)
-
-## Observed 0.1.1 candidate behavior
-
-**198 Node tests, TypeScript and production builds, 27 browser scenarios, two fixture
-manifests and native policy/locale self-tests passed.** Checks exercised the extracted
-app ZIP, mounted DMG, plugin ZIP, version agreement and offline guide contents.
-
-The update preserved application/plugin directory identity, 15 existing project
-files and the token. Native observations confirmed automatic pairing, retained Korean
-preferences, mixed-language unsaved input during switching, four offline guides and
-reuse of the existing Figma manifest registration. The plugin retained its connected
-session while changing language. The installed bundled MCP read an actual selected
-node; the original Figma source remained unchanged.
-The previous 0.1.0 saved synthetic capture with 21 nodes also opened read-only,
-with its project file unchanged.
-
-The [0.1.1 record](docs/evaluation/release-0.1.1-acceptance.json) describes the candidate
-installed before the final documentation commit. The separately generated
-`figma-semantic-bridge-0.1.1-verification.json` binds the final clean revision to the
-rebuilt artifacts' hashes. These native observations are not reassigned to a newly
-generated package.
-
-## Previous 0.1.0 installed-app observations
-
-The installed `/Applications/Figma Semantic Bridge.app` used its bundled Node to
-exercise embedded-editor pairing, synthetic annotation save, native JSON/Markdown
-save dialogs and a two-capture bundle export/import. Its bundled plugin manifest
-was imported into Figma; an owned synthetic file in Dev Mode produced 21 nodes and
-an 800×600 PNG. The installed MCP bundle served `list_projects` and
-`get_approved_context`.
-
-An incompatible existing development service was rejected. Only the explicitly
-identified test service was stopped and backed up during migration; six existing
-projects were preserved. Quitting removed the app-owned port-4177 listener, and
-restart preserved the token, projects and saved annotation. These are installed-app
-observations, not independent semantic evaluations or a first-download test on
-another Mac. See the validation record for the dated automated checks; final
-publication revision and artifact checksums are fixed separately. These observations
-remain historical; the independent 0.1.1 results appear above and in the
-[0.1.1 release notes](docs/releases/0.1.1.md).
-
-## Develop and package from source
-
-This section is for source contributors. End users do not need these commands.
-Development requires Node.js 22 or later. macOS app packaging requires an Apple
-Silicon Mac and already installed and authorized Command Line Tools.
-
-```sh
-npm ci
-npm run check
-npm run fixtures:validate
-npm run test:e2e
-npm run package:plugin
-npm run package:macos
-npm run release:verify
-```
-
-For a final release, run the full `npm run package:macos` from a clean commit,
-then `npm run release:verify -- --require-clean`. Check that the verification
-report links the source revision to the actual asset hashes. Do not use
-`--skip-build` for the final candidate.
-
-Use `npm start` for the development server and `npm run dev:web` for the UI
-development server. The release app contains static production UI assets and does
-not use Vite's development server. Packaging outputs go to `dist/releases/`.
-Before publishing, verify the license, exact commit, signing status, package
-checks and artifact hashes.
-
-## Project documentation
-
-- [English workflow guide](docs/user-guide.en.md) · [한국어 사용자 가이드](docs/user-guide.ko.md)
-- [Installation and MCP](docs/alpha-installation.en.md) · [Developer quickstart](docs/product-quickstart.md)
-- [Context](docs/context.md) · [Architecture](docs/architecture.md) · [Pipeline](docs/pipeline.md)
-- [Data model](docs/data-model.md) · [Roadmap](docs/roadmap.md) · [Feasibility](docs/feasibility.md)
-- [App packaging decision](docs/adr/0004-packaged-macos-alpha.md)
-- [Rendering evidence and human review](docs/adr/0002-rendering-evidence-grounding.md)
-- [Capture transfer](docs/adr/0003-portable-capture-bundles.md)
-- [Public fixture research](docs/research/public-figma-fixtures-2026-10-23.md) · [Fixture tools](docs/fixture-plugin.md)
-- [Agent working agreement](AGENTS.md)
-
-Some reference documents remain in Korean. Workflow and installation guides are
-provided in both languages. Reference links outside those guides point to source
-repository documents and may not be included in standalone or plugin packages.
-
-Never commit source designs, internal specifications or pairing tokens.
-Project-owned code and documentation are [MIT licensed](LICENSE); that license
-does not cover external Figma designs. See the distribution's `THIRD-PARTY-NOTICES.md` and
-original license files for bundled third-party software.
+Project code and documentation use the [MIT license](LICENSE). External Figma
+designs retain their owners' rights. Packaged third-party notices cover the
+included runtime and dependencies.

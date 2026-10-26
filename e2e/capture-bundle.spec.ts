@@ -61,7 +61,7 @@ async function exportBundle(page: Page, app: AppFixture) {
 test('disconnected capture export and import preserve sources and leave approved records unchanged', async ({ page, app }, testInfo) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   const panel = await openTransfer(page, app);
-  await expect(panel).toContainText('Annotations and approvals are not transferred');
+  await expect(panel).toContainText('without annotations or approvals');
   const { path, bundle } = await exportBundle(page, app);
   expect(bundle.snapshots.map(entry => entry.snapshot)).toEqual(app.source.snapshots);
   expect(bundle).not.toHaveProperty('annotations');
@@ -69,13 +69,13 @@ test('disconnected capture export and import preserve sources and leave approved
   expect(bundle).not.toHaveProperty('proposals');
   expect(await app.read(app.source.id)).toEqual(app.source);
   // Import also works before choosing any workspace, with only the local server paired.
-  await page.getByRole('button', { name: 'Unpair', exact: true }).click();
+  await page.getByRole('button', { name: 'Disconnect editor', exact: true }).click();
   await page.getByLabel('Pairing token').fill(app.token);
-  await page.getByRole('button', { name: 'Pair server', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByText('Capture transfer', { exact: true }).click();
   await expect(page.getByLabel('Open workspace')).toHaveValue('');
-  await page.getByLabel('Capture bundle JSON', { exact: true }).setInputFiles(path);
-  await page.getByLabel('Imported workspace name', { exact: true }).fill('Transferred review');
+  await page.getByLabel('Capture file (.json)', { exact: true }).setInputFiles(path);
+  await page.getByLabel('New workspace name for this import', { exact: true }).fill('Transferred review');
   await page.getByRole('button', { name: 'Import captures', exact: true }).click();
   await expect(page.locator('.project-heading')).toHaveText('Transferred review');
   await expect(page.getByRole('status')).toContainText('Source contents are unverified');
@@ -104,7 +104,7 @@ test('oversized and malformed files are rejected without replacing or creating a
   const panel = await openTransfer(page, app);
   let imports = 0;
   page.on('request', req => { if (new URL(req.url()).pathname === '/api/capture-bundles/import') imports++; });
-  const input = page.getByLabel('Capture bundle JSON', { exact: true });
+  const input = page.getByLabel('Capture file (.json)', { exact: true });
   await input.setInputFiles({ name: 'too-large.json', mimeType: 'application/json', buffer: Buffer.alloc(CAPTURE_BUNDLE_MAX_BYTES + 1, 32) });
   await expect(panel.getByRole('alert')).toContainText('no larger than 15 MB');
   await expect(panel.getByRole('button', { name: 'Import captures', exact: true })).toBeDisabled();
@@ -126,7 +126,7 @@ test('oversized and malformed files are rejected without replacing or creating a
 test('unsaved annotations, specifications and draft input block importing', async ({ page, app }) => {
   const panel = await openTransfer(page, app);
   const { path } = await exportBundle(page, app);
-  await page.getByLabel('Capture bundle JSON', { exact: true }).setInputFiles(path);
+  await page.getByLabel('Capture file (.json)', { exact: true }).setInputFiles(path);
   const importButton = panel.getByRole('button', { name: 'Import captures', exact: true });
   await expect(importButton).toBeEnabled();
   await page.locator('.component-list').getByRole('button', { name: 'Approved search', exact: true }).click();
@@ -153,7 +153,7 @@ test('pending import locks workspace changes and cannot be submitted twice', asy
   const panel = await openTransfer(page, app);
   const { path } = await exportBundle(page, app);
   await page.locator('.component-list').getByRole('button', { name: 'Approved search', exact: true }).click();
-  await page.getByLabel('Capture bundle JSON', { exact: true }).setInputFiles(path);
+  await page.getByLabel('Capture file (.json)', { exact: true }).setInputFiles(path);
   let release!: () => void, intercepted!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   const seen = new Promise<void>(resolve => { intercepted = resolve; });
@@ -166,10 +166,10 @@ test('pending import locks workspace changes and cannot be submitted twice', asy
     await seen;
     await expect(panel.getByRole('button', { name: 'Import captures', exact: true })).toBeDisabled();
     await expect(page.getByLabel('Open workspace')).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Unpair', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Disconnect editor', exact: true })).toBeDisabled();
     await expect(page.getByLabel('Component name', { exact: true })).toBeDisabled();
-    await expect(page.getByLabel('Capture bundle JSON', { exact: true })).toBeDisabled();
-    await expect(page.getByRole('status')).toHaveText('Working with your local server…');
+    await expect(page.getByLabel('Capture file (.json)', { exact: true })).toBeDisabled();
+    await expect(page.getByRole('status')).toHaveText('Working…');
   } finally { release(); }
   await expect(page.locator('.project-heading')).toHaveText('Imported captures');
   expect(imports).toBe(1);

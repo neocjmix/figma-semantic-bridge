@@ -15,7 +15,7 @@ const tokenLabel=document.querySelector<HTMLElement>('#token-label')!;
 let locale=initialPluginLocale(typeof navigator==='undefined'?undefined:navigator.languages?.[0]??navigator.language);
 let localeEdited=false, localeRequest=0;
 let statusDetail='Disconnected. Your Figma document remains unchanged.', localeDetail='';
-const intro='Open the Figma Semantic Bridge app on this computer. Copy its pairing token from the Bridge menu, connect here, then capture your selected frame in the app.';
+const intro='Open Figma Semantic Bridge on this Mac. Copy the pairing token from its Bridge menu and connect below. Keep this plugin open while you work in the app.';
 function renderLocale() {
   if(document.documentElement)document.documentElement.lang=locale;
   language.value=locale;

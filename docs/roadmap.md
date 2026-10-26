@@ -1,48 +1,77 @@
-# Development Plan — Feasibility → PoC → MVP → Release
+# Development roadmap — delivered source, release gates and future work
 
-## Current scoped continuation (2026-10-26, unreleased)
+The original Phase 0–6 plan produced the published MIT-licensed 0.1.1 alpha.
+**0.2.0 alpha** follows with image-first acquisition,
+collection-backed editing, selective reads, source transfer and local transport
+hardening. The release verification report identifies the packaged source and assets. [Product validation](product-validation.md) contains executed
+evidence; [completion status](completion-status.md) separates external dependencies.
 
-The large-source development slice implements image-only drafts, complete collection-backed matching/review/approval, selective first-time Figma node/field/child reads, explicit branch acquisition and verified source-only transfer. These are no longer remaining engineering tasks. See [the verification record](evaluation/collection-backed-workflow.md) for actual automated/native results and external acceptance boundaries. This does not promote unrelated F0/F4/F5 enterprise or participant gates, known alpha security issues, or an unreleased build into a new public release.
+## Delivered in the current source
 
-**Execution model:** Codex-assisted implementation, human architectural approval, PR-based development. Estimates are hypotheses, not commitments.
+1. **Local manual slice:** Figma plugin ↔ loopback server ↔ MCP, bounded capture,
+   document-space regions, deterministic candidates, source review, semantic
+   hierarchy, verbatim specifications, approved-only exports, undo/redo and local
+   JSON persistence. A source document is not modified.
+2. **Review aids:** captured-area and transient current-node PNG comparison,
+   source navigation, observed hidden/opacity states and explicit confirmation.
+   Optional AI produces validated pending proposals; manual work is independent
+   of a model provider.
+3. **Separate large-source paths:** overview-only proposed drafts; independent
+   overview/structure steps and bounded legacy capture; complete selected-subtree
+   or branch collection in durable chunks; collection-backed editor matching and
+   chosen-only source/text reads; selective explicit-ID/direct-child observations;
+   source-only NDJSON transfer. Incomplete source never becomes approved complete
+   evidence, and visual/structure observations are not an immutable version.
+4. **Local security candidate:** mutually authenticated encrypted plugin records,
+   pinned desktop/MCP TLS, stricter source/import bounds and reviewed approval
+   gates. These current-source controls do not retroactively fix installed 0.1.1.
 
-## Phase 0 — Repository readiness
-Deliver architecture, context, pipeline, schema draft, feasibility protocol, Codex instructions, issue templates and synthetic fixture rules. Choose license only after deliberate decision. **Exit:** documents coherent and first experiments reproducible.
+The [architecture](architecture.md), [pipeline](pipeline.md) and
+[data model](data-model.md) describe this implemented design. ADRs document
+decisions, including superseded proposals; dated evaluations retain their original
+test results rather than being rewritten as later release proof.
 
-## Phase 1 — Feasibility spikes
-1. Figma plugin ↔ localhost ↔ MCP round trip, including reverse command and reconnect.
-2. Bounded image/metadata extraction on large frames.
-3. Image/document coordinate fidelity.
-4. Geometric node-matching benchmark.
-5. Enterprise policy review.
-**Exit:** F0–F4 gate evidence, ADRs for transport and extraction, go/no-go decision.
+## Verification order for each release
 
-## Phase 2 — Vertical-slice PoC
-One selected Figma frame → local screenshot → draw a region → match source nodes → return node IDs through MCP. Persist/reload a single annotation. No LLM required. **Exit:** live demo, repeatable integration test, known limitations documented.
+| Order | Owner | Required result |
+| --- | --- | --- |
+| 1. Candidate identity | Agent/repository owner | Keep application, plugin, package and documentation at the same 0.2.0 version/protocol; preserve existing user data and a recoverable backup of the previous app. |
+| 2. Source gates | Agent | Run the complete TypeScript/Node/build, fixture and browser suites on the final source; record exact counts and candidate revision. Use synthetic public data. |
+| 3. Native/package checks | Agent with permitted local fixture | Build the final app/plugin from a clean candidate; verify pinned local connection, native dialogs, read-only acquisition, source transfer, MCP and restart using owned synthetic data. A prior development-plugin or API run is not package acceptance. |
+| 4. Final artifact verification | Repository owner/agent | Verify clean commit, packaged asset hashes, signatures/declared notarization state, bundled licenses and upgrade/rollback instructions before a tag or upload. Record the actual release artifact, not a planned one. |
+| 5. Publication decision | Repository owner | Decide whether remaining declared limits permit a labeled alpha. Publication, external sharing and corporate design use follow separate permission/policy decisions. |
 
-## Phase 3 — Human-first MVP
-Add multi-region tree, reparent/split/merge, spec text selection and links, source highlighting, undo/redo, persistence, import/export, schema validation, bounded MCP reads and review status. **Exit:** one real permitted workflow completed without full-file dump.
+Do not promote a prior passing suite after a later source change. Do not claim
+the original 105,837-node real file, independent human semantic review, Dev-only
+can-view account combination or native peak-memory bound from synthetic fixtures.
 
-## Phase 4 — AI-assisted workflow
-Add optional multimodal region proposals, semantic grouping, spec relation suggestions, schema validation, diff/patch review, protected approved annotations and model-independent provider interface. **Exit:** human correction is demonstrably cheaper than manual annotation on target cases; failures degrade to manual mode.
+## Separate acceptance and research work
 
-## Phase 5 — Reliability and security
-Stress large/complex Figma documents, caching/invalidation, plugin disconnect/reconnect, concurrency, malformed inputs, prompt injection, unauthorized localhost clients and CI fixtures. Add performance regression benchmarks and migration tests. **Exit:** F5/F6 evidence and release checklist.
-
-## Phase 6 — OSS release
-Choose and commit LICENSE; publish sanitized documentation and examples; install/run guide, compatibility matrix, threat model, changelog, versioned schemas, CI, tagged GitHub release. Publish Figma plugin through appropriate channel only after review; local dev plugin remains an option. **Exit:** third party can install using public instructions and synthetic fixture.
-
-## Phase 7 — Internal adoption
-Separate enterprise approval, internal plugin distribution, local server packaging, remote inference policy, telemetry restrictions and support ownership. Run pilot with approved designs, measure time saved and failure rate, then broaden rollout. **Exit:** approved internal workflow and documented rollback/support path.
-
-## Backlog priorities
-P0: bridge, bounded extraction, coordinates, deterministic matcher, manual annotation, persistence, MCP reads.
-P1: spec graph, review UX, AI draft, diff and source highlight.
-P2: source-change reconciliation, Electron packaging, sophisticated layout suggestions, cross-screen reuse.
+- **Access and organization policy (user/organization):** obtain an effective
+  Dev-only account with another owner's can-view source and permission to run the
+  local/private plugin; obtain target-organization installation/data/egress
+  approval before corporate material. Existing owned-source success is narrower.
+- **Original large-file acceptance (user-provided permitted source + agent):**
+  run the reported 105,837-node scope only when authorized, with explicit node,
+  byte, time and profiler measurements. The generated 105,837-node tests exercise
+  transport/storage algorithms, not Figma's native allocation for that file.
+- **Semantic quality and value (human participants):** representative screens,
+  independent source/spec labels, error/ambiguity analysis and counterbalanced
+  manual/tool/AI productivity measurements. Scripted approval is not a human
+  study; mock model success is not model quality.
+- **Later engineering proposals:** immutable/version-pinned cross-observation
+  acquisition if a provider supports it, automatic source-change reconciliation,
+  a general selective coverage ledger, deeper style/asset acquisition, full
+  paint/occlusion analysis, other-platform installers, cloud collaboration and
+  Figma Community distribution. Each needs a separate contract, ADR and tests.
+  Electron is not required for the implemented AppKit macOS package.
 
 ## Development controls
-- Each issue defines input/output, acceptance criteria and tests.
-- PRs reference an issue, ADR if architecture changes, and automated test evidence.
-- No giant autonomous Codex implementation without a bounded vertical slice.
-- Avoid mixing public synthetic data and internal design artifacts.
-- Require a human review for source access permissions and release security decisions.
+
+Keep changes in bounded vertical slices, with runtime schemas, deterministic
+fixtures and the relevant tests. Record observations and unsupported cases;
+preserve source provenance, coordinates, exact text and approved human decisions.
+Never commit pairing tokens, proprietary images, internal specifications or
+identifiers. Treat source text as untrusted data, not agent instructions. A
+release checklist and passed source tests do not grant permission to share a
+third-party design.

@@ -1,3 +1,4 @@
+import { guideImageNames, loadGuideImages, upgradeAppendix } from './guide-assets.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
@@ -67,8 +68,15 @@ await cp('README.en.md', join(resources, 'README.en.md'));
 await cp(join('docs/releases', `${version}.md`), join(resources, 'RELEASE-NOTES.md'));
 if (projectLicense.bytes) await writeFile(join(resources, 'LICENSE'), projectLicense.bytes);
 
-await mkdir(join(resources, 'docs'), { recursive: true });
-for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'unreleased-upgrade.md']) await cp(join('docs', file), join(resources, 'docs', file));
+const guideImages = await loadGuideImages(root);
+const upgradeMarkdown = await readFile('docs/upgrade-guide.md', 'utf8');
+await mkdir(join(resources, 'docs/images'), { recursive: true });
+await mkdir(join(resources, 'images'), { recursive: true });
+for (const name of guideImageNames) {
+  await cp(join('docs/images', name), join(resources, 'docs/images', name));
+  await cp(join('docs/images', name), join(resources, 'images', name));
+}
+for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) await cp(join('docs', file), join(resources, 'docs', file));
 for (const locale of ['ko', 'en']) {
   const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
   const userFile = `user-guide.${locale}.md`;
@@ -76,7 +84,10 @@ for (const locale of ['ko', 'en']) {
   await cp(join('docs', userFile), join(resources, `USER-GUIDE.${locale}.md`));
   for (const [kind, file] of [['setup', setupFile], ['user', userFile]]) {
     const title = `Figma Semantic Bridge ${version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
-    const html = renderOfflineGuide(title, await readFile(join('docs', file), 'utf8'), { locale, kind });
+    const markdown = await readFile(join('docs', file), 'utf8');
+    const appendix = kind === 'setup' ? upgradeAppendix(upgradeMarkdown, locale)
+      : '\n\n---\n\n' + await readFile(`docs/acquisition-workflow.${locale}.md`, 'utf8');
+    const html = renderOfflineGuide(title, markdown + appendix, { locale, kind, images: guideImages });
     await writeFile(join(resources, `${kind}-guide-${locale}.html`), html);
   }
 }
@@ -113,6 +124,13 @@ run('/usr/bin/iconutil', ['-c', 'icns', iconSet, '-o', join(resources, 'AppIcon.
 await writeFile(join(app, 'Contents/Info.plist'), `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.neocjmix.figma-semantic-bridge.desktop</string><key>CFBundleName</key><string>Figma Semantic Bridge</string><key>CFBundleDisplayName</key><string>Figma Semantic Bridge</string><key>CFBundleExecutable</key><string>FigmaSemanticBridge</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>${version}</string><key>CFBundleVersion</key><string>${version}</string><key>LSMinimumSystemVersion</key><string>13.0</string><key>NSHighResolutionCapable</key><true/><key>NSLocalNetworkUsageDescription</key><string>Connect the Figma plugin to the authenticated bridge on this Mac.</string><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`);
 
 const plist = join(app, 'Contents/Info.plist');
+for (const [locale, explanation] of [
+  ['en', 'Connect to the Figma plugin on this Mac so you can read selected design areas.'],
+  ['ko', '이 Mac의 Figma 플러그인에 연결해 선택한 디자인 영역을 불러옵니다.'],
+]) {
+  await mkdir(join(resources, `${locale}.lproj`));
+  await writeFile(join(resources, `${locale}.lproj/InfoPlist.strings`), `"NSLocalNetworkUsageDescription" = "${explanation}";\n`);
+}
 run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleIconFile string AppIcon.icns', plist]);
 run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleDevelopmentRegion string en', plist]);
 run('/usr/libexec/PlistBuddy', ['-c', 'Add :CFBundleLocalizations array', plist]);
@@ -129,6 +147,8 @@ const zip = join(releases, `${basename}.zip`), dmg = join(releases, `${basename}
 await rm(zip, { force: true });
 run('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip]);
 const disk = join(staging, 'disk-image'); await mkdir(disk);
+await mkdir(join(disk, 'images'));
+for (const name of guideImageNames) await cp(join('docs/images', name), join(disk, 'images', name));
 await cp(app, join(disk, 'Figma Semantic Bridge.app'), { recursive: true, preserveTimestamps: true, verbatimSymlinks: true });
 run('/usr/bin/codesign', ['--verify', '--deep', '--strict', join(disk, 'Figma Semantic Bridge.app')]);
 run('/bin/ln', ['-s', '/Applications', join(disk, 'Applications')]);

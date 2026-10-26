@@ -99,14 +99,14 @@ test('visual draft stays proposed until a complete collection is attached and hu
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
-  const acquisition = page.getByRole('region', { name: 'Figma acquisition', exact: true });
+  const acquisition = page.getByRole('region', { name: 'Import from Figma', exact: true });
   await acquisition.getByRole('button', { name: 'Capture Figma selection' }).click();
-  await acquisition.getByLabel('Acquisition plan').selectOption('overview');
-  await acquisition.getByRole('button', { name: 'Start acquisition' }).click();
-  await expect(acquisition.getByRole('button', { name: 'Use overview as visual draft' })).toBeEnabled();
-  await acquisition.getByRole('button', { name: 'Use overview as visual draft' }).click();
+  await acquisition.getByLabel('What to bring in').selectOption('overview');
+  await acquisition.getByRole('button', { name: 'Start import' }).click();
+  await expect(acquisition.getByRole('button', { name: 'Create draft from overview' })).toBeEnabled();
+  await acquisition.getByRole('button', { name: 'Create draft from overview' }).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
-  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('Visual draft · source not collected');
+  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('Image draft · source structure needed');
   const visualProject = await app.readProject();
   expect(visualProject.snapshots).toHaveLength(0);
   expect(visualProject.scopes).toHaveLength(1);
@@ -121,12 +121,12 @@ test('visual draft stays proposed until a complete collection is attached and hu
   expect((await app.readProject()).annotations[0]).toMatchObject({ snapshotId: scopeId, reviewStatus: 'proposed' });
 
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Attach to current visual draft' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Attach to current visual draft' }).click();
-  await expect(page.getByText('Complete cached collection · human source confirmation required')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Attach to current image draft' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Attach to current image draft' }).click();
+  await expect(page.getByText('Source structure complete · confirm sources before approval')).toBeVisible();
   const attached = await app.readProject();
   expect(attached.scopes![0]).toMatchObject({ id: scopeId, kind: 'collection', preview: app.preview,
     collection: { nodeCount: 2 } });
@@ -148,7 +148,7 @@ test('visual draft stays proposed until a complete collection is attached and hu
   await page.getByRole('tab', { name: 'Specifications' }).click();
   await page.locator('.evidence-text-picker summary').click();
   await page.locator('.evidence-text-picker .collection-nodes li').filter({ hasText: child.name })
-    .getByRole('button', { name: 'Use exact text' }).click();
+    .getByRole('button', { name: 'Use original text' }).click();
   await expect(page.getByRole('button', { name: 'Create specification' })).toBeEnabled();
   await page.getByRole('button', { name: 'Create specification' }).click();
   await expect(page.locator('.spec-text')).toHaveText(exactText);
@@ -162,7 +162,7 @@ test('visual draft stays proposed until a complete collection is attached and hu
     sourceRefs: [{ snapshotId: scopeId, nodeId: child.id }] });
   await page.reload();
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
-  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('complete cached collection');
+  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('source structure complete');
   await page.getByRole('tab', { name: 'Specifications' }).click();
   await page.locator('.spec-list button').click();
   await expect(page.locator('.text-nodes .text-node')).toHaveCount(1);
@@ -178,13 +178,13 @@ test('complete collection can open an honest source-only editor without inventin
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
-  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('2 nodes · complete cached collection');
-  await expect(page.getByText('No overview image · draw from source bounds')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
+  await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('2 nodes · source structure complete');
+  await expect(page.getByText('No overview image · use source bounds to draw regions')).toBeVisible();
   const persisted = await app.readProject();
   expect(persisted.snapshots).toHaveLength(0);
   expect(persisted.scopes).toHaveLength(1);
@@ -200,11 +200,11 @@ test('source transfer downloads exact source only and imports a new unreviewed s
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
   const originalId = (await app.readProject()).scopes![0]!.id;
   await page.getByRole('button', { name: '+ Add region' }).click();
@@ -213,19 +213,19 @@ test('source transfer downloads exact source only and imports a new unreviewed s
 
   const panel = page.locator('details.source-transfer-panel');
   await panel.locator('summary').click();
-  await expect(panel).toContainText('Exact original text is included. Annotations, approvals and specifications are not transferred.');
+  await expect(panel).toContainText('Annotations, specifications and approvals are not included.');
   const downloadPromise = page.waitForEvent('download');
-  await panel.getByRole('button', { name: 'Download source evidence' }).click();
+  await panel.getByRole('button', { name: 'Download source file' }).click();
   const download = await downloadPromise;
   const bytes = await readFile(await download.path());
   expect(bytes.toString('utf8')).toContain(exactText);
   expect(bytes.toString('utf8')).not.toContain((await app.readProject()).annotations[0]!.id);
-  await panel.getByLabel('Source evidence NDJSON').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   const importResponse = page.waitForResponse(response => response.request().method() === 'POST'
     && new URL(response.url()).pathname === `/api/projects/${app.projectId}/source-transfer`);
-  await panel.getByRole('button', { name: 'Import source evidence' }).click();
+  await panel.getByRole('button', { name: 'Import source file' }).click();
   expect((await importResponse).status()).toBe(201);
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(2);
   const imported = await app.readProject();
@@ -247,16 +247,16 @@ test('a delayed source download cannot update transfer state after switching wor
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
   const panel = page.locator('details.source-transfer-panel');
   await panel.locator('summary').click();
 
   const initialDownload = page.waitForEvent('download');
-  await panel.getByRole('button', { name: 'Download source evidence' }).click();
+  await panel.getByRole('button', { name: 'Download source file' }).click();
   const validFile = await readFile(await (await initialDownload).path());
   let releaseOldDownload: (() => void) | undefined;
   let oldDownloadStarted: (() => void) | undefined;
@@ -280,20 +280,20 @@ test('a delayed source download cannot update transfer state after switching wor
     await route.continue();
   });
   try {
-    await panel.getByRole('button', { name: 'Download source evidence' }).click();
+    await panel.getByRole('button', { name: 'Download source file' }).click();
     await oldDownloadIntercepted;
     await expect(panel.getByRole('button', { name: 'Stop download' })).toBeVisible();
     await page.locator('#workspace-select').selectOption(app.secondProjectId);
     await expect(page.locator('#workspace-select')).toHaveValue(app.secondProjectId);
     await expect(panel.getByRole('button', { name: 'Stop download' })).toBeHidden();
-    await panel.getByLabel('Source evidence NDJSON').setInputFiles({
+    await panel.getByLabel('Source file (.ndjson)').setInputFiles({
       name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: validFile,
     });
-    await panel.getByRole('button', { name: 'Import source evidence' }).click();
+    await panel.getByRole('button', { name: 'Import source file' }).click();
     await importIntercepted;
     releaseOldDownload?.();
     await expect(panel.getByRole('button', { name: 'Stop import' })).toBeVisible();
-    await expect(panel.getByText('Uploading and verifying the complete file. Progress is indeterminate until the server responds.')).toBeVisible();
+    await expect(panel.getByText('Checking and importing the file on this computer. Please wait for confirmation.')).toBeVisible();
     await expect(panel.getByRole('alert')).toHaveCount(0);
     releaseImport?.();
     await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
@@ -312,11 +312,11 @@ test('source import holds the editor until its delayed workspace update is appli
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
   await page.getByRole('button', { name: '+ Add region' }).click();
   const name = page.getByLabel('Component name');
   await name.fill('Saved synthetic component');
@@ -325,9 +325,9 @@ test('source import holds the editor until its delayed workspace update is appli
   const panel = page.locator('details.source-transfer-panel');
   await panel.locator('summary').click();
   const downloadPromise = page.waitForEvent('download');
-  await panel.getByRole('button', { name: 'Download source evidence' }).click();
+  await panel.getByRole('button', { name: 'Download source file' }).click();
   const bytes = await readFile(await (await downloadPromise).path());
-  await panel.getByLabel('Source evidence NDJSON').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   let release: (() => void) | undefined, started: (() => void) | undefined;
@@ -338,7 +338,7 @@ test('source import holds the editor until its delayed workspace update is appli
     started?.(); await gate; await route.continue();
   });
   try {
-    await panel.getByRole('button', { name: 'Import source evidence' }).click();
+    await panel.getByRole('button', { name: 'Import source file' }).click();
     await intercepted;
     await expect(name).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Save annotation' })).toBeDisabled();
@@ -356,12 +356,12 @@ test('attaching a collection holds a clean annotation editor until the response 
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
-  const acquisition = page.getByRole('region', { name: 'Figma acquisition', exact: true });
+  const acquisition = page.getByRole('region', { name: 'Import from Figma', exact: true });
   await acquisition.getByRole('button', { name: 'Capture Figma selection' }).click();
-  await acquisition.getByLabel('Acquisition plan').selectOption('overview');
-  await acquisition.getByRole('button', { name: 'Start acquisition' }).click();
-  await expect(acquisition.getByRole('button', { name: 'Use overview as visual draft' })).toBeEnabled();
-  await acquisition.getByRole('button', { name: 'Use overview as visual draft' }).click();
+  await acquisition.getByLabel('What to bring in').selectOption('overview');
+  await acquisition.getByRole('button', { name: 'Start import' }).click();
+  await expect(acquisition.getByRole('button', { name: 'Create draft from overview' })).toBeEnabled();
+  await acquisition.getByRole('button', { name: 'Create draft from overview' }).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
   await page.getByRole('button', { name: '+ Add region' }).click();
   const name = page.getByLabel('Component name');
@@ -369,10 +369,10 @@ test('attaching a collection holds a clean annotation editor until the response 
   await page.getByRole('button', { name: 'Save annotation' }).click();
   await expect.poll(async () => (await app.readProject()).annotations[0]?.name).toBe('Saved visual component');
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  const attach = page.getByRole('button', { name: 'Attach to current visual draft' });
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  const attach = page.getByRole('button', { name: 'Attach to current image draft' });
   await expect(attach).toBeEnabled();
   let release: (() => void) | undefined, started: (() => void) | undefined;
   const intercepted = new Promise<void>(resolve => { started = resolve; });
@@ -384,7 +384,7 @@ test('attaching a collection holds a clean annotation editor until the response 
     await expect(name).toBeDisabled();
     await expect(page.locator('#workspace-select')).toBeDisabled();
     release?.();
-    await expect(page.getByText('Complete cached collection · human source confirmation required')).toBeVisible();
+    await expect(page.getByText('Source structure complete · confirm sources before approval')).toBeVisible();
     await expect(name).toHaveValue('Saved visual component');
     expect((await app.readProject()).annotations[0]?.name).toBe('Saved visual component');
   } finally { release?.(); }
@@ -397,21 +397,21 @@ test('creating a visual draft holds the editor while its project update is delay
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
   await page.getByRole('button', { name: '+ Add region' }).click();
   const name = page.getByLabel('Component name');
   await name.fill('Saved before visual');
   await page.getByRole('button', { name: 'Save annotation' }).click();
   await expect.poll(async () => (await app.readProject()).annotations[0]?.name).toBe('Saved before visual');
-  const acquisition = page.getByRole('region', { name: 'Figma acquisition', exact: true });
+  const acquisition = page.getByRole('region', { name: 'Import from Figma', exact: true });
   await acquisition.getByRole('button', { name: 'Capture Figma selection' }).click();
-  await acquisition.getByLabel('Acquisition plan').selectOption('overview');
-  await acquisition.getByRole('button', { name: 'Start acquisition' }).click();
-  const visual = acquisition.getByRole('button', { name: 'Use overview as visual draft' });
+  await acquisition.getByLabel('What to bring in').selectOption('overview');
+  await acquisition.getByRole('button', { name: 'Start import' }).click();
+  const visual = acquisition.getByRole('button', { name: 'Create draft from overview' });
   await expect(visual).toBeEnabled();
   let release: (() => void) | undefined, started: (() => void) | undefined;
   const intercepted = new Promise<void>(resolve => { started = resolve; });
@@ -435,15 +435,15 @@ test('late exact text from one specification cannot enter another specification 
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('details.raw-collection-panel summary').click();
-  await page.getByRole('button', { name: 'Prepare selected source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Start source collection' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Start source collection' }).click();
-  await expect(page.getByRole('button', { name: 'Add collection as source scope' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Add collection as source scope' }).click();
+  await page.getByRole('button', { name: 'Choose selected area' }).click();
+  await expect(page.getByRole('button', { name: 'Start collection' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start collection' }).click();
+  await expect(page.getByRole('button', { name: 'Add source structure to workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add source structure to workspace' }).click();
   await page.getByRole('tab', { name: 'Specifications' }).click();
   let picker = page.locator('.evidence-text-picker');
   await picker.locator('summary').click();
-  await picker.locator('.collection-nodes li').filter({ hasText: child.name }).getByRole('button', { name: 'Use exact text' }).click();
+  await picker.locator('.collection-nodes li').filter({ hasText: child.name }).getByRole('button', { name: 'Use original text' }).click();
   await expect(page.getByRole('button', { name: 'Create specification' })).toBeEnabled();
   await page.getByRole('button', { name: 'Create specification' }).click();
   await page.getByRole('button', { name: 'Save specification' }).click();
@@ -459,7 +459,7 @@ test('late exact text from one specification cannot enter another specification 
   await expect(page.getByText('Select source text (0)')).toBeVisible();
   picker = page.locator('.evidence-text-picker');
   await picker.locator('summary').click();
-  const choose = picker.locator('.collection-nodes li').filter({ hasText: child.name }).getByRole('button', { name: 'Use exact text' });
+  const choose = picker.locator('.collection-nodes li').filter({ hasText: child.name }).getByRole('button', { name: 'Use original text' });
   await expect(choose).toBeEnabled();
   let release: (() => void) | undefined, started: (() => void) | undefined, finished: (() => void) | undefined;
   const intercepted = new Promise<void>(resolve => { started = resolve; });
@@ -493,19 +493,19 @@ test('selective inspection reads only named live records and leaves the workspac
   const initial = await app.readProject();
   const panel = page.locator('details.selective-source-panel');
   await panel.locator('summary').click();
-  await expect(panel.getByRole('button', { name: 'Prepare selected inspection' })).toBeEnabled();
-  await panel.getByRole('button', { name: 'Prepare selected inspection' }).click();
-  await expect(panel.getByText(`Pinned inspection scope: ${root.name} (${root.type}) · ${root.id}`)).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Use selected Figma area' })).toBeEnabled();
+  await panel.getByRole('button', { name: 'Use selected Figma area' }).click();
+  await expect(panel.getByText(`Reading within: ${root.name} (${root.type}) · ${root.id}`)).toBeVisible();
   expect(await app.readProject()).toEqual(initial);
   expect(app.commands.map(command => command.type)).toEqual(['get_selection']);
 
   await panel.getByLabel('Node IDs (comma or space separated)').fill(child.id);
   await panel.getByLabel('Fields').selectOption('text');
-  await panel.getByRole('button', { name: 'Read explicit nodes' }).click();
+  await panel.getByRole('button', { name: 'Read these nodes' }).click();
   await expect(panel.getByText(child.name)).toBeVisible();
   await panel.getByRole('button', { name: 'Read exact text' }).click();
   await expect(panel.locator('.collection-text pre')).toContainText(exactText.slice(0, 4000));
-  await panel.getByRole('button', { name: 'Load next text segment' }).click();
+  await panel.getByRole('button', { name: 'Load more text' }).click();
   await expect(panel.locator('.collection-text pre')).toHaveText(exactText);
   expect(await app.readProject()).toEqual(initial);
   expect(app.commands.map(command => command.type)).toEqual(['get_selection', 'read_source_nodes']);
@@ -519,14 +519,14 @@ test('a rejected immediate parent can be corrected before retrying', async ({ pa
   await page.goto(app.url);
   const panel = page.locator('details.selective-source-panel');
   await panel.locator('summary').click();
-  await panel.getByRole('button', { name: 'Prepare selected inspection' }).click();
-  await expect(panel.getByLabel('Immediate parent ID')).toHaveValue(root.id);
-  await panel.getByLabel('Immediate parent ID').fill('missing-synthetic-parent');
-  await panel.getByRole('button', { name: 'Read immediate children' }).click();
-  await expect(panel.getByRole('alert')).toContainText('Synthetic parent is unavailable.');
-  await expect(panel.getByLabel('Immediate parent ID')).toBeEnabled();
-  await panel.getByLabel('Immediate parent ID').fill(root.id);
-  await panel.getByRole('button', { name: 'Read immediate children' }).click();
+  await panel.getByRole('button', { name: 'Use selected Figma area' }).click();
+  await expect(panel.getByLabel('Parent node ID')).toHaveValue(root.id);
+  await panel.getByLabel('Parent node ID').fill('missing-synthetic-parent');
+  await panel.getByRole('button', { name: 'Read child nodes' }).click();
+  await expect(panel.getByRole('alert')).toContainText('PLUGIN_ERROR');
+  await expect(panel.getByLabel('Parent node ID')).toBeEnabled();
+  await panel.getByLabel('Parent node ID').fill(root.id);
+  await panel.getByRole('button', { name: 'Read child nodes' }).click();
   await expect(panel.locator('.collection-nodes li').filter({ hasText: child.name })).toBeVisible();
   expect(app.commands.filter(command => command.type === 'read_source_children').map(command => command.parentId))
     .toEqual(['missing-synthetic-parent', root.id]);

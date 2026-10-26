@@ -1,4 +1,6 @@
 import { koreanMessages } from './messages.js';
+import { diagnosticKeys, errorKeys } from './diagnostics.js';
+import { ApiError } from './api.js';
 
 export type Locale = 'ko' | 'en';
 export type MessageKey = keyof typeof koreanMessages;
@@ -26,6 +28,22 @@ export function renderMessage(locale: Locale, value: UIMessage): string {
 export class UIError extends Error {
   constructor(readonly uiMessage: UIMessage) { super(renderMessage('en', uiMessage)); }
 }
+/** Only app-generated vocabulary is translated. Unknown/source content is verbatim. */
+export function systemMessage(value: string): UIMessage {
+  const limited = /^Spatial candidate limit exceeded\. Only the first (\d+) candidate diagnostics are shown; search all captured nodes or narrow the region to inspect more candidates\.$/.exec(value);
+  if (limited) return message('Only the first {count} matching candidates are shown. Search source nodes or make the region smaller to inspect more.', { count: Number(limited[1]) });
+  const key = diagnosticKeys[value] ?? (Object.hasOwn(koreanMessages, value) ? value as MessageKey : undefined);
+  return key ? message(key) : { raw: value };
+}
+export function apiErrorMessage(code: string, detail: string): UIMessage {
+  const key = errorKeys[code];
+  return key ? { parts: [message(key), { raw: `(${code})` }] } : systemMessage(detail);
+}
 export function errorMessage(cause: unknown, fallback: MessageKey = 'The request could not be completed.'): UIMessage {
-  return cause instanceof UIError ? cause.uiMessage : cause instanceof Error ? { raw: cause.message } : message(fallback);
+  if (cause instanceof UIError) return cause.uiMessage;
+  if (cause instanceof ApiError) return apiErrorMessage(cause.code, cause.message);
+  if (cause instanceof SyntaxError) return message('The draft is not valid JSON. Check its format before submitting.');
+  if (cause instanceof TypeError && /fetch|network|load failed/i.test(cause.message)) return message('The connection failed. Check that the desktop app is running, then try again.');
+  if (cause instanceof Error && cause.name === 'ZodError') return message('The received data could not be read. Refresh the workspace and try again.');
+  return cause instanceof Error ? systemMessage(cause.message) : message(fallback);
 }

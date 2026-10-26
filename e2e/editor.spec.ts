@@ -18,7 +18,7 @@ const test = base.extend<{ app: { url: string; token: string } }>({
 async function openDemo(page: Page, app: { url: string; token: string }) {
   await page.goto(app.url);
   await page.getByLabel('Pairing token').fill(app.token);
-  await page.getByRole('button', { name: 'Pair server', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByRole('button', { name: 'Load demo', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Design canvas' })).toBeVisible();
 }
@@ -36,7 +36,7 @@ async function saveAnnotation(page: Page, whilePending?: () => Promise<void>) {
   expect(response.status()).toBe(200);
   const saved: Project = await response.json();
   expect(saved.revision).toBe(response.request().postDataJSON().expectedRevision + 1);
-  await expect(page.locator('.revision')).toHaveText(`revision ${saved.revision}`);
+  await expect(page.locator('.revision')).toHaveText(`Saved version ${saved.revision}`);
   await expect(page.getByRole('status')).toHaveText('Annotation saved. Match source nodes, then review it.');
   await expect(page.locator('.unsaved')).toHaveCount(0);
   await expect(button).toBeEnabled();
@@ -127,14 +127,14 @@ test('coordinate editing, hierarchy, undo/redo and malformed proposals remain re
   await expect(page.locator('.proposal')).toHaveCount(1);
   await page.getByRole('button', { name: 'Reject draft', exact: true }).click();
   await expect(page.locator('.proposal')).toHaveCount(0);
-  await expect(page.getByLabel('Optional AI draft')).toContainText('AI is disabled');
+  await expect(page.getByLabel('Optional AI draft')).toContainText('AI drafting is not configured');
 });
 
 test('invalid pairing token cannot open local projects', async ({ page, app }) => {
   await page.goto(app.url);
   await page.getByLabel('Pairing token').fill('invalid-pairing-token-0123456789012345');
-  await page.getByRole('button', { name: 'Pair server', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('valid local pairing token');
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('pairing token was not accepted');
   await expect(page.getByRole('button', { name: 'Load demo', exact: true })).toHaveCount(0);
 });
 
@@ -182,7 +182,7 @@ test('zoomed and panned canvas moves and resizes in original document coordinate
     try {
       await intercepted;
       await expect(page.getByRole('button', { name: 'Save annotation', exact: true })).toBeDisabled();
-      await expect(page.getByRole('status')).toHaveText('Working with your local server…');
+      await expect(page.getByRole('status')).toHaveText('Working…');
       await expect(page.locator('.unsaved')).toBeVisible();
     } finally { releaseSave(); }
   });

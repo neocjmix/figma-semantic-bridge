@@ -83,7 +83,7 @@ test('overview-first acquisition crosses real HTTP and WebSocket boundaries, laz
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId); localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
-  const panel = page.getByRole('region', { name: 'Figma acquisition', exact: true });
+  const panel = page.getByRole('region', { name: 'Import from Figma', exact: true });
   const capture = panel.getByRole('button', { name: 'Capture Figma selection', exact: true });
   await expect(capture).toBeEnabled();
   const initial = await app.read(); expect(initial.snapshots).toEqual([]);
@@ -98,9 +98,9 @@ test('overview-first acquisition crosses real HTTP and WebSocket boundaries, laz
   expect(app.commands.map(command => command.type)).toEqual(['get_selection']);
   expect(await app.read()).toEqual(initial);
 
-  await panel.getByLabel('Acquisition plan').selectOption('overview');
+  await panel.getByLabel('What to bring in').selectOption('overview');
   const startedResponse = page.waitForResponse(response => new URL(response.url()).pathname.endsWith(`/${prepared.id}/start`));
-  await panel.getByRole('button', { name: 'Start acquisition', exact: true }).click();
+  await panel.getByRole('button', { name: 'Start import', exact: true }).click();
   expect((await startedResponse).status()).toBe(202);
   const image = panel.getByRole('img', { name: 'Figma overview image', exact: true });
   await expect(image).toBeVisible();
@@ -108,7 +108,7 @@ test('overview-first acquisition crosses real HTTP and WebSocket boundaries, laz
     const image = element as HTMLImageElement;
     return { complete: image.complete, width: image.naturalWidth, height: image.naturalHeight };
   })).toEqual({ complete: true, width: app.overview.preview.width, height: app.overview.preview.height });
-  await expect(panel.getByText('An overview-only result is for viewing and cannot be saved as a source-grounded capture.', { exact: true })).toBeVisible();
+  await expect(panel.getByText('An overview can be used for drafts. Source confirmation and approval need the complete source structure.', { exact: true })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Save complete capture', exact: true })).toBeDisabled();
   expect(app.commands.map(command => command.type)).toEqual(['get_selection', 'preview_capture']);
   expect(await app.readPersisted()).toEqual(initial);
@@ -118,7 +118,7 @@ test('overview-first acquisition crosses real HTTP and WebSocket boundaries, laz
   await panel.getByRole('button', { name: 'Load source structure', exact: true }).click();
   expect((await loadedResponse).status()).toBe(202);
   await expect.poll(() => app.commands.map(command => command.type)).toEqual(['get_selection', 'preview_capture', 'capture_metadata']);
-  await expect(panel.getByRole('progressbar', { name: 'Acquisition progress', exact: true })).toBeVisible();
+  await expect(panel.getByRole('progressbar', { name: 'Figma import progress', exact: true })).toBeVisible();
   await expect(image).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Save complete capture', exact: true })).toBeDisabled();
   expect(await app.readPersisted()).toEqual(initial);
@@ -137,7 +137,7 @@ test('overview-first acquisition crosses real HTTP and WebSocket boundaries, laz
   const committedHttp = await committedResponse; expect(committedHttp.status()).toBe(200);
   const committed = await committedHttp.json() as Project;
   await expect(panel.locator('.acquisition-status')).toHaveText('Saved');
-  await expect(page.getByRole('status')).toContainText('Complete Figma capture saved.');
+  await expect(page.getByRole('status')).toContainText('Complete capture saved.');
   expect(committed.revision).toBe(initial.revision + 1); expect(committed.snapshots).toHaveLength(1);
   const saved = committed.snapshots[0]!;
   expect(saved.source).toEqual(app.metadata.source); expect(saved.bounds).toEqual(app.metadata.bounds); expect(saved.nodes).toEqual(app.metadata.nodes);

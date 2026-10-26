@@ -149,7 +149,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 if let other = others.first {
                     other.activate(options: [.activateAllWindows, .activateIgnoringOtherApps]); NSApp.terminate(nil); return
                 }
-                showStartupError((error as? HostFailure)?.message ?? "The workspace could not start. Check local file access and whether another service owns port 4177, then choose Retry.")
+                showStartupError((error as? HostFailure)?.message ?? "The workspace could not start. Check local file access and whether another service owns ports 4177 or 4178, then choose Retry.")
             }
         }
     }
@@ -355,10 +355,10 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 if kind == "setup" { names.append("setup-guide.html") }
                 guard let guide = names.map({ runtime.resources.appendingPathComponent($0) }).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else { throw HostFailure("Missing offline guide.") }
                 let data = try Data(contentsOf: guide)
-                guard data.count <= 256_000, let html = String(data: data, encoding: .utf8) else { throw HostFailure("Invalid setup guide.") }
+                guard data.count <= 4_000_000, let html = String(data: data, encoding: .utf8) else { throw HostFailure("Invalid setup guide.") }
                 let config = WKWebViewConfiguration(); config.websiteDataStore = .nonPersistent()
                 config.defaultWebpagePreferences.allowsContentJavaScript = false; config.preferences.javaScriptCanOpenWindowsAutomatically = false
-                config.userContentController.add(try await contentRules(#"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}}]"#, name: "fsb-guide-no-network"))
+                config.userContentController.add(try await contentRules(#"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^data:image/png;base64,"},"action":{"type":"ignore-previous-rules"}}]"#, name: "fsb-guide-bundled-images"))
                 guard !terminating, guideRequest == request else { return }
                 let view = WKWebView(frame: .zero, configuration: config); view.navigationDelegate = guideDelegate; view.uiDelegate = guideDelegate
                 let guideWindow = self.guideWindow ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 700), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)

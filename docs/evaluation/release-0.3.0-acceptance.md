@@ -25,6 +25,10 @@ source revision, exact bytes, dependency notices and signing state.
 - All 51 browser cases passed in the final full run after the final UI wording
   changes. An earlier first attempt raced a production web rebuild and returned
   WEB_NOT_BUILT; the completed-build rerun passed.
+- The Linux CI run exposed a compatibility-test setup race: an explicit API
+  scope creation ran alongside automatic UI binding. Setup now completes before
+  opening the editor, retaining the exact single-scope assertion. The six affected
+  browser cases and typecheck passed after this test-only correction.
 - Two public synthetic fixture manifests passed validation.
 - Focused source-file integrity checks cover altered packet/tree structure,
   incomplete files, missing context-image bounds, hostile coverage and negative

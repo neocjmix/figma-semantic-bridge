@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ProjectSchema, type Project } from '../src/shared/contracts.js';
 import { SOURCE_TRANSFER_MAX_BYTES } from '../src/shared/source-transfer.js';
+import { CAPTURE_BUNDLE_MAX_BYTES } from '../src/shared/capture-bundle.js';
+import { completeScope, scopeNodeCount, sourceScopes, inlineScope } from '../src/core/source-scopes.js';
 import { ApiError } from './api.js';
 import { useLocale } from './i18n.js';
-import { errorMessage, message, type UIMessage } from './locale.js';
+import { errorMessage, message, UIError, type UIMessage } from './locale.js';
 
 type Action = 'export' | 'import';
 
@@ -24,7 +26,7 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
   beginProjectMutation(): (() => void) | null; onImported(next: Project): void;
 }) {
   const { t, renderMessage, formatNumber } = useLocale();
-  const complete = project?.scopes?.filter(scope => scope.kind === 'collection' && scope.collection) ?? [];
+  const complete = project ? sourceScopes(project).filter(scope => completeScope(scope) && scope.source.fileKey) : [];
   const [preferredId, setPreferredId] = useState<string | null>(null);
   const selected = complete.find(scope => scope.id === preferredId) ?? complete[0] ?? null;
   const [file, setFile] = useState<File | null>(null);
@@ -77,7 +79,9 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
   }
 
   async function importFile() {
-    if (!project || !file || !file.size || file.size > SOURCE_TRANSFER_MAX_BYTES || action || active.current || busy || dirty) return;
+    if (!file || !file.size || file.size > SOURCE_TRANSFER_MAX_BYTES || action || active.current || busy || dirty) return;
+    const legacy = file.name.toLowerCase().endsWith('.json');
+    if (!project && !legacy) return;
     const releaseEditor = beginProjectMutation();
     if (!releaseEditor) return;
     const expected = { ...context.current }, controller = new AbortController();
@@ -85,10 +89,21 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
     const currentOperation = () => pending.current === controller && context.current.token === expected.token
       && context.current.projectId === expected.projectId && context.current.revision === expected.revision;
     try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(project.id)}/source-transfer?expectedRevision=${project.revision}`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-ndjson' },
-        body: file, signal: controller.signal,
-      });
+      let response: Response;
+      if (legacy) {
+        if (file.size > CAPTURE_BUNDLE_MAX_BYTES) throw new Error('The older capture file exceeds its supported size limit.');
+        let bundle: unknown;
+        try { bundle = JSON.parse(await file.text()); }
+        catch { throw new UIError(message('The selected file could not be read as JSON. Choose a valid capture bundle JSON file.')); }
+        if (controller.signal.aborted || !currentOperation()) return;
+        response = await fetch('/api/capture-bundles/import', { method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, signal: controller.signal,
+          body: JSON.stringify({ name: file.name.replace(/\.json$/i, '').slice(0, 300) || t('Imported captures'), bundle }),
+        });
+      } else response = await fetch(`/api/projects/${encodeURIComponent(project!.id)}/source-transfer?expectedRevision=${project!.revision}`, {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-ndjson' },
+          body: file, signal: controller.signal,
+        });
       if (!response.ok) throw await responseError(response);
       const next = ProjectSchema.parse(await response.json());
       if (controller.signal.aborted || !currentOperation()) return;
@@ -108,18 +123,24 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
 
   return <details className="source-transfer-panel">
     <summary>{t('Source files')}</summary>
-    <p className="small muted">{t('Share complete source structure, original text and any overview image in one file. Annotations, specifications and approvals are not included.')}</p>
+    <p className="small muted">{t('Share prepared source structure, original text and any overview image in one file. A prepared part keeps its limited coverage. Annotations, specifications and approvals are not included.')}</p>
+    <p className="small muted">{t('An included overview image keeps its full area, including design outside a prepared part.')}</p>
     <p className="small source-transfer-warning">{t('The file can contain sensitive design images and original text. Keep it in an appropriate local location and share it only with permission.')}</p>
     <p className="small muted">{t('Files can be up to 80 MB. No Figma connection is needed. The file is checked for damage and completeness before adding its sources to this workspace for review.')}</p>
+    <p className="small muted">{t('Older capture files (.json, up to 15 MB) open in a new workspace. Current source files (.ndjson) are added to this workspace.')}</p>
     {complete.length > 0 && <label>{t('Source structure to share')}<select value={selected?.id ?? ''} disabled={!!action || busy}
-      onChange={event => setPreferredId(event.target.value)}>{complete.map(scope => <option key={scope.id} value={scope.id}>{scope.name} · {formatNumber(scope.collection!.nodeCount)} {t('nodes')}</option>)}</select></label>}
-    {!complete.length && <p className="small muted">{t('Complete a source collection and add it to your workspace before downloading a source file.')}</p>}
+      onChange={event => setPreferredId(event.target.value)}>{complete.map(scope => <option key={scope.id} value={scope.id}>{scope.name} · {formatNumber(scopeNodeCount(scope))} {t('nodes')}{!inlineScope(scope)&&scope.kind==='branch'?` · ${t('Prepared part')}`:''}</option>)}</select></label>}
+    {!complete.length && <p className="small muted">{t('Prepare a source or a complete part before downloading a source file. Its Figma file identity must be available.')}</p>}
     <button className="wide" disabled={!selected || !!action || busy} onClick={() => void exportScope()}>{t('Download source file')}</button>
     {action === 'export' && <><p role="status" className="small muted">{t('Downloaded {bytes} bytes of at most 80 MB', { bytes: formatNumber(bytes) })}</p>
       <progress aria-label={t('Source download progress')} /><button className="text-button" onClick={() => pending.current?.abort()}>{t('Stop download')}</button></>}
     <form onSubmit={event => { event.preventDefault(); void importFile(); }}>
-      <label>{t('Source file (.ndjson)')}<input ref={fileInput} type="file" accept=".ndjson,application/x-ndjson,text/plain" disabled={!!action || busy}
+      <label>{t('Source file (.ndjson or .json)')}<input ref={fileInput} type="file" accept=".ndjson,.json,application/x-ndjson,application/json,text/plain" disabled={!!action || busy}
         onChange={event => { const value = event.target.files?.[0] ?? null; setNotice(null);
+          if (value?.name.toLowerCase().endsWith('.json') && value.size > CAPTURE_BUNDLE_MAX_BYTES) {
+            setFile(null); event.target.value = ''; setError(message('Choose a capture bundle no larger than {limit} MB.', { limit: CAPTURE_BUNDLE_MAX_BYTES / 1_000_000 }));
+            return;
+          }
           if (value && (!value.size || value.size > SOURCE_TRANSFER_MAX_BYTES)) {
             setFile(null); event.target.value = ''; setError(message('Choose a source file of 80 MB or less. Empty files cannot be imported.'));
           } else { setFile(value); setError(null); }
@@ -132,7 +153,7 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
           pending.current?.abort();
           setNotice(message('Import stopped. The sources may already have been saved; refresh this workspace to check.'));
         }}>{t('Stop import')}</button></>}
-      <button className="wide" disabled={!project || !file || !!action || busy || dirty} type="submit">{t('Import source file')}</button>
+      <button className="wide" disabled={!file || !project && !file.name.toLowerCase().endsWith('.json') || !!action || busy || dirty} type="submit">{t('Import source file')}</button>
     </form>
     {error && <p className="small error" role="alert">{renderMessage(error)}</p>}
     {notice && <p className="small" role="status">{renderMessage(notice)}</p>}

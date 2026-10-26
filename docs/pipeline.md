@@ -1,11 +1,11 @@
 # Processing pipeline — implemented and proposed stages
 
-The current source implements a local, human-first pipeline. In 0.2.1 the normal UI has one image-plus-chunked import and resource settings; older mode-based routes below remain API/file compatibility paths. Published 0.1.1
-assets contain the earlier bounded-capture path; 0.2.0 adds the
-explicit image/collection/selective paths below. The
-[collection-backed verification](evaluation/collection-backed-workflow.md) records
-which paths ran through synthetic browser tests, scripted native-plugin calls and
-packaged UI. These are not interchangeable forms of acceptance.
+The 0.3.0 candidate source implements one local, human-first acquisition workflow.
+Images, saved partial records and scoped review remain available when broader
+acquisition stops. Earlier mode-based routes remain compatibility APIs.
+[Product validation](product-validation.md) records which checks ran through
+synthetic adapters, browser UI, native Figma and the packaged app; these are
+separate acceptance layers.
 
 ## 1. Pin a permitted source
 
@@ -23,7 +23,9 @@ invalidates a live cursor rather than silently changing the task target.
 | Bounded capture | Legacy `Snapshot` with inline node array and optional PNG. | Default 5,000 nodes/2 MB/5 s; ceilings 10,000/4 MB/15 s. A limit-hit prefix stays incomplete and cannot support new approval. |
 | Legacy independent acquisition | Overview, structure or either order, with stage status, elapsed/observed counts, cancellation and retry. An overview-only result can become a visual draft; a fully complete bounded structure can be committed as a Snapshot. | Preview has 2,048 px default long-edge and 8 MB PNG budget. Native export may continue after cancellation; image and structure have separate times. |
 | Normal resumable import | Scale-2 overview (default long edge 4,096px) plus complete chunk-backed editor sources; valid images become proposed drafts automatically and structure attaches when the editor is clean. | Settings default to 200,000 nodes/64 MB; node/byte/run budgets pause. Same-session resume reads updated settings; safety ceilings are 1,000,000 nodes/128 MB. |
-| Chunked collection | Complete selected subtree or explicit descendant branch, stored as acknowledged immutable chunks. | 500 nodes/1 MB per packet; default 200,000 nodes/64 MB, configurable up to 1,000,000/128 MB. Cooperative pause follows a durable packet; same-session resume expires after idle/source change. A partial collection is not queryable complete source. |
+| Chunked collection | Complete selected subtree or explicit descendant branch, stored as acknowledged immutable chunks. | 500 nodes/1 MB per packet; default 200,000 nodes/64 MB, configurable up to 1,000,000/128 MB. Cooperative pause follows a durable packet; same-session resume expires after idle/source change. Partial records remain queryable as observed evidence; only a proven closed subtree or complete original scope supports source approval. |
+| Focused part | Fresh complete traversal of a known incomplete saved container, linked to the original task and historical image. | Reads only that subtree; validates original enclosing membership. Releasing a broader paused cursor requires consent and never completes the broader task. |
+| Reconnect continuation | A separate generation revalidates the original subtree and receives compact receipts for exactly matching saved packets. | Requires consent for repeated native reads; preserves old records/approvals. Packet reuse saves transfer, not native getter work. |
 | Selective inspection | Explicit IDs with metadata or requested original text; one parent's immediate children in pages. | Up to 100 IDs and 1 MB per observation; up to 100 direct-child records/96 KB per page. No sibling/descendant coverage is implied. |
 
 Native Figma may allocate a wide parent's entire `children` array before the
@@ -40,11 +42,16 @@ regions, but matching, confirmation and approval are unavailable. A complete
 collection can create a source-only scope or attach to a visual draft only when
 file, page, root and bounds match. The visual observation is preserved. No partial
 chunk prefix is converted to a complete Snapshot or combined with an image as one
-atomic Figma version. Existing approved annotations remain intact; attaching
+atomic Figma version. Verified partial records can be inspected without this
+attachment. A closed subtree can create a separate branch-backed scope using the
+same historical enclosing image and copied proposed regions. The branch's source
+bounds and completeness remain distinct from that image and the original task. Existing approved annotations remain intact; attaching
 structure to a visual draft resets its proposed regions' source review.
 
 The editor pages metadata and shows loaded overlay bounds versus the collection's
-full count. Exact TEXT and chosen source records are resolved on demand. Cached
+full count. Exact saved TEXT and chosen source records are resolved on demand. This local
+paging is lazy; native traversal still reads full records and exact TEXT for
+every node in the requested subtree. Cached
 selective observations remain separate from project annotations and cannot be
 promoted into full-subtree evidence merely because their requested IDs returned.
 
@@ -68,8 +75,8 @@ saved capture image.
 ## 5. Confirm sources, specifications and meaning
 
 The user saves an intended reference set and, where required, explicitly invokes
-**Confirm sources**. Every new collection-backed annotation requires complete
-backing, at least one selected source reference and this confirmation before
+**Confirm sources**. Every new collection- or branch-backed annotation requires complete
+backing for its declared scope, at least one selected source reference and this confirmation before
 approval. Legacy snapshots require confirmation for geometric ambiguity or
 rendering uncertainty. Changing geometry/references invalidates review; AI cannot
 supply source confirmation. Approval is a separate semantic decision.
@@ -87,11 +94,19 @@ information. A child under an unapproved ancestor is withheld from the approved
 hierarchy. MCP also offers bounded targeted source reads and a proposal-writing
 path, but not semantic approval or arbitrary file/shell access.
 
-Capture bundles move up to two bounded Snapshots into a fresh workspace. Source
-transfer streams one complete collection and optional overview as an at-most-80 MB
-NDJSON file into a fresh unreviewed scope in the current workspace. Both preserve
-source material, not human annotations, specifications or approval. Digests and
+Standard V2 source transfer streams one complete collection, verified branch or
+complete bounded Snapshot with optional image context in an at-most-80 MB NDJSON
+file. Import creates fresh unreviewed evidence in the current workspace. Earlier
+V1 source transfers and capture bundles remain readable; legacy capture bundles
+create a fresh workspace. These formats preserve source material, not human
+annotations, specifications or approval. Digests and
 coverage checks establish local integrity, not origin permission or freshness.
+
+A fast busy rejection for a structure packet may be retried once after 250 ms,
+within the original packet/run deadlines and only while the task remains active
+in the same session. Another busy response or timeout pauses for Continue.
+Cancellation, pause, deterministic data failures and image export never trigger
+that retry. Restoring the workspace does not start heavy reads automatically.
 
 ## Optional and future work
 

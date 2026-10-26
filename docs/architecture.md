@@ -1,8 +1,11 @@
 # Architecture — local source and human review
 
-This describes the 0.2.1 architecture. The normal editor now uses one image-plus-chunked import with locally persisted resource settings; earlier bounded/mode-based APIs remain compatibility paths. See [ADR 0013](adr/0013-configurable-import-budgets.md). Versioned 0.1.1 assets remain a
-separate historical baseline. [ADRs](adr/) explain decisions and
-[product validation](product-validation.md) distinguishes actual native, browser,
+This describes the 0.3.0 candidate source. A single normal acquisition task owns
+its image, durable partial evidence, continuation and focused parts. Earlier
+bounded/mode-based APIs remain callable compatibility paths but are omitted from
+normal MCP discovery. [ADR 0012](adr/0012-recoverable-source-evidence.md) specifies
+recovery; [ADR 0013](adr/0013-configurable-import-budgets.md) specifies settings.
+[Product validation](product-validation.md) separates actual native, browser,
 synthetic and package checks.
 
 ```text
@@ -38,18 +41,28 @@ choice for this version. Acquisition jobs, collection chunks and selective
 observations have separate caches and retention limits. A completed collection's
 project reference is bound to its content hash and source identity; mutations,
 approval and approved exports fail closed if required backing evidence is missing
-or corrupt. Referenced collections cannot be removed. Backups must include both
-project JSON and its bound collection chunks.
+or corrupt. Referenced collections, focused-part parents/context and active recovery
+predecessors cannot be removed. Evidence leases protect reads and creation of
+references against concurrent deletion; deletion rechecks dependencies after
+cursor-release acknowledgement. Backups must include project JSON and all bound
+collection chunks.
 
 The UI edits semantic regions, hierarchy and specification relations. It can
 show a visual-only draft with proposed annotations, or attach a complete source
 collection to the same file/page/root/bounds without pretending that image and
 structure were atomic. Collection-backed source search, overlays and original
 TEXT use bounded pages; loaded overlays are labeled against the full node count.
-Saved source sets require explicit confirmation before new collection-backed
-approval. Optional model output enters a proposal queue and never silently
+Partial records remain browsable with explicit received-only coverage. A verified
+closed subtree can bind a branch scope, preserving the historical enclosing image
+and proposed-region geometry while retaining separate source coverage. A focused
+fresh part retains its original enclosing identity across restarts; it cannot
+escape that scope because selection or ancestry changed. Saved source sets require
+explicit confirmation before new collection- or branch-backed approval. Optional model output enters a proposal queue and never silently
 changes approved records. The MCP surface reads bounded approved context and
-live targeted source data, and can stage proposals; it cannot approve meaning.
+source task progress/evidence, and can stage proposals; it cannot approve meaning.
+Its normal acquisition tools are `acquire_source_task`, `get_source_task`,
+`continue_source_task` and `read_source_evidence`. Explicit cost confirmation is
+required before broad revalidation or releasing a paused cursor for a part.
 
 ## Distinct storage and interchange contracts
 
@@ -58,8 +71,10 @@ live targeted source data, and can stage proposals; it cannot approve meaning.
 | Legacy `Snapshot` | Bounded inline nodes, provenance, optional PNG, completeness flag | Only its captured selected subtree when `complete=true`; partial prefixes cannot support new approval. |
 | Visual `EvidenceScope` | Overview PNG, bounds/provenance, no inline nodes | Visual observation only; annotations remain proposed. |
 | Collection `EvidenceScope` | Immutable complete selected-subtree chunk reference, optional independently timed overview | Structural coverage of that root and descendants; never unseen siblings or one immutable Figma revision. |
+| Partial collection view | Verified immutable saved packets, received metadata/text and closed-subtree ranges | Only observed records; never the unfinished enclosing source. |
+| Branch `EvidenceScope` | Digest-bound closed subtree plus optional historical image context and separate coverage bounds | Complete saved branch only; outer task and unrelated siblings remain incomplete. |
 | Selective inspection | Immutable ID/field or direct-child observations, separately cached and unreviewed | Only explicit IDs/fields or the enumerated parent's immediate children. |
-| Capture bundle / source transfer | Up to two bounded Snapshots / one complete collection plus optional overview | Local byte/coverage validation, not authenticity, permission or semantic approval. |
+| Source transfer / older capture bundle | Standard V2 transfer for a complete collection, verified branch or complete bounded Snapshot; older files remain readable | Local byte/coverage validation, not authenticity, permission, live freshness or semantic approval. |
 
 `src/shared/contracts.ts`, `structure-collection.ts`, `selective-source.ts` and
 `source-transfer.ts` define the exact runtime schemas. The primary budgets are
@@ -70,6 +85,31 @@ direct children per response; and an 80 MB source-transfer file. These are
 different contracts. Exact 50,000-code-unit TEXT records are rejected on overflow,
 not shortened. See [data model](data-model.md) and
 [collection verification](evaluation/collection-backed-workflow.md) for full limits.
+
+## Continuation and native work
+
+A valid paused cursor resumes at the next acknowledged packet. A lost cursor
+starts a separate generation after consent, preserving the original target and
+old approval bindings. Revalidation traverses the source once, using old packet
+boundaries and exact canonical-payload hashes. A matching packet returns a compact
+receipt; the server restores verified saved bytes into the new generation with
+its new observation metadata. Changed packets retain new values. This detects
+required fields and inventories as they are reread, but cannot supply an atomic
+cross-read Figma revision. It is a transfer saving, not a native-read saving.
+
+For a known incomplete container, a focused part reads only that subtree after
+fresh membership validation. Its durable `partOf` reference retains the parent
+attempt and original image context. A complete part does not finish the original
+whole-source request. The broader live cursor is released only after consent;
+resuming that broader task then requires revalidation.
+
+Heavy plugin operations stay serialized. One fast `PLUGIN_BUSY` rejection may be
+retried after 250 ms with the identical packet command, inside the original
+packet and run deadlines. Pause, cancellation or a session change prevents that
+retry. A second busy response or timeout pauses the task; Continue can replay a
+cached packet without advancing twice. Image export, source changes and integrity
+failures are never automatically retried. Full native records, including TEXT,
+are acquired for the requested subtree; only local evidence/text queries are lazy.
 
 ## Local trust boundaries
 

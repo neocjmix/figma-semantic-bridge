@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IdSchema, RectSchema, SourceNodeSchema } from './contracts.js';
+import { AncestorRenderingSchema, IdSchema, RectSchema, SourceNodeSchema } from './contracts.js';
 import { MAX_COLLECTION_BYTES, MAX_COLLECTION_NODES } from './import-settings.js';
 
 export const STRUCTURE_CHUNK_NODES = 500;
@@ -20,13 +20,17 @@ export type StructureChunk = z.infer<typeof StructureChunkSchema>;
 
 export const CollectionSourceSchema = z.object({fileKey:IdSchema,pageId:IdSchema,nodeId:IdSchema,
   name:z.string().max(1000),type:z.string().max(80),bounds:RectSchema,
-  // Present only for a branch explicitly requested from a selective inspection.
+  // Present for a branch requested from an inspection or a saved source task.
   // A complete collection covers nodeId and its descendants, never scopeId's siblings.
-  scopeId:IdSchema.optional(),inspectionId:IdSchema.optional(),parentId:IdSchema.optional(),
+  scopeId:IdSchema.optional(),inspectionId:IdSchema.optional(),parentId:IdSchema.nullable().optional(),
+  ancestorRendering:AncestorRenderingSchema.optional(),
 }).strict().superRefine((value,ctx)=>{
-  const count=[value.scopeId,value.inspectionId,value.parentId].filter(item=>item!==undefined).length;
-  if(count!==0&&count!==3)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Branch provenance must be complete.'});
+  if((value.scopeId===undefined)!==(value.parentId===undefined)||value.inspectionId!==undefined&&value.scopeId===undefined)
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:'A branch must preserve its enclosing root and observed parent.'});
 });
+export const CollectionPartOfSchema=z.object({
+  collectionId:IdSchema,contextCollectionId:IdSchema,contextRootId:IdSchema,contextBounds:RectSchema,
+}).strict();
 export const CollectionStatusSchema=z.enum(['prepared','running','paused','complete','failed','cancelled','interrupted']);
 export const CollectionErrorSchema=z.object({code:z.string().max(80),message:z.string().max(1000)}).strict();
 export const CollectionViewSchema=z.object({
@@ -36,6 +40,10 @@ export const CollectionViewSchema=z.object({
   createdAt:z.string().datetime(),updatedAt:z.string().datetime(),finishedAt:z.string().datetime().nullable(),
   elapsedMs:z.number().int().min(0),error:CollectionErrorSchema.nullable(),
   overviewAcquisitionId:IdSchema.optional(),
+  partOf:CollectionPartOfSchema.optional(),
+  recovery:z.object({previousCollectionId:IdSchema,originalCollectionId:IdSchema,
+    revalidatedNodes:z.number().int().min(0).max(STRUCTURE_COLLECTION_NODES),
+    reusedPackets:z.number().int().min(0).max(STRUCTURE_COLLECTION_NODES)}).strict().optional(),
   pauseReason:z.enum(['user','time','nodes','bytes','busy']).nullable().optional(),
   pauseRequested:z.boolean().optional().default(false),
   warnings:z.array(z.string().max(2000)).max(100),consistency:z.literal('live-session-observation'),

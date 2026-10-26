@@ -4,6 +4,13 @@ This log records executed evidence rather than changing the requirements in the
 architecture, pipeline or roadmap. The branch builds an executable local product;
 this log does not certify release readiness or every Figma Desktop acceptance gate.
 
+## 0.3.0 recoverable source workflow, 2026-10-27
+
+See the [recovery acceptance record](evaluation/release-0.3.0-acceptance.md) for
+current results and their boundaries. Saved partial browsing, confirmed reconnect
+rechecks, focused subtree acquisition and closed-branch approval are separate
+from immutable-revision, original production-file and independent human claims.
+
 ## 0.2.1 import and settings verification, 2026-10-26
 
 See [0.2.1 acceptance](evaluation/release-0.2.1-acceptance.md): 414 source tests,

@@ -2,7 +2,7 @@
 
 ## 한국어
 
-0.2.0 이전 버전에서 **0.2.1 알파**로 올릴 때는 앱과 Figma 플러그인을 함께 바꾸고 MCP 설정을
+이전 버전에서 **0.3.0 알파**로 올릴 때는 앱과 Figma 플러그인을 함께 바꾸고 MCP 설정을
 갱신하세요. 기존 작업 공간·원문·승인·연결 토큰·언어 설정은 유지합니다.
 앱 실행 파일은 `/Applications`, 작업 자료는 기본적으로 `~/.figma-semantic-bridge`에
 별도로 있습니다. 실제 데이터 위치는 **브리지 → 로컬 데이터 폴더 보기**로 확인하세요.
@@ -28,14 +28,14 @@ ditto "$HOME/.figma-semantic-bridge" "$backup_dir/data"
 
 ### 2. 앱과 플러그인 교체
 
-1. [0.2.1 릴리즈](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.2.1-alpha)의
+1. [0.3.0 릴리즈](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.3.0-alpha)의
    DMG 또는 앱 ZIP을 받고 체크섬을 확인합니다.
 2. 기존 앱의 경로와 루트 폴더를 유지하며 **Contents를 교체**합니다. 기존 앱을 이동하거나
    이름을 바꾸면 Figma가 백업 사본의 플러그인을 따라갈 수 있습니다.
    앱이 종료된 상태에서 마운트된 새 앱으로 바꾸는 예시는 다음과 같습니다.
 
 ```sh
-rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.2.1/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
+rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.3.0/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
 codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 "/Applications/Figma Semantic Bridge.app/Contents/MacOS/FigmaSemanticBridge" --release-info
 ```
@@ -57,11 +57,11 @@ codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 ### 3. MCP 갱신과 확인
 
 새 앱의 **브리지 → MCP 설정 복사**로 기존 `figma_semantic_bridge` 항목만 갱신합니다.
-0.2.1의 앱·MCP는 `https://127.0.0.1:4178`과 같은 데이터 폴더의 비공개 인증서를
+0.3.0의 앱·MCP는 `https://127.0.0.1:4178`과 같은 데이터 폴더의 비공개 인증서를
 사용합니다. 플러그인 포트는 4177입니다. 0.1.x의 HTTP 설정이나 오래된 플러그인과
 섞어 쓰지 마세요. 로컬 인증서를 시스템에 설치할 필요가 없습니다.
 
-- `--release-info`와 앱의 로컬 서비스가 `0.2.1`인지 확인합니다.
+- `--release-info`와 앱의 로컬 서비스가 `0.3.0`인지 확인합니다.
 - 작은 허용된 원본의 이름·미리보기를 읽어 연결을 확인합니다.
 - 기존 작업 공간과 승인 맥락을 열고 언어·원문·승인이 유지됐는지 확인합니다.
 - MCP에서 실제로 `list_projects`, 필요한 작업 공간의 `get_approved_context`를 호출합니다.
@@ -76,6 +76,8 @@ codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 복원 전에도 앱·플러그인·모든 쓰기 서비스를 중지하고 현재 상태를 별도로 백업하세요.
 **같은 시점의 앱과 데이터 전체**를 복원한 뒤 등록된 플러그인 경로와 MCP 설정을
 맞춥니다. 이전 앱에 새 데이터 일부만 섞는 다운그레이드는 보장하지 않습니다.
+0.3.0의 부분 검토·복구 기록은 이전 앱이 읽을 수 없을 수 있습니다. 이전 앱만 덮어쓰지
+말고 업데이트 전의 앱과 데이터 전체를 함께 복원하세요.
 0.1.1로 돌아가면 그 버전의 알려진 보안 제한도 다시 적용됩니다.
 
 앱만 제거해도 작업 자료는 남습니다. 자료까지 삭제하려면 필요한 전체 백업을 먼저
@@ -84,7 +86,7 @@ codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 
 ## English
 
-When moving from 0.2.0 or earlier to **0.2.1 alpha**, update the app and Figma plugin together
+When moving from an earlier version to **0.3.0 alpha**, update the app and Figma plugin together
 and refresh MCP configuration. Preserve workspaces, original text, approvals, the
 pairing token and language preferences. The app in `/Applications` is separate
 from the default data directory, `~/.figma-semantic-bridge`. Use **Bridge → Reveal
@@ -114,14 +116,14 @@ key. Keep it private and out of public repositories or shared folders.
 ### 2. Replace the app and plugin
 
 1. Download the DMG or app ZIP from the
-   [0.2.1 release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.2.1-alpha)
+   [0.3.0 release](https://github.com/neocjmix/figma-semantic-bridge/releases/tag/v0.3.0-alpha)
    and check its checksum.
 2. Keep the installed app's path and root directory identity, and replace its
    **Contents** while it is closed. Moving or renaming the original app can make
    Figma follow the plugin in that backup. With the new DMG mounted:
 
 ```sh
-rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.2.1/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
+rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.3.0/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
 codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 "/Applications/Figma Semantic Bridge.app/Contents/MacOS/FigmaSemanticBridge" --release-info
 ```
@@ -143,12 +145,12 @@ restore the backup and investigate; do not disable verification.
 ### 3. Refresh MCP and check the update
 
 Use **Bridge → Copy MCP Configuration** in the new app to replace only the existing
-`figma_semantic_bridge` entry. The 0.2.1 app/MCP use `https://127.0.0.1:4178` and the
+`figma_semantic_bridge` entry. The 0.3.0 app/MCP use `https://127.0.0.1:4178` and the
 private identity in the same data directory. The plugin uses port 4177. Do not mix
 the old HTTP MCP configuration or plugin with the new app. Installing a system
 certificate is not required.
 
-- Check `--release-info` and the local service version are `0.2.1`.
+- Check `--release-info` and the local service version are `0.3.0`.
 - Read a small permitted source's name and preview to check the plugin connection.
 - Open existing work and approved context; check languages, original text and approvals.
 - Actually call `list_projects` and the relevant `get_approved_context` through MCP.
@@ -163,7 +165,9 @@ a network-supplied replacement certificate or turn off certificate validation.
 Before restoring, stop every writer and separately back up the current state.
 Restore the **app and complete data from the same backup**, then align the plugin
 registration and MCP paths. Downgrading by mixing old apps with newer partial data
-is not guaranteed. Returning to 0.1.1 also restores that version's known security limits.
+is not guaranteed. Older apps may not read 0.3.0 part-review and recovery records;
+restore the entire pre-update data backup together with its app. Returning to
+0.1.1 also restores that version's known security limits.
 
 Removing the app leaves local work in place. Before deleting data, make a complete
 backup and confirm the actual directory and the user's intent. Remove the local

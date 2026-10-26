@@ -1,4 +1,4 @@
-# Install Figma Semantic Bridge 0.2.1 Alpha
+# Install Figma Semantic Bridge 0.3.0 Alpha
 
 [한국어](alpha-installation.md) · [User guide](user-guide.en.md) · [Upgrade and backup](upgrade-guide.md)
 
@@ -19,13 +19,13 @@ before replacing files. Use the same release for the app and plugin.
   to make setup pass.
 
 Download matching files from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
-Check that the selected release and files say **0.2.1**.
+Check that the selected release and files say **0.3.0**.
 
 | File | Purpose |
 | --- | --- |
-| `figma-semantic-bridge-0.2.1-macos-arm64.dmg` | Install the app into Applications |
-| `figma-semantic-bridge-0.2.1-macos-arm64.zip` | Alternative app archive |
-| `figma-semantic-bridge-plugin-0.2.1.zip` | Optional separate prebuilt plugin; the app already includes it |
+| `figma-semantic-bridge-0.3.0-macos-arm64.dmg` | Install the app into Applications |
+| `figma-semantic-bridge-0.3.0-macos-arm64.zip` | Alternative app archive |
+| `figma-semantic-bridge-plugin-0.3.0.zip` | Optional separate prebuilt plugin; the app already includes it |
 | `SHA256SUMS` and adjacent `.sha256` files | Compare downloaded bytes with the release's checksums |
 | Installation and user guides | Offline copies of these instructions |
 
@@ -104,8 +104,9 @@ record the exact access condition and use permitted imported observations meanwh
 5. Check a JSON or Markdown save through the app's native file dialog. Confirm
    the file contains only the expected approved context.
 
-An image-only draft is useful for drawing, but cannot be approved until complete
-matching source structure is attached. For large scopes and targeted reads, use
+An image-only draft is useful for drawing. Before approval, wait for complete
+matching structure to attach, or prepare the needed part and review it separately.
+For large scopes and targeted reads, use
 [the acquisition guide](acquisition-workflow.en.md).
 
 ## 5. Register MCP and make a real call
@@ -160,7 +161,7 @@ also requires per-request consent for the selected content.
 | Symptom | Next step |
 | --- | --- |
 | macOS blocks launch | Verify release and integrity, then follow the per-app system procedure; respect organizational restrictions |
-| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.2.1 transports must not be mixed |
+| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.3.0 transports must not be mixed |
 | Local certificate or permissions error | Check ownership and private permissions of the actual data directory; preserve it and do not accept a network-supplied pin |
 | App editor asks for a token | Use the installed app's embedded editor and check startup status; a separately opened browser does not auto-pair |
 | Plugin will not connect | Confirm matching app/plugin versions, the current token and the running app; close and rerun the updated plugin |

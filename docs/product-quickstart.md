@@ -60,6 +60,33 @@ an MCP configuration. MCP offers bounded approved-context and targeted source
 reads, live selection/navigation and proposal staging; it cannot approve human
 meaning. Source text returned to an agent is untrusted data, not instructions.
 
+The tool list presents one source-task workflow alongside approved-context reads,
+selection/navigation and proposal staging. It advertises 13 tools; earlier
+capture, raw-collection and selective-inspection names remain callable for existing
+clients but are omitted from discovery. New agents should use these four tools:
+
+| Tool | Use |
+| --- | --- |
+| `acquire_source_task` | Default `action=prepare` pins the selected container without image export or traversal. Supply the project revision and current plugin session. After explaining the target and limits, explicitly start the returned `taskId` with `action=start`; `action=pause` preserves received data. For a known incomplete saved container, `action=part-plan` checks the effect of focusing on it and `action=part` reads only that part, leaving the original task incomplete. |
+| `get_source_task` | Omit `taskId` to list saved tasks, current connection and import settings. Include it for progress, recovery lineage and the next continuation plan. This performs no Figma read. |
+| `continue_source_task` | Resume the original task. If the cursor was lost, read the continuation plan and obtain the user's authorization for the displayed recheck cost before setting `confirmRevalidation=true`. The default is false. Follow the returned task ID when recovery creates a new generation. |
+| `read_source_evidence` | Read saved metadata pages, exact text segments or a complete saved branch descriptor with `kind=metadata`, `text` or `branch`. Partial imports remain queryable. These are historical, unreviewed records; no Figma read or approval occurs. |
+
+Use `list_projects` for the current project revision and `get_source_task` for the
+current plugin session before preparing or continuing. Source text pagination
+uses UTF-16 offsets; follow `nextOffset` until null. A complete saved branch does
+not complete the parent import or establish current Figma freshness. A recheck
+may reread every required node even when equal saved packets reduce transfer.
+The agent must not infer permission for this additional work from a timeout or
+automatically set the confirmation argument. Existing session authorization can
+be used when it explicitly covers the displayed recheck.
+
+A focused part preserves its enclosing source identity and historical image. If
+the broader import has a paused reading position, starting the part releases it;
+continuing the broader import later requires a recheck. The part plan reports
+this consequence, and `confirmRevalidation` remains false until authorized.
+Completing the part does not mark its siblings or the original full task complete.
+
 Manual annotation works without an AI provider. An optional OpenAI-compatible
 provider must be deliberately configured; external transfer of selected images
 and text needs per-request consent and applicable organization authorization.

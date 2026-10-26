@@ -190,7 +190,13 @@ export async function startServer(options:ServerOptions={}) {
             const project=importCaptureBundle(input.bundle,input.name);
             json(response,201,await store.importProject(project));return;
           }
-          const evidenceMatch=path.match(/^\/api\/projects\/([^/]+)\/evidence-scopes(?:\/([^/]+)\/(attach|nodes|text|resolve))?$/);
+          const evidenceBranchMatch=path.match(/^\/api\/projects\/([^/]+)\/evidence-scopes\/branch$/);
+          if(evidenceBranchMatch&&request.method==='POST'){
+            const value=RevisionSchema.extend({collectionId:IdSchema,nodeId:IdSchema,contextScopeId:IdSchema.optional()}).parse(await body(request));
+            json(response,201,await evidence.createBranch(evidenceBranchMatch[1]!,value.expectedRevision,{collectionId:value.collectionId,nodeId:value.nodeId,
+              ...(value.contextScopeId?{contextScopeId:value.contextScopeId}:{})}));return;
+          }
+          const evidenceMatch=path.match(/^\/api\/projects\/([^/]+)\/evidence-scopes(?:\/([^/]+)\/(attach|nodes|text|resolve|copy-regions))?$/);
           if(evidenceMatch&&request.method==='POST'){
             const projectId=evidenceMatch[1]!,scopeId=evidenceMatch[2],action=evidenceMatch[3],input=await body(request);
             if(!scopeId){
@@ -201,6 +207,10 @@ export async function startServer(options:ServerOptions={}) {
             if(action==='attach'){
               const value=RevisionSchema.extend({collectionId:IdSchema}).parse(input);
               json(response,200,await evidence.attach(projectId,scopeId,value.expectedRevision,value.collectionId));return;
+            }
+            if(action==='copy-regions'){
+              const value=RevisionSchema.extend({sourceScopeId:IdSchema,annotationIds:z.array(IdSchema).min(1).max(200)}).parse(input);
+              json(response,200,await evidence.copyRegions(projectId,scopeId,value.expectedRevision,value.sourceScopeId,value.annotationIds));return;
             }
             const project=await store.get(projectId);
             if(action==='nodes'){json(response,200,await evidence.query(project,scopeId,CollectionQuerySchema.parse(input)));return;}
@@ -271,13 +281,14 @@ export async function startServer(options:ServerOptions={}) {
             try{json(response,201,await collections.prepareFromInspection(branchMatch[1]!,value.expectedRevision,value.expectedSessionId,selective,value.inspectionId,value.nodeId,abort.signal));}
             finally{response.off('close',onClose);}return;
           }
-          const collectionMatch=path.match(/^\/api\/projects\/([^/]+)\/collections(?:\/([^/]+)(?:\/(start|stop|resume|remove|nodes|text))?)?$/);
+          const collectionMatch=path.match(/^\/api\/projects\/([^/]+)\/collections(?:\/([^/]+)(?:\/(start|stop|resume|remove|nodes|text|evidence|evidence-text|evidence-branch|continue-plan|continue|part-plan|part))?)?$/);
           if(collectionMatch){
             const projectId=collectionMatch[1]!,id=collectionMatch[2],action=collectionMatch[3];
             await store.get(projectId);
             if(request.method==='GET'){
               if(!id){json(response,200,{collections:collections.list(projectId)});return;}
               if(!action){json(response,200,collections.get(projectId,id));return;}
+              if(action==='continue-plan'){json(response,200,collections.continuePlan(projectId,id));return;}
             }
             if(request.method==='POST'){
               const input=await body(request);
@@ -295,7 +306,26 @@ export async function startServer(options:ServerOptions={}) {
               }
               if(action==='nodes'){json(response,200,await collections.store.query(projectId,id,CollectionQuerySchema.parse(input)));return;}
               if(action==='text'){json(response,200,await collections.store.text(projectId,id,CollectionTextQuerySchema.parse(input)));return;}
+              if(action==='evidence'){json(response,200,await collections.store.evidence(projectId,id,CollectionQuerySchema.parse(input)));return;}
+              if(action==='evidence-text'){json(response,200,await collections.store.evidenceText(projectId,id,CollectionTextQuerySchema.parse(input)));return;}
+              if(action==='evidence-branch'){
+                const value=z.object({nodeId:IdSchema}).strict().parse(input);json(response,200,await collections.store.evidenceBranch(projectId,id,value.nodeId));return;
+              }
+              if(action==='part-plan'){
+                const value=z.object({nodeId:IdSchema}).strict().parse(input);json(response,200,await collections.partPlan(projectId,id,value.nodeId));return;
+              }
+              if(action==='part'){
+                const value=RevisionSchema.extend({nodeId:IdSchema,expectedSessionId:IdSchema,confirmRevalidation:z.boolean().default(false)}).parse(input);
+                const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                try{json(response,202,await collections.part(projectId,id,value,abort.signal));}finally{response.off('close',onClose);}return;
+              }
+              if(action==='continue'){
+                const value=RevisionSchema.extend({expectedSessionId:IdSchema,confirmRevalidation:z.boolean().default(false)}).parse(input);
+                const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
+                try{json(response,202,await collections.continue(projectId,id,value,abort.signal));}finally{response.off('close',onClose);}return;
+              }
               z.object({}).strict().parse(input);
+              if(action==='continue-plan'){json(response,200,collections.continuePlan(projectId,id));return;}
               if(action==='start'||action==='resume'){json(response,202,await collections.start(projectId,id,action==='resume'));return;}
               if(action==='stop'){json(response,200,await collections.stop(projectId,id));return;}
               if(action==='remove'){await collections.remove(projectId,id);json(response,200,{removed:true});return;}

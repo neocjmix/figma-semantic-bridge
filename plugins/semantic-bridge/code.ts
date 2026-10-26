@@ -93,7 +93,7 @@ figma.ui.onmessage=async (message:unknown)=>{
     else if(command.type==='read_structure_chunk'){
       if(selectiveReader.hasCursor())throw new PluginCommandError('PLUGIN_BUSY','Release the active immediate-child cursor before reading structure.');
       clearCursorIdle();cursorIdleMs=command.cursorIdleMs??10*60*1000;
-      try {result=await structureReader.readChunk(command,options);}
+      try {result=await structureReader.readChunkWithReplay(command,options);}
       finally {refreshCursorIdle();}
     } else if(command.type==='release_structure_cursor'){
       clearCursorIdle();result=structureReader.release(command.collectionId);refreshCursorIdle();

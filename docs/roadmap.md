@@ -1,10 +1,13 @@
 # Development roadmap — delivered source, release gates and future work
 
-The original Phase 0–6 plan produced the published MIT-licensed 0.1.1 alpha.
-**0.2.1 alpha** adds a single normal import, 2× overview images and configurable resource budgets; cross-session partial recovery remains future work under ADR 0012. **0.2.0 alpha** follows with image-first acquisition,
-collection-backed editing, selective reads, source transfer and local transport
-hardening. The release verification report identifies the packaged source and assets. [Product validation](product-validation.md) contains executed
-evidence; [completion status](completion-status.md) separates external dependencies.
+**0.3.0 source** adds durable partial evidence browsing, scoped branch
+review, targeted acquisition of known incomplete containers and consented
+revalidation after reconnect. **0.2.1 alpha** established one normal import,
+2× overviews and configurable budgets; **0.2.0 alpha** added collection-backed
+editing, selective reads, source transfer and local transport hardening. The
+release verification report identifies the actual packaged source and assets.
+[Product validation](product-validation.md) records executed evidence;
+[completion status](completion-status.md) separates external dependencies.
 
 ## Delivered in the current source
 
@@ -16,13 +19,18 @@ evidence; [completion status](completion-status.md) separates external dependenc
    source navigation, observed hidden/opacity states and explicit confirmation.
    Optional AI produces validated pending proposals; manual work is independent
    of a model provider.
-3. **Separate large-source paths:** overview-only proposed drafts; independent
-   overview/structure steps and bounded legacy capture; complete selected-subtree
-   or branch collection in durable chunks; collection-backed editor matching and
-   chosen-only source/text reads; selective explicit-ID/direct-child observations;
-   source-only NDJSON transfer. Incomplete source never becomes approved complete
-   evidence, and visual/structure observations are not an immutable version.
-4. **Local security candidate:** mutually authenticated encrypted plugin records,
+3. **One normal acquisition workflow:** overview drafts and acknowledged source
+   packets persist independently. Partial metadata/text remain inspectable after
+   interruption. Verified closed branches support scoped review on historical
+   image context. A known incomplete container can be read without unrelated
+   subtrees; the original full task stays incomplete. Continue resumes a valid
+   cursor or starts a consented revalidation generation, compacting equal packets
+   without claiming saved native getter work or an immutable version.
+4. **Consolidated interfaces:** normal MCP discovery exposes task acquisition,
+   progress, continuation and evidence queries; older tools remain callable for
+   compatibility. Standard V2 source transfer supports complete collections,
+   closed branches and complete bounded captures; older files remain readable.
+5. **Local security controls:** mutually authenticated encrypted plugin records,
    pinned desktop/MCP TLS, stricter source/import bounds and reviewed approval
    gates. These current-source controls do not retroactively fix installed 0.1.1.
 
@@ -35,7 +43,7 @@ test results rather than being rewritten as later release proof.
 
 | Order | Owner | Required result |
 | --- | --- | --- |
-| 1. Candidate identity | Agent/repository owner | Keep application, plugin, package and documentation at the same 0.2.0 version/protocol; preserve existing user data and a recoverable backup of the previous app. |
+| 1. Candidate identity | Agent/repository owner | Keep application, plugin, package and documentation at the same candidate application version and supported protocol; preserve existing user data and a recoverable backup of the previous app. |
 | 2. Source gates | Agent | Run the complete TypeScript/Node/build, fixture and browser suites on the final source; record exact counts and candidate revision. Use synthetic public data. |
 | 3. Native/package checks | Agent with permitted local fixture | Build the final app/plugin from a clean candidate; verify pinned local connection, native dialogs, read-only acquisition, source transfer, MCP and restart using owned synthetic data. A prior development-plugin or API run is not package acceptance. |
 | 4. Final artifact verification | Repository owner/agent | Verify clean commit, packaged asset hashes, signatures/declared notarization state, bundled licenses and upgrade/rollback instructions before a tag or upload. Record the actual release artifact, not a planned one. |
@@ -59,7 +67,9 @@ can-view account combination or native peak-memory bound from synthetic fixtures
   independent source/spec labels, error/ambiguity analysis and counterbalanced
   manual/tool/AI productivity measurements. Scripted approval is not a human
   study; mock model success is not model quality.
-- **Later engineering proposals:** immutable/version-pinned cross-observation
+- **Later engineering proposals:** native field-selective structure acquisition
+  with separately persisted text requirements, automatic composition across
+  arbitrary incomplete branches, immutable/version-pinned cross-observation
   acquisition if a provider supports it, automatic source-change reconciliation,
   a general selective coverage ledger, deeper style/asset acquisition, full
   paint/occlusion analysis, other-platform installers, cloud collaboration and

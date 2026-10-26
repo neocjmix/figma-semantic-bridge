@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.2.1 Alpha
+# Figma Semantic Bridge 0.3.0 Alpha
 
 [한국어](README.md) · [Install](docs/alpha-installation.en.md) · [User guide](docs/user-guide.en.md) · [Upgrade](docs/upgrade-guide.md)
 
@@ -14,7 +14,7 @@ as fact.
 
 ## Start here
 
-1. Install the **0.2.1 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
+1. Install the **0.3.0 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
    The Apple Silicon app includes its runtime, local service, editor, MCP server
    and prebuilt Figma plugin. No Node.js installation is needed.
 2. Open the app, choose **Bridge → Reveal Figma Plugin**, and import its
@@ -28,7 +28,7 @@ as fact.
 [Detailed installation and MCP setup](docs/alpha-installation.en.md) covers
 checksums, Figma access, macOS prompts and connection checks. Already using an
 older version? [Update the app and plugin together](docs/upgrade-guide.md).
-The 0.1.1 downloads do not contain the 0.2.1 workflow or transport changes.
+The 0.1.1 downloads do not contain the 0.3.0 workflow or transport changes.
 
 ## Add a source and adjust settings
 
@@ -42,9 +42,12 @@ node/byte/time budgets. Structure defaults to **200,000 nodes and 64 MB**. Reach
 a configured budget pauses; raise it and **Continue** within the same valid
 connection to read from the next unsaved part.
 
-See [Import and settings](docs/acquisition-workflow.en.md). This does not restore
-a lost live cursor after reconnect or app restart, or approve incomplete sources.
-Valid saved sources and permitted source files remain usable without Figma.
+See [Import and settings](docs/acquisition-workflow.en.md). After interruption,
+browse saved nodes and text, review complete parts on the large image, or prepare
+a needed unfinished container. After reconnecting, **Continue** asks you to confirm
+the cost of rechecking the source while preserving earlier evidence, regions and
+approvals. Reviewing a part leaves the whole request incomplete. Saved evidence
+can be browsed without Figma.
 
 ## Review before sharing
 

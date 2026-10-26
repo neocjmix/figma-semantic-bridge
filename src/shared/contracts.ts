@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SelectiveReadNodesCommandSchema, SelectiveReadChildrenCommandSchema } from './selective-source.js';
 import { OverviewOptionsSchema, MAX_COLLECTION_NODES, MAX_COLLECTION_BYTES } from './import-settings.js';
+import { StructureReplayHintSchema } from './structure-replay.js';
 
 export const SCHEMA_VERSION = '1.0.0' as const;
 export const IdSchema = z.string().min(1).max(160);
@@ -57,17 +58,53 @@ export const CollectionReferenceSchema = z.object({
   nodeCount: z.number().int().min(1).max(MAX_COLLECTION_NODES), byteCount: z.number().int().min(1).max(MAX_COLLECTION_BYTES),
   observedAt: z.string().datetime(),
 }).strict();
+/** Complete coverage of a verified saved sub-tree, never of its enclosing import. */
+export const AncestorRenderingSchema=z.object({
+  status:z.enum(['hidden','transparent','unknown','potential']),sourceNodeId:IdSchema.nullable(),
+}).strict();
+export const BranchReferenceSchema = z.object({
+  collectionId:IdSchema,nodeId:IdSchema,contentHash:z.string().regex(/^[a-f0-9]{64}$/),
+  startOffset:z.number().int().min(0).max(MAX_COLLECTION_NODES),
+  endOffset:z.number().int().min(1).max(MAX_COLLECTION_NODES),
+  nodeCount:z.number().int().min(1).max(MAX_COLLECTION_NODES),
+  startedAt:z.string().datetime(),observedAt:z.string().datetime(),
+  enclosingRootId:IdSchema,coverage:z.literal('closed-saved-subtree'),freshness:z.literal('not-revalidated'),
+  ancestorRendering:AncestorRenderingSchema,
+}).strict();
+/** First imported observation; repeated transfers retain this provenance without an unbounded history. */
+export const SourceTransferOriginSchema=z.object({
+  kind:z.enum(['snapshot','branch','collection']),scopeId:IdSchema,
+  collection:CollectionReferenceSchema.optional(),branch:BranchReferenceSchema.optional(),
+  acquisition:SnapshotSchema.shape.acquisition,
+}).strict().superRefine((value,ctx)=>{
+  if((value.kind==='branch')!==(value.branch!==undefined)||(value.kind==='collection')!==(value.collection!==undefined)||
+    (value.acquisition!==undefined&&value.kind!=='snapshot'))
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:'Imported origin must match its source kind.'});
+});
 export const EvidenceScopeSchema = z.object({
-  id: IdSchema, name: z.string().min(1).max(300), kind: z.enum(['visual','collection']),
+  id: IdSchema, name: z.string().min(1).max(300), kind: z.enum(['visual','collection','branch']),
   source: SnapshotSchema.shape.source, bounds: RectSchema, preview: PreviewSchema.nullable(),
   warnings: z.array(z.string().max(2000)).max(100),
   visualObservation: z.object({taskId:IdSchema,observedAt:z.string().datetime()}).strict().nullable(),
   collection: CollectionReferenceSchema.nullable(),
+  branch:BranchReferenceSchema.optional(),coverageBounds:RectSchema.optional(),visualBounds:RectSchema.optional(),
+  transferOrigin:SourceTransferOriginSchema.optional(),
 }).strict().superRefine((scope,ctx)=>{
-  if(!scope.source.fileKey || (scope.kind==='visual')!==(scope.collection===null) ||
+  if(!scope.source.fileKey || (scope.kind==='collection')!==(scope.collection!==null) ||
+    (scope.kind==='branch')!==(scope.branch!==undefined) ||
+    (scope.kind==='branch')!==(scope.coverageBounds!==undefined) ||
+    (scope.visualBounds!==undefined&&(scope.kind!=='branch'||!scope.preview)) ||
+    (scope.kind==='branch'&&!!scope.preview!==!!scope.visualBounds) ||
     (scope.kind==='visual'&&(!scope.preview||!scope.visualObservation)) ||
     (!!scope.preview)!==!!scope.visualObservation)
     ctx.addIssue({code:z.ZodIssueCode.custom,message:'Evidence scope requires explicit visual or collection backing.'});
+  if(scope.branch){
+    const inside=(b:z.infer<typeof RectSchema>)=>b.x>=scope.bounds.x-0.01&&b.y>=scope.bounds.y-0.01&&
+      b.x+b.width<=scope.bounds.x+scope.bounds.width+0.01&&b.y+b.height<=scope.bounds.y+scope.bounds.height+0.01;
+    if(scope.branch.nodeId!==scope.source.rootId||scope.branch.endOffset-scope.branch.startOffset!==scope.branch.nodeCount||
+      !scope.coverageBounds||!inside(scope.coverageBounds)||scope.visualBounds&&!inside(scope.visualBounds))
+      ctx.addIssue({code:z.ZodIssueCode.custom,message:'Branch identity, coverage and image bounds must match its declared scope.'});
+  }
 });
 export const SourceReferenceSchema = z.object({
   snapshotId: IdSchema, nodeId: IdSchema,
@@ -118,6 +155,7 @@ export const OperationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_snapshot'), snapshot: SnapshotSchema }).strict(),
   z.object({ type: z.literal('add_evidence_scope'), scope: EvidenceScopeSchema }).strict(),
   z.object({ type: z.literal('attach_scope_collection'), scopeId: IdSchema, collection: CollectionReferenceSchema }).strict(),
+  z.object({ type:z.literal('copy_scope_regions'),sourceScopeId:IdSchema,targetScopeId:IdSchema,annotationIds:z.array(IdSchema).min(1).max(200) }).strict(),
   z.object({ type: z.literal('upsert_annotation'), annotation: AnnotationSchema }).strict(),
   z.object({ type: z.literal('delete_annotation'), id: IdSchema }).strict(),
   z.object({ type: z.literal('review_annotation'), id: IdSchema, status: ReviewStatusSchema }).strict(),
@@ -149,6 +187,7 @@ export const PluginCommandSchema = z.discriminatedUnion('type', [
     scopeId: IdSchema.optional(),
     maxNodes: z.number().int().min(1).max(MAX_COLLECTION_NODES).optional(),
     cursorIdleMs: z.number().int().min(60000).max(1800000).optional(),
+    replay: StructureReplayHintSchema.optional(),
     collectionId: IdSchema, sequence: z.number().int().min(0).max(MAX_COLLECTION_NODES) }).strict(),
   z.object({ type: z.literal('release_structure_cursor'), collectionId: IdSchema }).strict(),
   z.object({ type: z.literal('preview_node'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),

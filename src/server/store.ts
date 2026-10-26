@@ -100,7 +100,7 @@ export class ProjectStore {
     return summaries.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||a.id.localeCompare(b.id));
   }
   async mutate(id:string,expectedRevision:number,operation:Operation,actor:'human'|'ai'='human',evidenceWrite=false,signal?:AbortSignal):Promise<Project> {
-    if(!evidenceWrite&&(operation.type==='add_evidence_scope'||operation.type==='attach_scope_collection'))throw new ServiceError('FORBIDDEN','Use a verified source attachment route.',403);
+    if(!evidenceWrite&&(operation.type==='add_evidence_scope'||operation.type==='attach_scope_collection'||operation.type==='copy_scope_regions'))throw new ServiceError('FORBIDDEN','Use a verified source attachment route.',403);
     const active=()=>{if(signal?.aborted)throw new ServiceError('CANCELLED','Workspace mutation cancelled before its atomic commit.',499);};
     return this.exclusive(id,async()=>{
       active();

@@ -5,6 +5,8 @@ import {
 } from '../shared/structure-collection.js';
 import { utf8Bytes } from '../fixture-analysis/index.js';
 import { PluginCommandError, type CaptureHost, type FigmaReadableNode } from './capture.js';
+import { compactStructureChunk, StructureReplayHintSchema,
+  type StructureReplayResult } from '../shared/structure-replay.js';
 
 type ReadCommand = Extract<PluginCommand, {type:'read_structure_chunk'}>;
 type Frame = {nodes:readonly FigmaReadableNode[]; index:number; parentId:string|null};
@@ -13,7 +15,7 @@ type Cursor = {
   startedAt:string; epoch:number; serial:number; nextSequence:number; lastPacket:StructureChunk|null;
   stack:Frame[]; seen:Set<string>; totalNodes:number; totalBytes:number;
 };
-export interface StructureReadOptions {cancelled?:()=>boolean; yieldControl?:()=>Promise<void>}
+export interface StructureReadOptions {cancelled?:()=>boolean; yieldControl?:()=>Promise<void>; packetNodeLimit?:number}
 export interface StructureReaderOptions {now?:()=>number; observedAt?:()=>string; getChangeEpoch?:()=>number}
 
 function fail(code:string,message:string):never {throw new PluginCommandError(code,message);}
@@ -145,7 +147,7 @@ export class StructureReader {
         this.check(command,options,cursor.serial,cursor.epoch);
         const frame=draft[draft.length-1]!;
         if(frame.index>=frame.nodes.length){draft.pop();continue;}
-        if(nodes.length>=STRUCTURE_CHUNK_NODES||nodes.length>0&&this.now()-start>=1000)break;
+        if(nodes.length>=Math.min(options.packetNodeLimit??STRUCTURE_CHUNK_NODES,STRUCTURE_CHUNK_NODES)||nodes.length>0&&this.now()-start>=1000)break;
         if(cursor.totalNodes+nodes.length>=Math.min(command.maxNodes??STRUCTURE_COLLECTION_NODES,STRUCTURE_COLLECTION_NODES))break;
         const node=frame.nodes[frame.index]!;
         if(node.parent?.id!==frame.parentId) {this.invalidateSource();fail('SOURCE_CHANGED','A source node moved during structure reading.');}
@@ -189,5 +191,11 @@ export class StructureReader {
       cursor.lastPacket=packet;cursor.nextSequence=command.sequence+1;
       return packet;
     } finally {this.host.skipInvisibleInstanceChildren=previous;this.reading=false;}
+  }
+  /** Re-read source fields before substituting a compact acknowledgement for equal stored bytes. */
+  async readChunkWithReplay(command:ReadCommand,options:StructureReadOptions={}):Promise<StructureChunk|StructureReplayResult> {
+    const hint=command.replay===undefined?undefined:StructureReplayHintSchema.parse(command.replay);
+    const packet=await this.readChunk(command,{...options,...(hint?{packetNodeLimit:hint.nodeCount}:{})});
+    return compactStructureChunk(packet,hint);
   }
 }

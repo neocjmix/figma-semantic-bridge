@@ -5,6 +5,7 @@ import { NodePreviewResultSchema, PluginCommandSchema, PluginProgressSchema, Plu
 import { validateNodePreview, validatePreview } from './preview.js';
 import { ServiceError } from './errors.js';
 import { StructureChunkSchema, STRUCTURE_CHUNK_BYTES } from '../shared/structure-collection.js';
+import { StructureReplayResultSchema } from '../shared/structure-replay.js';
 import { SelectiveNodesResultSchema, SelectiveChildrenResultSchema } from '../shared/selective-source-results.js';
 import { SELECTIVE_CHILDREN_WIRE_BYTES, SELECTIVE_NODES_WIRE_BYTES } from '../shared/selective-source.js';
 import { BRIDGE_PROTOCOL, BridgeHelloSchema, BridgeAuthenticateSchema, bridgeEndpoint, bridgeProof, BridgeChannel, BRIDGE_MAX_WIRE_BYTES,
@@ -111,7 +112,13 @@ export class PluginBroker {
         else if(pending.command.type==='preview_capture'){const preview=NodePreviewResultSchema.parse(response.result),settings=pending.command.options;
           validateNodePreview(preview,{dimension:settings?.maxDimension??2048,bytes:settings?.maxBytes??8_000_000,scale:settings?.scale??1});result=preview;}
         else if(pending.command.type==='read_structure_chunk'){
-          result=StructureChunkSchema.parse(response.result);
+          const replay=pending.command.replay?StructureReplayResultSchema.safeParse(response.result):null;
+          if(replay?.success){
+            const c=pending.command,r=replay.data;
+            if(r.collectionId!==c.collectionId||r.sequence!==c.sequence||r.fileKey!==c.fileKey||r.pageId!==c.pageId||r.rootId!==c.nodeId||
+              r.contentHash!==c.replay!.contentHash||r.nodeCount!==c.replay!.nodeCount)throw new Error('Replay receipt does not match the request.');
+            result=r;
+          }else result=StructureChunkSchema.parse(response.result);
           if(Buffer.byteLength(JSON.stringify(result))>STRUCTURE_CHUNK_BYTES)throw new Error('Chunk exceeds wire byte budget.');
         }
         else if(pending.command.type==='release_structure_cursor'||pending.command.type==='release_source_children')result=z.object({released:z.literal(true)}).strict().parse(response.result);
@@ -138,7 +145,7 @@ export class PluginBroker {
     if(options.signal?.aborted)return Promise.reject(new ServiceError('CANCELLED','Plugin request cancelled.',499));
     if(this.pending.size>=(this.options.maxPending??16))return Promise.reject(new ServiceError('PLUGIN_BUSY','Too many pending plugin requests.',429));
     const timeoutMs=options.timeoutMs??20000;
-    if(!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>60000)return Promise.reject(new ServiceError('INVALID_TIMEOUT','Timeout must be between 1 and 60000 ms.'));
+    if(!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>305000)return Promise.reject(new ServiceError('INVALID_TIMEOUT','Timeout must be between 1 and 305000 ms.'));
     const requestId=randomUUID();
     return new Promise((resolve,reject)=>{
       const cancel=(error:Error)=>{

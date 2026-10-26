@@ -33,6 +33,12 @@ async function until<T>(read:()=>Promise<T>,accept:(v:T)=>boolean){
 async function fixture(t:test.TestContext,requestTimeoutMs=1000){
   const dataDir=await mkdtemp(join(tmpdir(),'fsb-collection-server-'));
   let server=await startServer({port:0,dataDir,aiConfig:null,requestTimeoutMs});
+  const packetTimeouts:number[]=[];
+  const request=server.broker.request.bind(server.broker);
+  server.broker.request=(command,options={})=>{
+    if(command.type==='read_structure_chunk')packetTimeouts.push(options.timeoutMs!);
+    return request(command,options);
+  };
   const token=server.token;
   const api=(path:string,body?:unknown)=>fetch(server.url+path,{method:body===undefined?'GET':'POST',headers:{Authorization:`Bearer ${token}`,
     ...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -57,7 +63,7 @@ async function fixture(t:test.TestContext,requestTimeoutMs=1000){
   });
   const prepare=async()=>{const response=await api(base,{expectedRevision:0,expectedSessionId:sessionId});assert.equal(response.status,201);return CollectionViewSchema.parse(await response.json());};
   const get=async(id:string)=>CollectionViewSchema.parse(await(await api(base+'/'+id)).json());
-  return {api,base,project,seen,cancels,prepare,get,reply,replyError,handler(fn:typeof handler){handler=fn;},onRelease(fn:typeof releaseHandler){releaseHandler=fn;},
+  return {api,base,project,seen,cancels,packetTimeouts,prepare,get,reply,replyError,handler(fn:typeof handler){handler=fn;},onRelease(fn:typeof releaseHandler){releaseHandler=fn;},
     async unchanged(){assert.deepEqual(await server.store.get(project.id),project);},
     get url(){return server.url;},token,
     async restart(){await server.close();server=await startServer({port:0,dataDir,token,aiConfig:null});},
@@ -77,7 +83,8 @@ test('chunk acquisition stays separate from projects and exposes complete raw no
   const mcp=createMcpServer(new BridgeApi(h.url,h.token,{allowInsecureHttp:true})),client=new Client({name:'collection-test',version:'1'});
   const [a,b]=InMemoryTransport.createLinkedPair();await mcp.connect(b);await client.connect(a);
   t.after(async()=>{await client.close();await mcp.close();});
-  const tools=await client.listTools();assert.ok(tools.tools.some(tool=>tool.name==='read_collection_text'&&tool.annotations?.readOnlyHint));
+  const tools=await client.listTools();assert.ok(tools.tools.some(tool=>tool.name==='read_source_evidence'&&tool.annotations?.readOnlyHint));
+  assert.ok(!tools.tools.some(tool=>tool.name==='read_collection_text'));
   let offset:number|null=0,text='';
   while(offset!==null){
     const response=await client.callTool({name:'read_collection_text',arguments:{projectId:h.project.id,collectionId:prepared.id,nodeId:'text',offset,limit:37}});
@@ -128,11 +135,27 @@ test('restart refuses continuation of a paused live cursor but retains the incom
   assert.equal((await h.get(prepared.id)).nodeCount,1);assert.notEqual((await h.get(prepared.id)).status,'complete');await h.unchanged();
 });
 
-test('plugin busy pauses without advancing sequence and manual resume completes the same source',async t=>{
+test('one fast busy rejection retries the identical packet within its original deadline',async t=>{
   const h=await fixture(t),prepared=await h.prepare();let busy=true;
   h.handler(request=>{
     if(request.command.type!=='read_structure_chunk')return;
     if(busy){busy=false;h.replyError(request,'PLUGIN_BUSY','Synthetic native read is still running.');return;}
+    h.reply(request,chunk(prepared.id,request.command.sequence));
+  });
+  assert.equal((await h.api(`${h.base}/${prepared.id}/start`,{})).status,202);
+  const complete=await until(()=>h.get(prepared.id),view=>view.status==='complete');
+  assert.equal(complete.nodeCount,2);
+  const reads=h.seen.filter(request=>request.command.type==='read_structure_chunk');
+  assert.deepEqual(reads.map(request=>request.command.type==='read_structure_chunk'&&request.command.sequence),[0,0,1]);
+  assert.equal(h.packetTimeouts[0],1000);assert.ok(h.packetTimeouts[1]!>0&&h.packetTimeouts[1]!<=750);
+  assert.deepEqual(reads[0]!.command,reads[1]!.command);await h.unchanged();
+});
+
+test('repeated busy rejection pauses after one retry and manual resume completes the same source',async t=>{
+  const h=await fixture(t),prepared=await h.prepare();let busy=2;
+  h.handler(request=>{
+    if(request.command.type!=='read_structure_chunk')return;
+    if(busy-->0){h.replyError(request,'PLUGIN_BUSY','Synthetic native read is still running.');return;}
     h.reply(request,chunk(prepared.id,request.command.sequence));
   });
   assert.equal((await h.api(`${h.base}/${prepared.id}/start`,{})).status,202);
@@ -142,8 +165,23 @@ test('plugin busy pauses without advancing sequence and manual resume completes 
   const complete=await until(()=>h.get(prepared.id),view=>view.status==='complete');
   assert.equal(complete.nodeCount,2);
   assert.deepEqual(h.seen.filter(request=>request.command.type==='read_structure_chunk').map(request=>
-    request.command.type==='read_structure_chunk'&&request.command.sequence),[0,0,1]);
+    request.command.type==='read_structure_chunk'&&request.command.sequence),[0,0,0,1]);
   await h.unchanged();
+});
+
+test('pause and shutdown prevent a pending automatic busy retry',async t=>{
+  for(const action of ['pause','shutdown'] as const)await t.test(action,async t=>{
+    const h=await fixture(t),prepared=await h.prepare();
+    h.handler(request=>h.replyError(request,'PLUGIN_BUSY','Synthetic operation is busy.'));
+    await h.api(`${h.base}/${prepared.id}/start`,{});
+    await until(async()=>h.seen.filter(request=>request.command.type==='read_structure_chunk').length,count=>count===1);
+    if(action==='pause'){
+      await h.api(`${h.base}/${prepared.id}/stop`,{});
+      await until(()=>h.get(prepared.id),view=>view.status==='paused');
+    }else await h.restart();
+    assert.equal(h.seen.filter(request=>request.command.type==='read_structure_chunk').length,1);
+    assert.equal((await h.get(prepared.id)).nodeCount,0);await h.unchanged();
+  });
 });
 
 test('failed cursor-release acknowledgement preserves paused ownership until a successful remove',async t=>{
@@ -183,6 +221,7 @@ test('timed-out first packet can be replayed at the same sequence after manual r
   assert.equal((await h.api(`${h.base}/${prepared.id}/start`,{})).status,202);
   const paused=await until(()=>h.get(prepared.id),view=>view.status==='paused');
   assert.equal(paused.error?.code,'PLUGIN_TIMEOUT');assert.equal(paused.chunkCount,0);
+  assert.equal(h.seen.filter(request=>request.command.type==='read_structure_chunk').length,1);
   await until(async()=>h.cancels.includes(lostReply!.requestId),value=>value);
   assert.equal((await h.api(`${h.base}/${prepared.id}/resume`,{})).status,202);
   const complete=await until(()=>h.get(prepared.id),view=>view.status==='complete');

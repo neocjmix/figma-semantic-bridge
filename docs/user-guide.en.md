@@ -1,6 +1,6 @@
-# Figma Semantic Bridge 0.2.1 Alpha user guide
+# Figma Semantic Bridge 0.3.0 Alpha user guide
 
-[한국어](user-guide.ko.md) · [Installation and MCP](alpha-installation.en.md) · [Acquisition choices](acquisition-workflow.en.md)
+[한국어](user-guide.ko.md) · [Installation and MCP](alpha-installation.en.md) · [Import and settings](acquisition-workflow.en.md)
 
 Build a reviewed interpretation of a design: **bring in source → mark regions →
 check exact nodes → approve meaning → share context**. The original Figma design
@@ -37,7 +37,15 @@ default to scale 2 and a 4,096px long edge. Existing images are not regenerated.
 The default structure budget is 200,000 nodes and 64 MB. Reaching a configured
 budget or run duration pauses instead of terminally failing. Increase the budget
 and choose **Continue** with the same valid connection to read from the next
-unsaved part. Reconnecting or restarting the app loses that live reading position.
+unsaved part. After reconnecting or restarting, use **Continue** as well. The app
+explains and asks you to confirm the cost of rechecking saved nodes. Existing
+evidence and approvals remain unchanged; the new observation is saved separately.
+
+Open **Received sources** to browse saved nodes and exact text. Choose **Review
+this part** for a fully read node, or **Prepare this part** for a known unfinished
+container. The currently selected, saved proposed region on the same image is
+copied without redrawing. The original whole-source task
+stays incomplete; approval cannot extend beyond the prepared source coverage.
 
 See [Import and settings](acquisition-workflow.en.md) for supported ranges and
 recovery conditions.
@@ -58,7 +66,7 @@ requires review again; approval is not a permanent label attached to its name.
 Choose **Match source** for geometric suggestions. Inspect overlapping or ambiguous
 candidates; the highest coverage is not proof of correct meaning. Choose the exact
 nodes from the candidate list or source browser, and remove unwanted references.
-For a collection, metadata is paged and original text is fetched when selected;
+For a collection, metadata is paged from saved records and original text is loaded when selected;
 the canvas's loaded bounds count is not the collection's total node count.
 
 ![Synthetic source review with candidate references and confirmation controls](images/source-review.en.png)
@@ -71,7 +79,7 @@ the canvas's loaded bounds count is not the collection's total node count.
 | Enlarge comparison | Inspect already received images without another Figma export, where available |
 
 Current-node comparison is available for small saved captures and regions backed
-by complete structure collections. It requires a Figma connection; use the node
+by complete structure collections or prepared parts. It requires a Figma connection; use the node
 list, original text and **Show in Figma** alongside it. Captured-area previews
 cropped from a saved image are available for small saved captures.
 
@@ -135,23 +143,24 @@ material, not instructions the agent should obey.
 
 | Need | Action | What moves |
 | --- | --- | --- |
-| Review a complete collection elsewhere | Source files → Download source file / Import source file | One collection with exact text and any overview; adds an unreviewed scope to the receiving workspace |
-| Review one or two small saved captures elsewhere | Capture transfer → Export captures / Import captures | Capture observations; creates a new workspace without annotations or approvals |
+| Review prepared source elsewhere | Source files → Download source file / Import source file | Prepared source structure, exact text and any context image; no annotations, specifications or approvals |
 | Give a developer reviewed context | Export JSON / Markdown / MCP | Approved semantic content and provenance |
 | Restore your own work | Stop all writers and back up the data directory | Complete local state, including private credentials; see the upgrade guide |
 
-Source files use NDJSON, up to 80 MB. Capture bundles use JSON, up to 15 MB across
-at most two captures. Neither transfer carries semantic approvals or is a full
-workspace backup. A checksum detects altered bytes; it does not establish sharing
+New source files use NDJSON, up to 80 MB. The same file picker reads older JSON
+captures, up to 15 MB, into a new workspace. Source transfer carries no semantic
+approvals and is not a full workspace backup. Even when sharing a small part,
+its context image may include the surrounding design. Check permission for the
+entire image before sharing. A checksum detects altered bytes; it does not establish sharing
 rights or agreement with today's Figma design. Share through permitted channels.
 
 ## When something is unclear
 
 | Situation | Next action |
 | --- | --- |
-| An image is ready but approval is disabled | Check whether this is an image-only draft; attach a complete matching collection, then save and confirm nodes |
-| Structure is incomplete | At a budget, raise Settings and Continue in the same valid connection. After reconnect, a new collection is required |
-| A collection is paused | Resume within its valid session and idle window; reconnecting or restarting does not preserve a live traversal |
+| An image is ready but approval is disabled | Wait for complete matching structure to attach automatically, or open a prepared part. Save and confirm its source nodes before approval |
+| Structure is incomplete | Use received evidence and review complete parts. Prepare the needed part or Continue the whole task |
+| A collection is paused | Raise Settings if a budget was reached, then Continue. After reconnection, read and confirm the recheck cost |
 | Layers overlap or seem obsolete | Inspect exact nodes and current images; geometry and order cannot establish which design is authoritative |
 | Source changed or the wrong page is open | Open the matching source/page or acquire a fresh scope and review again; do not guess missing identifiers |
 | No image for a Section or transformed root | Keep its structure and warnings, or explicitly select an unrotated inner Frame for an image |

@@ -92,8 +92,9 @@ const test = base.extend<{ app: AppFixture }>({
   },
 });
 
-// Source setup uses the existing HTTP compatibility contracts. The normal
-// UI import, automatic binding and lock behavior are covered by source-import.spec.ts.
+// Source setup uses the HTTP compatibility contracts before the editor opens.
+// Otherwise initial import discovery can auto-bind while this fixture also adds
+// the same scope. Normal automatic binding is covered by source-import.spec.ts.
 async function api(app:AppFixture,path:string,body?:unknown):Promise<any> {
   const response=await fetch(app.url+path,{method:body===undefined?'GET':'POST',headers:{Authorization:`Bearer ${app.token}`,
     ...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -106,7 +107,7 @@ async function prepareCollection(app:AppFixture):Promise<string> {
   await api(app,`${base}/${task.id}/start`,{});
   await expect.poll(async()=>(await api(app,`${base}/${task.id}`)).status).toBe('complete');return task.id;
 }
-async function arrangeSource(page:import('@playwright/test').Page,app:AppFixture,kind:'visual'|'collection') {
+async function arrangeSource(app:AppFixture,kind:'visual'|'collection') {
   let input:Record<string,unknown>;
   if(kind==='visual'){
     const current=await app.readProject(),status=await api(app,'/api/plugin/status'),base=`/api/projects/${app.projectId}/acquisitions`;
@@ -115,18 +116,17 @@ async function arrangeSource(page:import('@playwright/test').Page,app:AppFixture
     await expect.poll(async()=>(await api(app,`${base}/${task.id}`)).status).toBe('ready');input={acquisitionId:task.id};
   }else input={collectionId:await prepareCollection(app)};
   await api(app,`/api/projects/${app.projectId}/evidence-scopes`,{expectedRevision:(await app.readProject()).revision,...input});
-  await page.getByRole('button',{name:'Refresh',exact:true}).click();
-  await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount((await app.readProject()).scopes!.length);
 }
 
 test('visual draft stays proposed until a complete collection is attached and human source review is confirmed', async ({ page, app }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(({ token, projectId }) => {
+  await page.addInitScript(({ token, projectId, origin }) => {
+    if (location.origin !== origin) return;
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
-  }, { token: app.token, projectId: app.projectId });
+  }, { token: app.token, projectId: app.projectId, origin: new URL(app.url).origin });
+  await arrangeSource(app,'visual');
   await page.goto(app.url);
-  await arrangeSource(page,app,'visual');
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
   await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('Image draft · source structure needed');
   const visualProject = await app.readProject();
@@ -142,9 +142,14 @@ test('visual draft stays proposed until a complete collection is attached and hu
   expect((await app.readProject()).annotations).toHaveLength(1);
   expect((await app.readProject()).annotations[0]).toMatchObject({ snapshotId: scopeId, reviewStatus: 'proposed' });
 
+  // This test exercises the compatibility attachment contract. Keep the editor
+  // closed during external setup so its automatic importer is not a second writer.
+  await page.goto('about:blank');
   const collectionId=await prepareCollection(app);
   await api(app,`/api/projects/${app.projectId}/evidence-scopes/${scopeId}/attach`,{expectedRevision:(await app.readProject()).revision,collectionId});
-  await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await page.goto(app.url);
+  await expect(page.locator('.component-list button')).toHaveCount(1);
+  await page.locator('.component-list button').click();
   await expect(page.getByText('Source structure complete · confirm sources before approval')).toBeVisible();
   const attached = await app.readProject();
   expect(attached.scopes![0]).toMatchObject({ id: scopeId, kind: 'collection', preview: app.preview,
@@ -195,8 +200,8 @@ test('complete collection can open an honest source-only editor without inventin
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
+  await arrangeSource(app,'collection');
   await page.goto(app.url);
-  await arrangeSource(page,app,'collection');
   await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('2 nodes · source structure complete');
   await expect(page.getByText('No overview image · use source bounds to draw regions')).toBeVisible();
   const persisted = await app.readProject();
@@ -212,8 +217,8 @@ test('source transfer downloads exact source only and imports a new unreviewed s
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
+  await arrangeSource(app,'collection');
   await page.goto(app.url);
-  await arrangeSource(page,app,'collection');
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
   const originalId = (await app.readProject()).scopes![0]!.id;
   await page.getByRole('button', { name: '+ Add region' }).click();
@@ -229,7 +234,7 @@ test('source transfer downloads exact source only and imports a new unreviewed s
   const bytes = await readFile(await download.path());
   expect(bytes.toString('utf8')).toContain(exactText);
   expect(bytes.toString('utf8')).not.toContain((await app.readProject()).annotations[0]!.id);
-  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   const importResponse = page.waitForResponse(response => response.request().method() === 'POST'
@@ -254,8 +259,8 @@ test('a delayed source download cannot update transfer state after switching wor
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
+  await arrangeSource(app,'collection');
   await page.goto(app.url);
-  await arrangeSource(page,app,'collection');
   const panel = page.locator('details.source-transfer-panel');
   await panel.locator('summary').click();
 
@@ -290,7 +295,7 @@ test('a delayed source download cannot update transfer state after switching wor
     await page.locator('#workspace-select').selectOption(app.secondProjectId);
     await expect(page.locator('#workspace-select')).toHaveValue(app.secondProjectId);
     await expect(panel.getByRole('button', { name: 'Stop download' })).toBeHidden();
-    await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+    await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
       name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: validFile,
     });
     await panel.getByRole('button', { name: 'Import source file' }).click();
@@ -314,8 +319,8 @@ test('source import holds the editor until its delayed workspace update is appli
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
+  await arrangeSource(app,'collection');
   await page.goto(app.url);
-  await arrangeSource(page,app,'collection');
   await page.getByRole('button', { name: '+ Add region' }).click();
   const name = page.getByLabel('Component name');
   await name.fill('Saved synthetic component');
@@ -326,7 +331,7 @@ test('source import holds the editor until its delayed workspace update is appli
   const downloadPromise = page.waitForEvent('download');
   await panel.getByRole('button', { name: 'Download source file' }).click();
   const bytes = await readFile(await (await downloadPromise).path());
-  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   let release: (() => void) | undefined, started: (() => void) | undefined;
@@ -354,8 +359,8 @@ test('late exact text from one specification cannot enter another specification 
     sessionStorage.setItem('fsb-token', token); sessionStorage.setItem('fsb-last-project', projectId);
     localStorage.setItem('fsb-locale', 'en');
   }, { token: app.token, projectId: app.projectId });
+  await arrangeSource(app,'collection');
   await page.goto(app.url);
-  await arrangeSource(page,app,'collection');
   await page.getByRole('tab', { name: 'Specifications' }).click();
   let picker = page.locator('.evidence-text-picker');
   await picker.locator('summary').click();
@@ -390,6 +395,8 @@ test('late exact text from one specification cannot enter another specification 
   try {
     await choose.click();
     await intercepted;
+    await expect(specs.nth(1)).toBeDisabled();
+    await page.getByRole('button', { name: 'Discard specification changes', exact: true }).click();
     await specs.nth(1).click();
     await expect(page.locator('.spec-text')).toHaveText(exactText);
     release?.();

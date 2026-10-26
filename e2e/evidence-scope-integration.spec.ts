@@ -229,7 +229,7 @@ test('source transfer downloads exact source only and imports a new unreviewed s
   const bytes = await readFile(await download.path());
   expect(bytes.toString('utf8')).toContain(exactText);
   expect(bytes.toString('utf8')).not.toContain((await app.readProject()).annotations[0]!.id);
-  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   const importResponse = page.waitForResponse(response => response.request().method() === 'POST'
@@ -290,7 +290,7 @@ test('a delayed source download cannot update transfer state after switching wor
     await page.locator('#workspace-select').selectOption(app.secondProjectId);
     await expect(page.locator('#workspace-select')).toHaveValue(app.secondProjectId);
     await expect(panel.getByRole('button', { name: 'Stop download' })).toBeHidden();
-    await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+    await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
       name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: validFile,
     });
     await panel.getByRole('button', { name: 'Import source file' }).click();
@@ -326,7 +326,7 @@ test('source import holds the editor until its delayed workspace update is appli
   const downloadPromise = page.waitForEvent('download');
   await panel.getByRole('button', { name: 'Download source file' }).click();
   const bytes = await readFile(await (await downloadPromise).path());
-  await panel.getByLabel('Source file (.ndjson)').setInputFiles({
+  await panel.getByLabel('Source file (.ndjson or .json)').setInputFiles({
     name: 'synthetic-evidence.ndjson', mimeType: 'application/x-ndjson', buffer: bytes,
   });
   let release: (() => void) | undefined, started: (() => void) | undefined;
@@ -390,6 +390,8 @@ test('late exact text from one specification cannot enter another specification 
   try {
     await choose.click();
     await intercepted;
+    await expect(specs.nth(1)).toBeDisabled();
+    await page.getByRole('button', { name: 'Discard specification changes', exact: true }).click();
     await specs.nth(1).click();
     await expect(page.locator('.spec-text')).toHaveText(exactText);
     release?.();

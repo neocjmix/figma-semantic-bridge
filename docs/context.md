@@ -1,9 +1,13 @@
 # Project context and design rationale
 
-This explains the local product in 0.2.1. Normal imports use a 2× overview and resumable chunked structure, with adjustable budgets and automatic clean-editor binding. These changes do not implement cross-session supplementation of partial evidence; see [ADR 0013](adr/0013-configurable-import-budgets.md). The
-[validation log](product-validation.md) records executed checks; dated evaluations
-and ADRs retain the evidence available at their dates. Published 0.1.1 binaries
-do not acquire later source-build behavior merely because the repository changed.
+This describes the 0.3.0 candidate source. Normal imports use a 2× overview and
+chunked structure with adjustable budgets. Saved partial evidence remains usable
+for inspection; complete saved branches support scoped review. Continue resumes a
+valid cursor or, after consent, creates a new generation that rechecks the original
+scope. See [ADR 0012](adr/0012-recoverable-source-evidence.md) and
+[ADR 0013](adr/0013-configurable-import-budgets.md). The
+[validation log](product-validation.md) records executed checks and distinguishes
+source, synthetic, native and released-package evidence.
 
 ## Why the bridge exists
 
@@ -31,10 +35,24 @@ the product does not generate production code.
   one selected subtree, including a chosen branch when requested. It may have
   an independently timed overview or no image. Browser pages and exact text are
   read on demand; full-scope matching scans the verified collection.
-- Selective ID and immediate-child reads are separate, unreviewed observations.
-  They establish only requested fields or direct children. A complete branch
-  does not cover its siblings. Source-only NDJSON transfer carries one complete
-  collection and optional overview, never annotations or approvals.
+- Partial collection records expose verified received metadata, exact saved text,
+  observed child counts and closed-subtree coverage. They remain historical and
+  unreviewed. Missing records never become complete source by inference.
+- A branch-backed `EvidenceScope` binds one verified closed subtree, optionally
+  retaining the enclosing image and copied proposed regions. Its review covers
+  that branch, not the image's unseen siblings or the original whole-source task.
+- A known incomplete saved container can be acquired separately without traversing
+  unrelated siblings. Releasing a broader paused cursor requires cost consent;
+  the broader task remains incomplete and its saved records remain intact.
+- Selective ID and immediate-child reads remain unreviewed compatibility
+  observations. They establish only requested fields or direct children. Standard
+  source transfer carries complete evidence and optional image context, never
+  annotations or approvals; previous file formats remain readable.
+
+Native subtree traversal still reads complete source records, including exact
+TEXT. Browser text queries are lazy reads of saved local data. Choosing a smaller
+part reduces native work; reconnect freshness for a whole scope still requires
+reading that scope again. Exact packet reuse reduces transfer, not Figma getters.
 
 The [data model](data-model.md) explains these contracts; runtime validators in
 `src/shared/` and server/domain checks are authoritative. Image, structure and

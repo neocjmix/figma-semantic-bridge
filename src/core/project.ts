@@ -23,6 +23,10 @@ function uniqueIds(items:readonly {id:string}[], kind:string):void {
 function requireCompleteSource(snapshot:SourceScope):void {
   if (!completeScope(snapshot)) throw new DomainError('SOURCE_INCOMPLETE', 'The requested source capture is incomplete. Complete its acquisition before matching, confirming sources or granting a new approval.');
 }
+function requireRegionCoverage(scope:SourceScope,region:Rect):void {
+  if(!inlineScope(scope)&&scope.kind==='branch'&&(!scope.coverageBounds||!contains(scope.coverageBounds,region,0.01)))
+    throw new DomainError('SOURCE_REGION_INCOMPLETE','This region extends beyond the prepared source part. Acquire its full required source before confirming or approving it.');
+}
 
 /** Linear-time parent validation, including disconnected cycles. */
 function validateParents(items:readonly {id:string;parentId:string|null}[], allowExternalRoot?:string):void {
@@ -108,7 +112,8 @@ function validateContents(project:Project,access?:SourceAccess):void {
   for (const annotation of project.annotations) {
     const snapshot = snapshots.get(annotation.snapshotId);
     if (!snapshot) fail('Annotation snapshot does not exist.');
-    if(!inlineScope(snapshot)&&annotation.reviewStatus==='approved'&&(snapshot.kind!=='collection'||!annotation.sourceRefs.length||annotation.sourceReview?.status!=='confirmed'))fail('Collection-backed approval requires complete source and explicit human confirmation.');
+    if(!inlineScope(snapshot)&&annotation.reviewStatus==='approved'&&(!completeScope(snapshot)||!annotation.sourceRefs.length||annotation.sourceReview?.status!=='confirmed'))fail('Collection-backed approval requires complete source and explicit human confirmation.');
+    if(annotation.reviewStatus==='approved')requireRegionCoverage(snapshot,annotation.bbox);
     if (!contains(snapshot.bounds,annotation.bbox,0.01)) fail('Annotation lies outside its captured image bounds.');
     if (annotation.parentId !== null && annotations.get(annotation.parentId)?.snapshotId !== annotation.snapshotId) fail('Annotation parents must belong to the same captured scope.');
     if (annotation.sourceRefs.some(ref => ref.snapshotId !== annotation.snapshotId)) fail('Annotation source references must belong to its captured scope.');
@@ -161,7 +166,7 @@ function scopeFor(project:Project,id:string):SourceScope {
   const scope=sourceScope(project,id);if(!scope)throw new DomainError('NOT_FOUND','Source scope was not found.');return scope;
 }
 function requireScopeAccess(scope:SourceScope,access?:SourceAccess):void {
-  if(!inlineScope(scope)&&scope.kind==='collection'&&!access)
+  if(!inlineScope(scope)&&completeScope(scope)&&!access)
     throw new DomainError('SOURCE_RESOLUTION_REQUIRED','Resolve the bound collection before changing, confirming, approving or exporting its evidence.');
 }
 function matchScope(scope:SourceScope,region:Rect,context:OperationContext,tolerance=0.5):MatchResult {
@@ -263,6 +268,19 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       invalidateRelations(project,new Set(project.annotations.filter(item=>item.snapshotId===scope.id).map(item=>item.id)));
       break;
     }
+    case 'copy_scope_regions': {
+      if(!context.evidenceWrite)throw new DomainError('FORBIDDEN','Copy regions through a verified source route.');
+      const source=scopeFor(project,operation.sourceScopeId),target=scopeFor(project,operation.targetScopeId);
+      if(inlineScope(target)||target.kind!=='branch'||source.source.fileKey!==target.source.fileKey||source.source.pageId!==target.source.pageId||
+        target.branch?.enclosingRootId!==source.source.rootId)throw new DomainError('SOURCE_BINDING_CHANGED','The branch does not belong to this design source.');
+      const originals=operation.annotationIds.map(id=>lookup(project.annotations,id,'Annotation'));
+      if(new Set(operation.annotationIds).size!==originals.length||originals.some(a=>a.snapshotId!==source.id||a.reviewStatus!=='proposed'))
+        throw new DomainError('APPROVED_PROTECTED','Only proposed regions from this source can be copied for branch review.');
+      const copies=new Map(originals.map(a=>[a.id,newId()]));
+      for(const original of originals)putAnnotation(project,{...original,id:copies.get(original.id)!,snapshotId:target.id,
+        parentId:original.parentId?copies.get(original.parentId)??null:null,sourceRefs:[],sourceReview:undefined,reviewStatus:'proposed',revision:0},'human',context);
+      break;
+    }
     case 'rename_project': project.name = operation.name; break;
     case 'upsert_annotation': putAnnotation(project,operation.annotation,'human',context); break;
     case 'delete_annotation': {
@@ -276,6 +294,7 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       if(operation.status==='approved'&&annotation.reviewStatus!=='approved') {
         const snapshot=scopeFor(project,annotation.snapshotId);
         requireCompleteSource(snapshot);
+        requireRegionCoverage(snapshot,annotation.bbox);
         requireScopeAccess(snapshot,context.sources);
         annotation.sourceReview=reviewScope(snapshot,annotation,annotation,undefined,context);
         if(!inlineScope(snapshot)&&!annotation.sourceRefs.length)throw new DomainError('SOURCE_REFERENCES_REQUIRED','Choose captured source references before approval.');
@@ -298,6 +317,7 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       if(!annotation.sourceRefs.length) throw new DomainError('SOURCE_REFERENCES_REQUIRED','Choose at least one captured source reference before confirming.');
       const snapshot=scopeFor(project,annotation.snapshotId);
       requireCompleteSource(snapshot);
+      requireRegionCoverage(snapshot,annotation.bbox);
       requireScopeAccess(snapshot,context.sources);
       const review=annotation.sourceReview??reviewScope(snapshot,annotation,undefined,undefined,context);
       annotation.sourceReview={...review,status:'confirmed',confirmedAt:now};
@@ -434,7 +454,9 @@ export function approvedContext(value:Project,options:ApprovedExportOptions={},a
   }
   const usedSnapshots=new Set(refs.map(r=>r.snapshotId));for(const a of annotations)usedSnapshots.add(a.snapshotId);
   const sources=sourceScopes(project).filter(s=>usedSnapshots.has(s.id)).map(s=>({snapshotId:s.id,name:s.name,source:s.source,bounds:s.bounds,completeness:inlineScope(s)?s.completeness:{complete:completeScope(s),reason:completeScope(s)?null:'Visual draft'},warnings:s.warnings,
-    ...(inlineScope(s)?s.acquisition?{acquisition:s.acquisition}:{}:{kind:s.kind,collection:s.collection,visualObservation:s.visualObservation})}));
+    ...(inlineScope(s)?s.acquisition?{acquisition:s.acquisition}:{}:{kind:s.kind,collection:s.collection,visualObservation:s.visualObservation,
+      ...(s.branch?{branch:s.branch,coverageBounds:s.coverageBounds,visualBounds:s.visualBounds}: {}),
+      ...(s.transferOrigin?{transferOrigin:s.transferOrigin}:{})})}));
   for(const source of sources)if(!source.completeness.complete)unresolved.push(`Source scope ${source.snapshotId} is partial.`);
   return {schemaVersion:'1.0.0' as const,projectId:project.id,name:project.name,revision:project.revision,updatedAt:project.updatedAt,annotations,specifications,sourceNodes,sources,unresolved,truncated};
 }

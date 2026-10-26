@@ -65,7 +65,8 @@ test('selective MCP tools page metadata, explicitly read text, and prepare a bra
   await mcp.connect(serverTransport); await client.connect(clientTransport);
   t.after(async () => { await client.close(); await mcp.close(); });
   const tools = await client.listTools();
-  assert.ok(tools.tools.some(tool => tool.name === 'read_selective_text' && tool.annotations?.readOnlyHint));
+  assert.ok(tools.tools.some(tool => tool.name === 'read_source_evidence' && tool.annotations?.readOnlyHint));
+  assert.equal(tools.tools.some(tool => tool.name === 'read_selective_text'), false);
   const prepared = body(await client.callTool({ name: 'prepare_selective_inspection', arguments: {
     projectId: project.id, expectedRevision: project.revision, expectedSessionId: sessionId } })) as { id: string };
   const observed = body(await client.callTool({ name: 'inspect_source_nodes', arguments: {

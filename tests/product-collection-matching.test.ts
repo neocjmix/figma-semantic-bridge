@@ -63,6 +63,19 @@ test('legacy missing rendering and external ancestor boundary preserve existing 
   await equivalent([parent, child], box(0, 0));
 });
 
+test('closed branch retains known hidden or transparent rendering above its captured root', async () => {
+  const branch=root();branch.parentId='saved-outside-parent';
+  const nodes=[branch,node('child','root',box(0,0))];
+  for(const ancestorRendering of ['hidden','transparent'] as const){
+    const result=await matchCollectionRegion(scopeId,box(0,0),chunks(nodes),{expectedNodeCount:2,ancestorRendering});
+    assert.deepEqual(result.sourceRefs,[]);assert.deepEqual(result.candidates,[]);
+    assert.ok(result.warnings.some(value=>value.includes('saved ancestor outside this branch')));
+  }
+  const unknown=await matchCollectionRegion(scopeId,box(0,0),chunks(nodes),{expectedNodeCount:2,ancestorRendering:'unknown'});
+  assert.deepEqual(unknown.sourceRefs.map(value=>value.nodeId),['child']);
+  assert.ok(unknown.warnings.some(value=>value.includes('not fully known')));
+});
+
 test('all near-equal candidates affect ambiguity even when only 200 diagnostics are returned', async () => {
   const nodes = [root(), ...Array.from({ length: 250 }, (_, i) => node(`equal-${String(i).padStart(3, '0')}`, 'root', box(0, 0)))];
   await equivalent(nodes, box(0, 0));

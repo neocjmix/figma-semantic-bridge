@@ -35,7 +35,7 @@ function retainCandidate(top: Scored[], item: Scored): void {
  * The server supplies hash-verified immutable chunks; this function independently verifies coverage.
  */
 export async function matchCollectionRegion(scopeId: string, inputRegion: Rect, chunks: AsyncIterable<StructureChunk>,
-  options: { expectedNodeCount: number; tolerance?: number }): Promise<MatchResult> {
+  options: { expectedNodeCount: number; tolerance?: number; ancestorRendering?: Rendering }): Promise<MatchResult> {
   const tolerance = options.tolerance ?? 0.5, expectedNodeCount = options.expectedNodeCount, parsedRegion = RectSchema.safeParse(inputRegion);
   if (!IdSchema.safeParse(scopeId).success || !parsedRegion.success || !Number.isFinite(tolerance) || tolerance < 0 || tolerance > 10 ||
     !Number.isSafeInteger(expectedNodeCount) || expectedNodeCount < 1 || expectedNodeCount > STRUCTURE_COLLECTION_NODES)
@@ -67,7 +67,7 @@ export async function matchCollectionRegion(scopeId: string, inputRegion: Rect, 
       if (seen.has(node.id) || node.id === chunk.root.parentId || node.sourceFileKey !== chunk.fileKey || node.sourcePageId !== chunk.pageId)
         invalid('Duplicate source node or inconsistent source provenance.');
       seen.add(node.id);
-      let depth = 0, inherited: Rendering = node.parentId === chunk.pageId ? 'potential' : 'unknown';
+      let depth = 0, inherited: Rendering = options.ancestorRendering??(node.parentId === chunk.pageId ? 'potential' : 'unknown');
       if (count === 0) {
         if (JSON.stringify(node) !== JSON.stringify(chunk.root)) invalid('The first source node must be the declared collection root.');
       } else {
@@ -100,6 +100,8 @@ export async function matchCollectionRegion(scopeId: string, inputRegion: Rect, 
   }
   if (!finalComplete || count !== expectedNodeCount || stack.length) incomplete();
   const warnings = ['BBox matches use axis-aligned captured bounds; clipping, masks, rotation silhouettes and semantic ownership require human review.'];
+  if(options.ancestorRendering==='hidden'||options.ancestorRendering==='transparent')warnings.push('A saved ancestor outside this branch is hidden or has zero opacity. Its descendants are excluded from automatic candidates.');
+  else if(options.ancestorRendering==='unknown')warnings.push('Rendering above this saved branch is not fully known. Inspect the image and the original design before confirming source nodes.');
   if (observedRendering) warnings.push('Observed hidden and zero-opacity subtrees are excluded from automatic candidates. Positive opacity does not prove visible pixels or rule out overlays outside the capture.');
   const candidates = top.map(item => ({ nodeId: item.nodeId, coverage: item.coverage, iou: item.iou,
     reason: item.near ? 'equal or near-equal bounds' : item.inside ? 'inside the selected region' : item.contains ? 'contains the selected region' : 'partial spatial intersection' }));

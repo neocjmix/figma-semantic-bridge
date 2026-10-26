@@ -2,7 +2,7 @@
 
 [한국어](acquisition-workflow.ko.md) · [User guide](user-guide.en.md) · [Install](alpha-installation.en.md)
 
-**0.2.1 Alpha** has one normal import route. The app pins the selected source,
+**0.3.0 Alpha** has one normal import route. The app pins the selected source,
 prepares its image and structure, and saves received evidence automatically.
 Users do not choose an acquisition strategy or read order. Source designs stay unchanged.
 
@@ -71,13 +71,38 @@ compatibility. New normal imports do not use that route.
 | --- | --- |
 | Paused, same connection | Keep the source unchanged and Continue within configured retention |
 | Temporary delay or busy Figma | Check the cause and Continue in the same valid connection |
-| Reconnect, app restart, page or source change | Saved parts remain historical, but the reading position is invalid; check the source and add it anew |
+| Reconnect or app restart | Continue explains the cost before rechecking the pinned source. Existing images, records and approvals remain unchanged |
+| Source deleted or in another file/page | New reads stop; saved evidence remains available. Return to the permitted source or restore a valid backup |
 | Image failure | Read the warning; complete structure remains usable without an image |
-| Incomplete structure | Save image drafts; source confirmation and approval remain unavailable |
+| Incomplete structure | Browse saved nodes and exact text. Review a fully read part separately, or prepare a known unfinished container |
 | Corrupt evidence or different provenance | Obtain valid evidence or restore backup; repeated requests cannot make invalid data complete |
 
-Cross-session supplementation of partial structures and approval directly from
-partial nodes are not implemented. They remain future work.
+After reconnection, saved nodes are read from Figma again. Matching content uses
+compact replies to avoid repeat transfer, but the underlying Figma reads still
+occur. Names and bounds cannot establish unchanged text or descendants. Earlier
+observations and approvals remain immutable; the retained image is not freshly
+verified. No single immutable Figma revision is guaranteed.
+
+## Work with a part
+
+Open **Received sources** to search saved nodes and choose **Read original text**.
+These local queries need no Figma connection. Unread text is distinct from empty text.
+A fully read part opens with **Review this part**, retaining the large image.
+The currently selected, saved proposed region on that image is copied. Existing
+regions and approvals remain unchanged.
+
+For a known unfinished container, choose **Prepare this part** to read only its
+subtree. This read also saves the original text within that part; later text
+queries use the local saved records.
+If this requires releasing an earlier paused reading position, the app explains
+that continuing the original task will require a recheck and asks for confirmation.
+The original whole-source task stays incomplete. If the selected part also stops,
+its own **Received sources** remain available, and **Continue** resumes that part first.
+
+Part review does not cover outside siblings or overlapping layers. A region beyond
+the displayed source coverage cannot be approved. Obtain a sufficiently broad
+source for a component spanning several branches. Source confirmation and meaning
+approval remain separate human decisions.
 
 ## Browse, clean up and transfer
 

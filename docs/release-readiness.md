@@ -1,15 +1,16 @@
 # Release readiness
 
-Current version: **0.2.1 alpha**. The [0.2.1 acceptance record](evaluation/release-0.2.1-acceptance.md)
-records its normal import/settings checks. Publication and final downloaded assets
-require the new clean-commit verifier report; old 0.2.0 results alone are insufficient.
+Current version: **0.3.0 alpha**. The [recovery acceptance record](evaluation/release-0.3.0-acceptance.md)
+separates source/browser checks from native recovery and packaging. Publication and
+final downloaded assets require the clean-commit verifier report for this release;
+earlier results are insufficient.
 Current setup and workflow instructions are in
 [the installation guide](alpha-installation.en.md) and [user guide](user-guide.en.md).
 The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md) documents
 source/interface and installed-candidate checks. Exact release provenance comes
 from the verification JSON attached to the final clean-commit package.
 
-## 0.2.0 release boundary
+## Historical 0.2.0 release boundary
 
 The app and plugin must be updated together; MCP uses the bundled runtime and
 pinned HTTPS origin. The [upgrade guide](upgrade-guide.md) covers backup, path
@@ -207,7 +208,7 @@ For the final candidate, run the complete `npm run package:macos` on a clean
 commit, then `npm run release:verify -- --require-clean`. This rejects dirty or
 mismatched provenance. A prior successful candidate is not the final artifact.
 
-The historical baseline is `0.1.1`; the current version is `0.2.0`. npm's
+The historical baseline is `0.1.1`; the current source version is `0.3.0`. npm's
 private flag does not mean the macOS application is unimplemented. Company installation/data/egress approval,
 Dev-only can-view acceptance if advertised, and independent F4/F5 evaluation remain
 separate deployment/claim requirements. This alpha has no Developer ID notarization

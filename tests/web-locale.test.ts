@@ -47,3 +47,15 @@ test('queued UI notices retranslate without translating user content or raw diag
   assert.equal(renderMessage('en', raw), raw.raw);
   assert.equal(renderMessage('ko', { parts: [raw, message('Refresh the workspace before saving again.')] }), raw.raw + ' 다시 저장하기 전에 작업 공간을 새로고침하세요.');
 });
+
+test('focused-part continuation and source-file image coverage are explained in Korean', () => {
+  const reason = 'The saved reading position was released to read a chosen part. Saved evidence remains available; continuing the broader import rechecks its source.';
+  const translated = renderMessage('ko', errorMessage(new ApiError('CURSOR_RELEASED_FOR_PART', reason, 409)));
+  assert.match(translated, /선택한 부분/);
+  assert.match(translated, /전체 가져오기를 계속하면 원본을 다시 확인/);
+  assert.doesNotMatch(translated, /saved reading position/i);
+  assert.equal(renderMessage('en', systemMessage(reason)), reason);
+  const coverage = 'An included overview image keeps its full area, including design outside a prepared part.';
+  assert.match(translate('ko', coverage), /원래 범위 전체/);
+  assert.match(translate('ko', coverage), /부분 밖의 디자인/);
+});

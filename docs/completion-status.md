@@ -1,9 +1,9 @@
 # Completion status
 
-Current version: **0.2.1 alpha**. The [0.2.1 acceptance record](evaluation/release-0.2.1-acceptance.md)
-records the single normal import, doubled overview, resource settings and
-same-session budget continuation. Cross-session partial supplementation remains
-the separate ADR 0012 proposal; this change does not mark that complete.
+Current version: **0.3.0 alpha**. The [recovery acceptance record](evaluation/release-0.3.0-acceptance.md)
+separates partial evidence, reconnect rechecks, focused subtree acquisition,
+branch review, transfer and native/package validation. Earlier observations and
+human approvals are retained; a completed part does not complete its enclosing task.
 The [user guide](user-guide.en.md),
 [한국어 가이드](user-guide.ko.md) and [upgrade guide](upgrade-guide.md) describe
 current use. The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md)

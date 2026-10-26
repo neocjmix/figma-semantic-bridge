@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.2.1 Alpha
+# Figma Semantic Bridge 0.3.0 Alpha
 
 [English](README.en.md) · [설치](docs/alpha-installation.md) · [사용 가이드](docs/user-guide.ko.md) · [업데이트](docs/upgrade-guide.md)
 
@@ -12,7 +12,7 @@
 
 ## 시작하기
 
-1. [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases)에서 **0.2.1 알파 앱**을 설치합니다.
+1. [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases)에서 **0.3.0 알파 앱**을 설치합니다.
    Apple Silicon 앱에 실행 환경, 로컬 서비스, 편집기, MCP 서버와 미리 빌드된
    Figma 플러그인이 포함되어 있습니다. Node.js를 따로 설치할 필요가 없습니다.
 2. 앱의 **브리지 → Figma 플러그인 폴더 보기**로 폴더를 열고, Figma Desktop에서
@@ -26,7 +26,7 @@
 체크섬, Figma 접근 권한, macOS 실행 안내와 연결 확인은
 [상세 설치·MCP 가이드](docs/alpha-installation.md)를 참고하세요. 이전 버전을
 사용 중이라면 [앱과 플러그인을 함께 업데이트](docs/upgrade-guide.md)하세요.
-0.1.1 배포 파일에는 0.2.1의 작업 흐름과 연결 방식 변경이 포함되지 않습니다.
+0.1.1 배포 파일에는 0.3.0의 작업 흐름과 연결 방식 변경이 포함되지 않습니다.
 
 ## 원본 추가와 설정
 
@@ -40,8 +40,10 @@
 같은 유효한 연결에서 한도를 높이고 **계속**하면 받은 부분 다음부터 읽습니다.
 
 [가져오기·설정 안내](docs/acquisition-workflow.ko.md)에서 범위와 제한을 확인하세요.
-재연결·앱 재시작으로 잃은 읽기 위치를 복구하거나 미완료 구조를 승인하는 기능은
-포함하지 않습니다. 저장된 정상 원본과 허용된 전달 파일은 Figma 없이 검토할 수 있습니다.
+중단돼도 받은 노드·원문을 열고, 준비된 작은 부분부터 큰 이미지 위에서 검토할 수
+있습니다. 덜 읽힌 컨테이너는 그 부분만 준비합니다. 재연결 뒤 **계속**은 비용을
+확인받고 원본을 다시 검사하며 기존 자료·영역·승인을 보존합니다. 작은 부분을
+검토해도 전체 요청은 미완료로 남습니다. 저장 자료 조회에는 Figma가 필요하지 않습니다.
 
 ## 검토한 내용만 코딩 맥락으로 전달
 

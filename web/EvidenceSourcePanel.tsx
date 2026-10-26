@@ -5,6 +5,8 @@ import { request } from './api.js';
 import { useLocale } from './i18n.js';
 import { errorMessage, type UIMessage } from './locale.js';
 import type { NodePreviewState } from './SourceReviewPanel.js';
+import { completeScope } from '../src/core/source-scopes.js';
+import { contains } from '../src/fixture-analysis/index.js';
 
 const NodeSummarySchema = SourceNodeSchema.omit({ text: true }).extend({ textLength: z.number().int().min(0).max(50000).nullable() }).strict();
 export const NodePageSchema = z.object({ nodes: z.array(NodeSummarySchema).max(200), nextOffset: z.number().int().min(0).nullable(),
@@ -76,7 +78,8 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
   onShowInFigma(nodeId: string): void; onPreviewNode(nodeId: string): void; onCloseNodePreview(): void;
 }) {
   const { t, systemText, renderMessage, formatDate, formatNumber } = useLocale();
-  const complete = scope.kind === 'collection';
+  const complete = completeScope(scope);
+  const regionIncomplete = scope.kind === 'branch' && (!scope.coverageBounds || !contains(scope.coverageBounds, annotation.bbox, 0.01));
   const [browseOpen, setBrowseOpen] = useState(false);
   const browser = useNodePage(token, projectId, scope.id, false, complete && browseOpen);
   const selectedIds = new Set(annotation.sourceRefs.map(ref => ref.nodeId));
@@ -92,7 +95,12 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
   return <section className="source-review evidence-source-review" aria-label={t('Review source connections')}>
     <div className="section-title"><h2>{t('Source connections')}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
     {scope.kind === 'visual' ? <p className="small evidence-warning">{t('This draft has an image only. Save your regions, then attach complete source structure to match nodes, confirm sources and approve.')}</p> : <>
-      <p className="small muted">{t('All source nodes have been collected. Compare them with the image, then save and confirm your chosen sources before approval.')}</p>
+      <p className="small muted">{t(scope.kind === 'branch'
+        ? 'Only this part has complete saved sources. Check its nodes before approval; other parts of the full image are outside this review.'
+        : 'All source nodes have been collected. Compare them with the image, then save and confirm your chosen sources before approval.')}</p>
+      {scope.branch?.ancestorRendering.status==='hidden'&&<p className="small evidence-warning">{t('A parent layer ({nodeId}) was hidden when this source was saved. Its children are excluded from automatic matching. Check visibility in Figma before choosing sources.',{nodeId:scope.branch.ancestorRendering.sourceNodeId??''})}</p>}
+      {scope.branch?.ancestorRendering.status==='transparent'&&<p className="small evidence-warning">{t('A parent layer ({nodeId}) had zero opacity when this source was saved. Its children are excluded from automatic matching. Check visibility in Figma before choosing sources.',{nodeId:scope.branch.ancestorRendering.sourceNodeId??''})}</p>}
+      {scope.branch?.ancestorRendering.status==='unknown'&&<p className="small evidence-warning">{t('Some parent layers were not recorded. Check in Figma that this part is visible and is the version you intend to use.')}</p>}
       <p className="small muted">{t('Nodes are loaded a page at a time. Matching positions alone cannot tell you which overlapping layer is visible.')}</p>
       <button className="wide" disabled={busy || !saved || dirty} onClick={onMatch}>{t('Match source')}</button>
       <button className="wide" disabled={busy || !saved || !connected || !sessionId} onClick={onAddCurrent}>{t('Add current Figma selection')}</button>
@@ -136,7 +144,7 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
           previous={() => browser.setOffsets(value => value.slice(0, -1))}
           next={() => { if (browser.page?.nextOffset !== null && browser.page) browser.setOffsets(value => [...value, browser.page!.nextOffset!]); }} />
       </details>
-      <button className="wide" disabled={busy || !saved || dirty || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t('Confirm sources')}</button>
+      <button className="wide" disabled={busy || !saved || dirty || regionIncomplete || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t('Confirm sources')}</button>
       {review?.status !== 'confirmed' && <p className="small evidence-warning">{t('Confirm the saved source nodes before approving the annotation.')}</p>}
     </>}
   </section>;

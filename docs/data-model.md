@@ -1,7 +1,7 @@
 # Data model and source-evidence invariants
 
-This documents the 0.2.1 implementation, not a frozen third-party SDK.
-`src/shared/contracts.ts`, `structure-collection.ts`, `selective-source*.ts`,
+This documents the 0.3.0 candidate implementation, not a frozen third-party SDK.
+`src/shared/contracts.ts`, `structure-collection.ts`, `collection-evidence.ts`, `selective-source*.ts`,
 `source-transfer.ts` and `capture-bundle.ts` define the exact Zod contracts;
 `src/core/project.ts` and server storage add cross-record validation. The project
 data schema is still `1.0.0`, independent of the application version. Optional
@@ -19,6 +19,7 @@ contain a 200,000-node collection.
 | --- | --- | --- |
 | `Snapshot` | `source` file/page/root/revision/capture time, document `bounds`, 1–10,000 inline `SourceNode`s, nullable PNG, `completeness` and warnings. | A bounded selected subtree if complete; a limit-hit prefix remains incomplete. |
 | Visual `EvidenceScope` | Same explicit source identity/bounds, PNG, visual task/observation time, no inline nodes and `collection=null`. | Image observation and proposed regions only. Matching, confirmation and new approval require structure. |
+| Branch `EvidenceScope` | A `branch` reference with packet-range digest, observation interval, enclosing root and ancestor rendering; separate `coverageBounds` and optional `visualBounds`. | Complete saved subtree only. Enclosing image and original task can remain incomplete; historical viewing does not revalidate live Figma. |
 | Collection `EvidenceScope` | Source/bounds, optional separately timed PNG and a required immutable collection reference: ID, SHA-256 content hash, node/byte counts, observation time. | Verified complete traversal of its root and descendants, possibly a branch; no claim about its siblings or an atomic Figma revision. |
 
 `Annotation.snapshotId` and `SourceReference.snapshotId` retain their wire names
@@ -113,9 +114,11 @@ reads return up to 100 text-free records and 96 KB per page, with an ordered cur
 and explicit `childrenComplete` only after all direct children were received.
 An ID read does not establish child coverage; an immediate-child inventory does
 not establish descendant coverage. An explicit branch collection covers only that
-branch. Stored inspection history is bounded (twelve inspections/32 MB total).
-The proposed general cross-observation coverage ledger in
-[ADR 0009](adr/0009-selective-source-acquisition.md) is not implemented.
+branch. `source.scopeId` and observed `parentId` retain its enclosing source guard;
+`inspectionId` is optional for branches derived directly from saved tasks. Stored inspection history is bounded (twelve inspections/32 MB total).
+A general ledger that merges arbitrary selective observations into a current
+whole-scope result is not implemented. Recovery uses verified packet coverage and
+explicit branch lineage rather than inferring unobserved child IDs.
 
 For complete collections, local metadata queries return at most 200 records per
 request under a 96 KB response-page budget. They omit original text but include
@@ -124,15 +127,57 @@ offsets do not split a UTF-16 surrogate pair. Selected full source records can b
 resolved under a separate bounded response. These pages are views of verified
 storage, not a claim that the browser loaded every node.
 
+### Partial views, recovery generations and focused parts
+
+`CollectionEvidenceSnapshot` version 1 binds verified saved packets to a content
+hash, counts, original source, observation interval and `scopeComplete`. Every
+partial evidence response is `observed-records-only`, `unreviewed` and
+`freshness:not-revalidated`. Metadata pages add declared/observed child counts,
+`subtreeComplete`, `textAvailable` and nullable `textLength`. An empty observed
+TEXT has length zero; absent text is not an empty string. Text pages preserve
+exact Unicode under the same bounded offsets. Corrupt or missing packets cannot
+be exposed as verified evidence.
+
+Validated preorder and direct-child counts establish a closed subtree without
+inventing unsaved children. `CollectionEvidenceBranch` binds its half-open record
+range, root, original packets and observation times with a digest. Known saved
+ancestor visibility/opacity is carried separately; unknown outside ancestors
+remain unknown. A branch-backed scope uses this reference for matching, review,
+approval and approved export, and never promotes the enclosing partial collection
+to complete. Its historical image may depict more than the approved source scope.
+
+A continued collection stores `recovery.previousCollectionId`, the original
+collection ID, revalidated-node count and reused-packet count. It is a new immutable
+generation; prior evidence and approvals are not replaced. Exact replay compares
+canonical source fields, ordered node records, child counts, warnings and
+completion after a real read. Transfer-only collection/sequence/timing fields are
+excluded from the equality hash, then supplied from the new observation. This
+provides no immutable Figma-version guarantee.
+
+A focused fresh task stores `partOf.collectionId`, `contextCollectionId`,
+`contextRootId` and `contextBounds`. They identify the parent attempt and original
+historical image context. The fresh source retains `scopeId` and observed
+`parentId`; continuation preserves this enclosing guard and lineage. Part parents
+and context records are retained while referenced. New native reads do not copy
+historical ancestor-rendering facts as current evidence. Successful part coverage
+never changes the parent's whole-scope completion flag.
+
+Native subtree traversal currently captures full records including exact TEXT.
+Partial/local metadata and text APIs are lazy views of saved storage, not evidence
+that native text getters were skipped.
+
 ## Transfer, previews and trust
 
 The legacy capture-bundle format moves one or two bounded Snapshots in a compact
 JSON file (10,000 aggregate nodes, 4 MB node JSON, 15 MB file). Import creates a
-**new workspace** with no annotations, specs, proposals or approval. The separate
-source-transfer NDJSON format moves one complete collection, exact text and an
-available overview (80 MB file maximum). Import verifies each chunk, checksum,
-footer, EOF and complete coverage before adding a fresh unreviewed scope to the
-**current workspace**. Neither digest establishes authorship, permission or
+**new workspace** with no annotations, specs, proposals or approval. The standard
+source-transfer NDJSON V2 format moves one complete collection, verified saved
+branch or complete bounded Snapshot, exact text and optional image context
+(80 MB file maximum). V1 source transfers remain readable. V2 validates source,
+coverage and visual bounds, exact packet contents, checksum, footer and EOF before
+adding fresh unreviewed evidence to the **current workspace**. Imported branch
+context preserves historical enclosing identity, observation interval and known
+ancestor rendering without inventing the enclosing tree or current freshness. Neither digest establishes authorship, permission or
 agreement with today's Figma pixels. See [ADR 0003](adr/0003-portable-capture-bundles.md)
 and [ADR 0008](adr/0008-collection-backed-editor.md).
 

@@ -86,6 +86,15 @@ test('real WebSocket broker pairs, responds, times out, cancels, disconnects and
   assert.equal(broker.status.pendingRequests,0);
 });
 
+test('broker accepts the configurable structure and image waits without exceeding their supported ceiling',async t=>{
+  const {url,broker}=await harness(t),ws=await connect(url);t.after(()=>ws.terminate());
+  ws.on('message',raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='request')ws.send(JSON.stringify({type:'response',requestId:msg.requestId,ok:true,
+    result:{fileKey:null,pageId:'synthetic-page',nodes:[]}}));});
+  for(const timeoutMs of [120000,305000])assert.deepEqual(await broker.request({type:'get_selection'},{timeoutMs}),{fileKey:null,pageId:'synthetic-page',nodes:[]});
+  await assert.rejects(broker.request({type:'get_selection'},{timeoutMs:305001}),{code:'INVALID_TIMEOUT'});
+  assert.equal(broker.status.pendingRequests,0);
+});
+
 for(const scenario of [
   {name:'selection',body:{},command:'get_selection',
     lateResult:{fileKey:'fixture-key',pageId:'old-page',nodes:[]},result:{fileKey:'fixture-key',pageId:'current-page',nodes:[]}},

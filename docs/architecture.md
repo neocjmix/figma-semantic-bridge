@@ -1,6 +1,6 @@
 # Architecture — local source and human review
 
-This describes the 0.2.0 architecture. Versioned 0.1.1 assets remain a
+This describes the 0.2.1 architecture. The normal editor now uses one image-plus-chunked import with locally persisted resource settings; earlier bounded/mode-based APIs remain compatibility paths. See [ADR 0013](adr/0013-configurable-import-budgets.md). Versioned 0.1.1 assets remain a
 separate historical baseline. [ADRs](adr/) explain decisions and
 [product validation](product-validation.md) distinguishes actual native, browser,
 synthetic and package checks.
@@ -63,8 +63,9 @@ live targeted source data, and can stage proposals; it cannot approve meaning.
 
 `src/shared/contracts.ts`, `structure-collection.ts`, `selective-source.ts` and
 `source-transfer.ts` define the exact runtime schemas. The primary budgets are
-5,000 nodes/2 MB/5 s by default for bounded metadata capture; 500 nodes/1 MB per
-collection packet with 200,000 nodes/64 MB total; up to 100 selective IDs or 100
+5,000 nodes/2 MB/5 s for legacy bounded metadata capture; normal import defaults to
+200,000 nodes/64 MB and allows settings up to 1,000,000 nodes/128 MB, with
+500 nodes/1 MB per collection packet; up to 100 selective IDs or 100
 direct children per response; and an 80 MB source-transfer file. These are
 different contracts. Exact 50,000-code-unit TEXT records are rejected on overflow,
 not shortened. See [data model](data-model.md) and

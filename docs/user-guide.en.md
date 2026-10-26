@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.2.0 Alpha user guide
+# Figma Semantic Bridge 0.2.1 Alpha user guide
 
 [한국어](user-guide.ko.md) · [Installation and MCP](alpha-installation.en.md) · [Acquisition choices](acquisition-workflow.en.md)
 
@@ -14,29 +14,33 @@ original text and your annotations retain their wording.
 
 ![Synthetic workspace with source scope, regions and annotation controls](images/workflow.en.png)
 
-## 1. Bring in the right source
+## 1. Add a source
 
-Create or open a **Workspace**. Save unfinished edits before importing or switching
-workspaces. In Figma, select one container you may inspect, then choose
-**Capture Figma selection** in the app. Check the source name and bounds before
-choosing **What to bring in** and **Start import**.
+Open a workspace and select one permitted container in Figma. Choose **Add source**,
+check its name, bounds and budgets, then **Start import**. There is no separate
+small/large capture mode or image/structure-order selector.
 
-| Result you need | Choose | Continue with |
-| --- | --- | --- |
-| A small screen plus its nodes | Overview, then structure; or Structure, then overview | Save complete capture once both required steps finish |
-| A drawing surface first | Overview only | Create draft from overview; attach matching complete structure before review/approval |
-| Source records without an image | Structure only, for a small scope | Save complete capture; draw using document bounds |
-| A larger selected subtree | Collect source structure | Add source structure to workspace, or Attach to current image draft |
-| Particular IDs, immediate children or a nested branch | Read selected source nodes | Read only the requested records; collect a chosen branch when needed |
+The received image is saved automatically, allowing region work in the same
+workspace. Structure is stored in small parts and attaches to that image draft
+when complete. Save unsaved region edits first; automatic attachment waits for
+them. If image export fails, complete structure remains usable without an image.
 
-An image draft can hold proposed regions but has no source tree to match or
-approve. A complete collection can become a source scope with or without an
-image. Attaching to an existing image requires the same file, page, root and
-bounds. Do not attach a different branch merely because it looks similar.
+Incomplete structure cannot support complete-source approval. Image drafts can
+hold proposed names and regions; confirmation and meaning approval wait for
+sufficient sources. Image and structure are separate observations: avoid editing
+the source during import and compare the results.
 
-See [the acquisition guide](acquisition-workflow.en.md) for the exact sequence,
-limits and pause/retry behavior. Image and structure are separate observations;
-avoid editing the source during acquisition and compare the results yourself.
+**Settings** controls image scale, long edge, bytes and wait, plus source nodes,
+bytes, run duration, response wait and paused-connection retention. New overviews
+default to scale 2 and a 4,096px long edge. Existing images are not regenerated.
+
+The default structure budget is 200,000 nodes and 64 MB. Reaching a configured
+budget or run duration pauses instead of terminally failing. Increase the budget
+and choose **Continue** with the same valid connection to read from the next
+unsaved part. Reconnecting or restarting the app loses that live reading position.
+
+See [Import and settings](acquisition-workflow.en.md) for supported ranges and
+recovery conditions.
 
 ## 2. Draw and save a meaningful region
 
@@ -66,9 +70,10 @@ the canvas's loaded bounds count is not the collection's total node count.
 | Compare current export | Request a bounded image of a current node/subtree for comparison |
 | Enlarge comparison | Inspect already received images without another Figma export, where available |
 
-Current-node comparison and captured-area previews are available for small saved
-captures. For collection-backed regions, use the node list, original text and
-Show in Figma.
+Current-node comparison is available for small saved captures and regions backed
+by complete structure collections. It requires a Figma connection; use the node
+list, original text and **Show in Figma** alongside it. Captured-area previews
+cropped from a saved image are available for small saved captures.
 
 Select exact nodes one at a time to combine distant branches within the same
 source scope. One annotation cannot mix source references from different scopes.
@@ -145,7 +150,7 @@ rights or agreement with today's Figma design. Share through permitted channels.
 | Situation | Next action |
 | --- | --- |
 | An image is ready but approval is disabled | Check whether this is an image-only draft; attach a complete matching collection, then save and confirm nodes |
-| Structure is incomplete | Read the limit or error. Use a deliberate smaller scope or a collection; do not label a prefix complete |
+| Structure is incomplete | At a budget, raise Settings and Continue in the same valid connection. After reconnect, a new collection is required |
 | A collection is paused | Resume within its valid session and idle window; reconnecting or restarting does not preserve a live traversal |
 | Layers overlap or seem obsolete | Inspect exact nodes and current images; geometry and order cannot establish which design is authoritative |
 | Source changed or the wrong page is open | Open the matching source/page or acquire a fresh scope and review again; do not guess missing identifiers |

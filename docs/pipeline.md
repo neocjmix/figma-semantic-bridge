@@ -1,6 +1,6 @@
 # Processing pipeline — implemented and proposed stages
 
-The current source implements a local, human-first pipeline. Published 0.1.1
+The current source implements a local, human-first pipeline. In 0.2.1 the normal UI has one image-plus-chunked import and resource settings; older mode-based routes below remain API/file compatibility paths. Published 0.1.1
 assets contain the earlier bounded-capture path; 0.2.0 adds the
 explicit image/collection/selective paths below. The
 [collection-backed verification](evaluation/collection-backed-workflow.md) records
@@ -21,8 +21,9 @@ invalidates a live cursor rather than silently changing the task target.
 | Path | Implemented output | Limit and incompleteness rule |
 | --- | --- | --- |
 | Bounded capture | Legacy `Snapshot` with inline node array and optional PNG. | Default 5,000 nodes/2 MB/5 s; ceilings 10,000/4 MB/15 s. A limit-hit prefix stays incomplete and cannot support new approval. |
-| Independent acquisition | Overview, structure or either order, with stage status, elapsed/observed counts, cancellation and retry. An overview-only result can become a visual draft; a fully complete bounded structure can be committed as a Snapshot. | Preview has 2,048 px default long-edge and 8 MB PNG budget. Native export may continue after cancellation; image and structure have separate times. |
-| Chunked collection | Complete selected subtree or explicit descendant branch, stored as acknowledged immutable chunks. | 500 nodes/1 MB per packet; 200,000 nodes/64 MB total. Cooperative pause follows a durable packet; same-session resume expires after idle/source change. A partial collection is not queryable complete source. |
+| Legacy independent acquisition | Overview, structure or either order, with stage status, elapsed/observed counts, cancellation and retry. An overview-only result can become a visual draft; a fully complete bounded structure can be committed as a Snapshot. | Preview has 2,048 px default long-edge and 8 MB PNG budget. Native export may continue after cancellation; image and structure have separate times. |
+| Normal resumable import | Scale-2 overview (default long edge 4,096px) plus complete chunk-backed editor sources; valid images become proposed drafts automatically and structure attaches when the editor is clean. | Settings default to 200,000 nodes/64 MB; node/byte/run budgets pause. Same-session resume reads updated settings; safety ceilings are 1,000,000 nodes/128 MB. |
+| Chunked collection | Complete selected subtree or explicit descendant branch, stored as acknowledged immutable chunks. | 500 nodes/1 MB per packet; default 200,000 nodes/64 MB, configurable up to 1,000,000/128 MB. Cooperative pause follows a durable packet; same-session resume expires after idle/source change. A partial collection is not queryable complete source. |
 | Selective inspection | Explicit IDs with metadata or requested original text; one parent's immediate children in pages. | Up to 100 IDs and 1 MB per observation; up to 100 direct-child records/96 KB per page. No sibling/descendant coverage is implied. |
 
 Native Figma may allocate a wide parent's entire `children` array before the

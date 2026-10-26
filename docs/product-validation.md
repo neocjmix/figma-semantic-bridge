@@ -4,10 +4,19 @@ This log records executed evidence rather than changing the requirements in the
 architecture, pipeline or roadmap. The branch builds an executable local product;
 this log does not certify release readiness or every Figma Desktop acceptance gate.
 
+## 0.2.1 import and settings verification, 2026-10-26
+
+See [0.2.1 acceptance](evaluation/release-0.2.1-acceptance.md): 414 source tests,
+41 browser cases, synthetic 5,000→6,001-node budget continuation, and an installed
+matched app/plugin native 10→21-node continuation with a 1,600×1,200 overview.
+Original project/token/pin preservation and fresh bundled MCP reads passed.
+Final clean-commit package provenance is recorded by the release verifier;
+cross-session partial supplementation remains unimplemented.
+
 ## 0.2.0 interface and release verification, 2026-10-26
 
 See the [0.2.0 acceptance record](evaluation/release-0.2.0-acceptance.md) for the
-latest source/interface and installed-update observations. Final package
+earlier source/interface and installed-update observations. Final package
 provenance is bound by the verification JSON attached to that release. Entries
 below retain their original pre-release status, versions and executed counts.
 

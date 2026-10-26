@@ -7,9 +7,8 @@ import { Canvas } from './Canvas.js';
 import { AiDraftPanel } from './AiDraftPanel.js';
 import { SourceReviewPanel, type NodePreviewState } from './SourceReviewPanel.js';
 import { CaptureBundlePanel } from './CaptureBundlePanel.js';
-import { AcquisitionPanel } from './AcquisitionPanel.js';
-import { CollectionPanel } from './CollectionPanel.js';
-import { SelectiveSourcePanel } from './SelectiveSourcePanel.js';
+import { SourceImportPanel } from './SourceImportPanel.js';
+import { ImportSettingsButton } from './ImportSettings.js';
 import { SourceTransferPanel } from './SourceTransferPanel.js';
 import { EvidenceSourcePanel, EvidenceTextPicker, NodePageSchema, type ChosenEvidenceText } from './EvidenceSourcePanel.js';
 import { CAPTURE_BUNDLE_MAX_BYTES, type CaptureBundle } from '../src/shared/capture-bundle.js';
@@ -390,7 +389,7 @@ export function App() {
     <header className="app-header">
       <div className="brand"><span className="brand-mark" aria-hidden="true">⇄</span><div><strong>Semantic Bridge</strong><span>{t("FIGMA → IMPLEMENTATION CONTEXT")}</span></div></div>
       <div className="header-center"><span className="local-pill">{t("LOCAL WORKSPACE")}</span>{project && <span className="project-heading">{project.name}</span>}</div>
-      <div className="header-actions"><LanguageSelector /><span className={`connection ${connected ? 'online' : ''}`}><i />{connected ? t("Figma connected") : t("Figma disconnected")}</span>{token && <button className="quiet inverse" disabled={busy} onClick={() => { sessionStorage.removeItem('fsb-token'); sessionStorage.removeItem('fsb-last-project'); setToken(''); setTokenInput(''); setProject(null); }}>{t("Disconnect editor")}</button>}</div>
+      <div className="header-actions">{token && <ImportSettingsButton token={token} disabled={busy} />}<LanguageSelector /><span className={`connection ${connected ? 'online' : ''}`}><i />{connected ? t("Figma connected") : t("Figma disconnected")}</span>{token && <button className="quiet inverse" disabled={busy} onClick={() => { sessionStorage.removeItem('fsb-token'); sessionStorage.removeItem('fsb-last-project'); setToken(''); setTokenInput(''); setProject(null); }}>{t("Disconnect editor")}</button>}</div>
     </header>
     {!token ? <main className="pairing-page">
       <section className="welcome-copy"><div className="eyebrow">{t("HUMAN FIRST. SOURCE GROUNDED.")}</div><h1>{t("Turn a design into")}<br />{t("shared understanding.")}</h1><p>{t("Mark components, link their requirements, and share approved design context with your coding agent.")}</p><div className="workflow-steps"><span><b>01</b> {t("Capture a frame")}</span><span><b>02</b> {t("Annotate & connect")}</span><span><b>03</b> {t("Review & share")}</span></div></section>
@@ -406,24 +405,15 @@ export function App() {
             <button className="text-button" disabled={busy} onClick={() => void run(async () => { receive(await request<Project>(token, '/api/demo', {}), false); setNotice(message("Sample workspace loaded. Its designs are generated examples, not your Figma content.")); })}>{t("Load demo")}</button>
           </section>
           <section className="panel-section"><div className="section-title"><h2>{t('Design sources')}</h2><span className="count">{scopes.length}</span></div><p className="small muted">{t('Choose a design source to work on. Images can be used for drafts; approval also requires complete source structure.')}</p>
-            <AcquisitionPanel token={token} project={project} sessionId={pluginSessionId} connected={connected} busy={busy} dirty={dirtyCaptureImport}
+            <SourceImportPanel token={token} project={project} sessionId={pluginSessionId} connected={connected} busy={busy} dirty={dirtyCaptureImport}
               beginProjectMutation={beginProjectMutation}
-              onCommitted={next => { receive(next, false); setSnapshotId(next.snapshots.at(-1)?.id ?? null); setNotice(message('Complete capture saved. Existing annotations and specifications are kept.')); }}
-              onVisualCreated={next => { receive(next, false); setSnapshotId(next.scopes?.at(-1)?.id ?? null); setNotice(message('Image draft added. Draw regions now; attach the complete source structure and confirm sources before approval.')); }} />
+              onBound={(next,id,keepSelection) => { receive(next,keepSelection); setSnapshotId(id); }} />
             <div className="snapshot-list">{scopes.map((value, i) => <button disabled={busy} key={value.id} className={`snapshot-item ${scope?.id === value.id ? 'active' : ''}`} onClick={() => { setSnapshotId(value.id); setSelectedId(null); setAnnotationDraft(null); setMergeIds([]); }}><span className="snapshot-number">{String(i + 1).padStart(2, '0')}</span><span><strong>{value.name}</strong><small>{inlineScope(value)
               ? t('{count} nodes · {scope}', { count: formatNumber(value.nodes.length), scope: t(value.completeness.complete ? 'complete' : 'incomplete') })
               : value.kind === 'visual' ? t('Image draft · source structure needed') : t('{count} nodes · source structure complete', { count: formatNumber(scopeNodeCount(value)) })}</small></span></button>)}</div>
             <CaptureBundlePanel key={project?.id ?? 'no-workspace'} project={project} currentSnapshotId={snapshot?.id ?? null} busy={busy} dirty={dirtyCaptureImport}
               onExport={ids => void run(() => exportCaptures(ids))} onImport={(file, name) => void run(() => importCaptures(file, name))} />
           </section>
-          <section className="panel-section"><CollectionPanel token={token} project={project} sessionId={pluginSessionId}
-            connected={connected} busy={busy} dirty={dirtyCaptureImport} currentScope={evidenceScope}
-            beginProjectMutation={beginProjectMutation}
-            onScopeCreated={next => { receive(next, false); setSnapshotId(next.scopes?.at(-1)?.id ?? null);
-              setNotice(message('Source structure added. Review and confirm the source nodes of each annotation before approval.')); }}
-            onScopeAttached={next => { receive(next); setNotice(message('Source structure attached to the image. They were read at different times; check their match and confirm sources before approval.')); }} /></section>
-          <section className="panel-section"><SelectiveSourcePanel token={token} project={project} sessionId={pluginSessionId}
-            connected={connected} busy={busy} dirty={dirtyCaptureImport} /></section>
           <section className="panel-section"><SourceTransferPanel token={token} project={project} busy={busy} dirty={dirtyCaptureImport}
             beginProjectMutation={beginProjectMutation}
             onImported={next => { receive(next, false); setSnapshotId(next.scopes?.at(-1)?.id ?? null);

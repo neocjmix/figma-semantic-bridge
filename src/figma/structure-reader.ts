@@ -146,7 +146,7 @@ export class StructureReader {
         const frame=draft[draft.length-1]!;
         if(frame.index>=frame.nodes.length){draft.pop();continue;}
         if(nodes.length>=STRUCTURE_CHUNK_NODES||nodes.length>0&&this.now()-start>=1000)break;
-        if(cursor.totalNodes+nodes.length>=STRUCTURE_COLLECTION_NODES)fail('COLLECTION_NODE_LIMIT','The collection exceeds the 200,000 node limit.');
+        if(cursor.totalNodes+nodes.length>=Math.min(command.maxNodes??STRUCTURE_COLLECTION_NODES,STRUCTURE_COLLECTION_NODES))break;
         const node=frame.nodes[frame.index]!;
         if(node.parent?.id!==frame.parentId) {this.invalidateSource();fail('SOURCE_CHANGED','A source node moved during structure reading.');}
         if(cursor.seen.has(node.id)||newIds.has(node.id))fail('INVALID_TREE','Duplicate node ID or cycle in selected scope.');
@@ -172,9 +172,8 @@ export class StructureReader {
         if(nodes.length%100===0&&options.yieldControl){await options.yieldControl();this.check(command,options,cursor.serial,cursor.epoch);}
       }
       while(draft.length&&draft[draft.length-1]!.index>=draft[draft.length-1]!.nodes.length)draft.pop();
-      if(nodes.length===0)fail('EMPTY_COLLECTION','No source records could be read.');
+      if(nodes.length===0)fail('COLLECTION_NODE_LIMIT','The node budget is reached. Increase it and resume the same collection.');
       const complete=draft.length===0;
-      if(!complete&&cursor.totalNodes+nodes.length>=STRUCTURE_COLLECTION_NODES)fail('COLLECTION_NODE_LIMIT','The collection exceeds the 200,000 node limit.');
       await this.checkRoot(command,cursor,options);
       this.check(command,options,cursor.serial,cursor.epoch);
       const packet=StructureChunkSchema.parse({collectionId:cursor.collectionId,sequence:command.sequence,

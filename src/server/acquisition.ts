@@ -152,6 +152,7 @@ export class AcquisitionManager {
     if(task.view.status!=='prepared')throw new ServiceError('ACQUISITION_STATE','This task has already started. Retry a failed step or prepare a new task.',409);
     if(needsPreview(parsed.plan)&&task.view.source.type==='SECTION')throw new ServiceError('UNSUPPORTED_PREVIEW','Sections support structure only. Choose structure or explicitly select an inner Frame.',400);
     task.view.plan=parsed.plan;task.view.limits=parsed.limits;
+    if(parsed.overview)task.view.overview=parsed.overview;
     return this.launch(task);
   }
   async retry(projectId:string,id:string,step:'preview'|'structure'):Promise<AcquisitionView> {
@@ -219,8 +220,8 @@ export class AcquisitionManager {
         try {
           const commandSource={fileKey:source.fileKey,pageId:source.pageId,nodeId:source.nodeId};
           if(step==='preview') {
-            const result=NodePreviewResultSchema.parse(await this.broker.request({type:'preview_capture',...commandSource},
-              {signal:run.controller.signal,timeoutMs:this.options.requestTimeoutMs??60000}));
+            const result=NodePreviewResultSchema.parse(await this.broker.request({type:'preview_capture',...commandSource,...(view.overview?{options:view.overview}:{})},
+              {signal:run.controller.signal,timeoutMs:this.options.requestTimeoutMs??(view.overview?.maxDurationMs??55000)+5000}));
             check();this.validateSource(task,result.node,result.fileKey,result.pageId);
             task.preview=result;view.preview={status:'ready',observedAt:result.observedAt,error:null};
           } else {

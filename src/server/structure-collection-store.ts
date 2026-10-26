@@ -14,15 +14,15 @@ import { ServiceError } from './errors.js';
 
 export type CollectionPage = { nodes: (Omit<SourceNode, 'text'> & { textLength: number | null })[]; nextOffset: number | null; total: number; complete: true; reviewStatus: 'unreviewed' };
 export type CollectionText = { nodeId: string; text: string; offset: number; nextOffset: number | null; totalLength: number; reviewStatus: 'unreviewed' };
-type Create = { id: string; projectId: string; sessionId: string; source: CollectionSource };
-type Patch = Partial<Pick<CollectionView, 'status' | 'elapsedMs' | 'error' | 'warnings'>>;
+type Create = { id: string; projectId: string; sessionId: string; source: CollectionSource; overviewAcquisitionId?: string };
+type Patch = Partial<Pick<CollectionView, 'status' | 'elapsedMs' | 'error' | 'warnings' | 'pauseReason'>>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MAX_COLLECTIONS = 12, MAX_DISK_BYTES = 256_000_000, MAX_MANIFEST_BYTES = 16_000_000, MAX_PAGE_BYTES = 96_000;
+const MAX_COLLECTIONS = 12, MAX_DISK_BYTES = 512_000_000, MAX_MANIFEST_BYTES = 16_000_000, MAX_PAGE_BYTES = 96_000;
 const DescriptorSchema = z.object({ sequence: z.number().int().min(0), sha256: z.string().regex(/^[a-f0-9]{64}$/),
   bytes: z.number().int().min(1).max(STRUCTURE_CHUNK_BYTES), nodeCount: z.number().int().min(1).max(500) }).strict();
 const ManifestSchema = z.object({ version: z.literal(1), view: CollectionViewSchema,
   chunks: z.array(DescriptorSchema).max(STRUCTURE_COLLECTION_NODES) }).strict();
-const PatchSchema = CollectionViewSchema.pick({ status: true, elapsedMs: true, error: true, warnings: true }).partial().strict();
+const PatchSchema = CollectionViewSchema.pick({ status: true, elapsedMs: true, error: true, warnings: true, pauseReason: true }).partial().strict();
 type Manifest = z.infer<typeof ManifestSchema>;
 type Location = { sequence: number; offset: number };
 type Frontier = { id: string; remaining: number; previous: Frontier | null };
@@ -248,7 +248,7 @@ export class CollectionStore {
       const previous = runtime.manifest.view, patch = parsed.data;
       if (patch.status && patch.status !== previous.status && (terminal.has(previous.status) || patch.status === 'complete' || patch.status === 'prepared'))
         invalid('This update cannot complete or restart a terminal collection.');
-      const view: CollectionView = { ...previous, status: patch.status ?? previous.status,
+      const view: CollectionView = { ...previous, ...patch, status: patch.status ?? previous.status,
         elapsedMs: patch.elapsedMs ?? previous.elapsedMs, warnings: patch.warnings ?? previous.warnings,
         error: patch.error === undefined ? previous.error : patch.error, updatedAt: new Date().toISOString() };
       await this.save(runtime, { ...runtime.manifest, view }); return structuredClone(view);

@@ -105,10 +105,12 @@ test('storage denial still permits session language changes and the narrow heade
     await selector.selectOption(locale);
     const layout = await page.evaluate(() => {
       const rect = (selector: string) => { const box = document.querySelector(selector)!.getBoundingClientRect(); return { left: box.left, right: box.right, top: box.top, bottom: box.bottom }; };
-      return { brand: rect('.brand'), pill: rect('.local-pill'), language: rect('.language-selector'), connection: rect('.connection'), unpair: rect('.header-actions button'), width: innerWidth };
+      return { brand: rect('.brand'), pill: rect('.local-pill'), settings:rect('.header-actions button'), language: rect('.language-selector'), connection: rect('.connection'), unpair: rect('.header-actions button.quiet.inverse'), width: innerWidth };
     });
     expect(layout.brand.right).toBeLessThanOrEqual(layout.pill.left);
     expect(layout.pill.right).toBeLessThanOrEqual(layout.language.left);
+    expect(layout.pill.right).toBeLessThanOrEqual(layout.settings.left);
+    expect(layout.settings.right).toBeLessThanOrEqual(layout.language.left);
     expect(layout.language.right).toBeLessThanOrEqual(layout.connection.left);
     expect(layout.connection.right).toBeLessThanOrEqual(layout.unpair.left);
     expect(layout.unpair.right).toBeLessThanOrEqual(layout.width);

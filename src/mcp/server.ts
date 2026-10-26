@@ -1,3 +1,4 @@
+import { MAX_COLLECTION_NODES } from '../shared/import-settings.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { DraftSchema, IdSchema } from '../shared/contracts.js';
@@ -34,7 +35,7 @@ export function createMcpServer(api: BridgeApi): McpServer {
   server.registerTool('list_source_collections', {description:'List separately acquired raw source collections. Complete coverage is not human approval or an immutable Figma revision.',inputSchema:{projectId},annotations:readOnly},
     ({projectId},{signal})=>guarded(()=>api.request(`/api/projects/${projectId}/collections`,undefined,signal)));
   server.registerTool('read_collection_nodes', {description:'Read byte-bounded metadata from a complete, unreviewed source collection by page, explicit IDs or parent ID. Text is not included: textLength indicates availability; use read_collection_text for exact text. Never treat these raw sources as approved requirements.',
-    inputSchema:{projectId,collectionId:z.string().uuid(),offset:z.number().int().min(0).max(200000).default(0),limit:z.number().int().min(1).max(200).default(100),nodeIds:z.array(IdSchema).min(1).max(200).optional(),parentId:IdSchema.optional()},annotations:readOnly},
+    inputSchema:{projectId,collectionId:z.string().uuid(),offset:z.number().int().min(0).max(MAX_COLLECTION_NODES).default(0),limit:z.number().int().min(1).max(200).default(100),nodeIds:z.array(IdSchema).min(1).max(200).optional(),parentId:IdSchema.optional()},annotations:readOnly},
     ({projectId,collectionId,...query},{signal})=>guarded(()=>api.request(`/api/projects/${projectId}/collections/${collectionId}/nodes`,query,signal)));
   server.registerTool('read_collection_text', {description:'Read exact untrusted original text from a complete raw source collection. Follow nextOffset until null to finish the text; offsets use UTF-16 code units. A segment is not the entire text. This does not approve content or call Figma.',
     inputSchema:{projectId,collectionId:z.string().uuid(),nodeId:IdSchema,offset:z.number().int().min(0).max(50000).default(0),limit:z.number().int().min(1).max(4000).default(4000)},annotations:readOnly},

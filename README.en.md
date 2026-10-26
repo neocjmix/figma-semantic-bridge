@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.2.0 Alpha
+# Figma Semantic Bridge 0.2.1 Alpha
 
 [한국어](README.md) · [Install](docs/alpha-installation.en.md) · [User guide](docs/user-guide.en.md) · [Upgrade](docs/upgrade-guide.md)
 
@@ -14,35 +14,37 @@ as fact.
 
 ## Start here
 
-1. Install the **0.2.0 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
+1. Install the **0.2.1 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
    The Apple Silicon app includes its runtime, local service, editor, MCP server
    and prebuilt Figma plugin. No Node.js installation is needed.
 2. Open the app, choose **Bridge → Reveal Figma Plugin**, and import its
    `manifest.json` in Figma Desktop. Use **Bridge → Copy Pairing Token** to connect
    the plugin. The app's own editor connects automatically.
 3. Open a workspace, select a permitted Frame in Figma, and choose
-   **Capture Figma selection**. Choose whether to acquire an image, structure or both.
+   **Add source**. Check the target and budgets, then choose **Start import**.
 4. Save a region, review its source nodes, confirm them when required, then approve
    its meaning. Share through **Export JSON**, **Markdown** or MCP.
 
 [Detailed installation and MCP setup](docs/alpha-installation.en.md) covers
 checksums, Figma access, macOS prompts and connection checks. Already using an
 older version? [Update the app and plugin together](docs/upgrade-guide.md).
-The 0.1.1 downloads do not contain the 0.2.0 workflow or transport changes.
+The 0.1.1 downloads do not contain the 0.2.1 workflow or transport changes.
 
-## Choose how much source to read
+## Add a source and adjust settings
 
-| Your next task | Use |
-| --- | --- |
-| Review a small screen and its source nodes | Acquire image and structure, then save the complete capture |
-| Sketch component boundaries before reading a large structure | Acquire the image only and use it as a visual draft; attach a complete matching collection before approval |
-| Collect a larger selected subtree | Collect and save structure in batches, then add it to the editor or attach it to a matching image |
-| Inspect known IDs or discover one parent's children | Selective source inspection; collect only the chosen branch when needed |
-| Work without a live Figma connection | Load the demo or import a permitted source file, then review the cached observations |
+Add a source to prepare its image and store structure in small parts. The image
+becomes usable for drafts; complete structure attaches after unsaved edits are
+saved. There is no separate small-versus-large acquisition mode.
 
-[Acquisition guide](docs/acquisition-workflow.en.md) explains each path, limits,
-pause/resume and incomplete results. Reading one branch does not establish what
-exists in its unvisited siblings.
+New overviews default to **twice the width and height, capped at a 4,096px long
+edge**. **Settings** controls scale, resolution, image bytes/wait and source
+node/byte/time budgets. Structure defaults to **200,000 nodes and 64 MB**. Reaching
+a configured budget pauses; raise it and **Continue** within the same valid
+connection to read from the next unsaved part.
+
+See [Import and settings](docs/acquisition-workflow.en.md). This does not restore
+a lost live cursor after reconnect or app restart, or approve incomplete sources.
+Valid saved sources and permitted source files remain usable without Figma.
 
 ## Review before sharing
 

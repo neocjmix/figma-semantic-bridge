@@ -1,3 +1,4 @@
+import { MAX_COLLECTION_NODES } from './import-settings.js';
 import { z } from 'zod';
 import { EvidenceScopeSchema } from './contracts.js';
 import { CollectionSourceSchema } from './structure-collection.js';
@@ -10,6 +11,6 @@ export const SourceTransferHeaderSchema=z.object({
 }).strict().refine(value=>value.scope.kind==='collection'&&value.scope.collection!==null,'A complete collection is required.');
 export type SourceTransferHeader=z.infer<typeof SourceTransferHeaderSchema>;
 export const SourceTransferFooterSchema=z.object({kind:z.literal('end'),
-  chunkCount:z.number().int().min(1).max(200000),nodeCount:z.number().int().min(1).max(200000),
+  chunkCount:z.number().int().min(1).max(MAX_COLLECTION_NODES),nodeCount:z.number().int().min(1).max(MAX_COLLECTION_NODES),
   sha256:z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();

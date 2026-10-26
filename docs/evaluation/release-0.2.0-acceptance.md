@@ -31,6 +31,10 @@ retain their original counts and observations.
   authenticated API, persistence, capture transfer and bundled MCP.
 - The compiled native policy, locale and transfer self-tests passed, including
   Unicode NDJSON above 15 MB and preservation of an existing destination on invalid input.
+- The documented `rsync -a --delete` update command was run on an isolated copy
+  of the installed 0.1.1 app. Signature/version checks passed and app/plugin folder
+  identities were preserved. A merge-only `ditto` copy left stale sealed resources
+  and failed signature verification; the upgrade guide was corrected before publication.
 - The installed 0.1.1 app/data were privately backed up. App-root and registered
   plugin-directory identities were preserved during replacement with the 0.2.0
   candidate. Existing 15 project files, token and local certificate pin retained

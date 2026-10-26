@@ -35,14 +35,15 @@ ditto "$HOME/.figma-semantic-bridge" "$backup_dir/data"
    앱이 종료된 상태에서 마운트된 새 앱으로 바꾸는 예시는 다음과 같습니다.
 
 ```sh
-ditto "/Volumes/Figma Semantic Bridge 0.2.0/Figma Semantic Bridge.app/Contents" "/Applications/Figma Semantic Bridge.app/Contents"
+rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.2.0/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
 codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 "/Applications/Figma Semantic Bridge.app/Contents/MacOS/FigmaSemanticBridge" --release-info
 ```
 
-마운트 위치가 다르면 실제 경로를 사용하세요. 위 명령은 현재 배포본의 파일 구성을
-전제로 합니다. 오래된 파일이 남아 서명 검증이 실패하면 정상 상태로 되돌리고 정확한
-파일 목록을 확인하세요. 서명 검증을 끄고 실행하지 마세요.
+마운트 위치가 다르면 실제 경로를 사용하세요. 양쪽 경로가 확인된 앱의 Contents인지
+먼저 확인합니다. 이 명령은 앱 폴더의 정체성을 유지하면서 새 배포본에 없는 이전
+파일을 제거합니다. 앱을 종료하고 백업한 뒤에만 실행하세요. 데이터 폴더를 이 명령의
+대상으로 지정하지 마세요. 서명 검증이 실패하면 백업으로 되돌려 원인을 확인합니다.
 
 3. 설치된 앱을 실행하고 Figma 플러그인을 닫았다가 다시 실행합니다. 앱 내부의
    같은 manifest 경로를 재사용하세요. 별도 ZIP으로 설치했다면 그 고정 폴더도
@@ -120,13 +121,16 @@ key. Keep it private and out of public repositories or shared folders.
    Figma follow the plugin in that backup. With the new DMG mounted:
 
 ```sh
-ditto "/Volumes/Figma Semantic Bridge 0.2.0/Figma Semantic Bridge.app/Contents" "/Applications/Figma Semantic Bridge.app/Contents"
+rsync -a --delete -- "/Volumes/Figma Semantic Bridge 0.2.0/Figma Semantic Bridge.app/Contents/" "/Applications/Figma Semantic Bridge.app/Contents/"
 codesign --verify --deep --strict "/Applications/Figma Semantic Bridge.app"
 "/Applications/Figma Semantic Bridge.app/Contents/MacOS/FigmaSemanticBridge" --release-info
 ```
 
-Use the actual mounted path. If stale files cause signature verification to fail,
-restore and check the exact file set; do not disable verification.
+Use the actual mounted path and verify that both paths are the intended app
+Contents directories. This keeps existing directory identities and removes old
+app files absent from the new release. Run only after quitting and backing up.
+Never use the data directory as the destination. If signature verification fails,
+restore the backup and investigate; do not disable verification.
 3. Launch the installed app and close/relaunch the Figma plugin. Reuse the same
    manifest path inside the app. If using a standalone plugin ZIP, update its
    permanent folder to the matching version too.

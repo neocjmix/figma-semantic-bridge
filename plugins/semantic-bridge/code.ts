@@ -22,9 +22,10 @@ const structureReader=new StructureReader(host,{getChangeEpoch:()=>sourceEpoch})
 const selectiveReader=new SelectiveReader(host,{getChangeEpoch:()=>sourceEpoch});
 let cursorIdleTimer:ReturnType<typeof setTimeout>|null=null;
 const clearCursorIdle=()=>{if(cursorIdleTimer!==null){clearTimeout(cursorIdleTimer);cursorIdleTimer=null;}};
+let cursorIdleMs=10*60*1000;
 const refreshCursorIdle=()=>{
   clearCursorIdle();
-  if(structureReader.hasCursor())cursorIdleTimer=setTimeout(()=>{cursorIdleTimer=null;structureReader.clear();},10*60*1000);
+  if(structureReader.hasCursor())cursorIdleTimer=setTimeout(()=>{cursorIdleTimer=null;structureReader.clear();},cursorIdleMs);
 };
 let observedPage=figma.currentPage;
 const onNodeChange=()=>{sourceEpoch++;clearCursorIdle();structureReader.invalidateSource();selectiveReader.invalidateSource();};
@@ -91,7 +92,7 @@ figma.ui.onmessage=async (message:unknown)=>{
     else if(command.type==='release_source_children')result=selectiveReader.release(command.observationId);
     else if(command.type==='read_structure_chunk'){
       if(selectiveReader.hasCursor())throw new PluginCommandError('PLUGIN_BUSY','Release the active immediate-child cursor before reading structure.');
-      clearCursorIdle();
+      clearCursorIdle();cursorIdleMs=command.cursorIdleMs??10*60*1000;
       try {result=await structureReader.readChunk(command,options);}
       finally {refreshCursorIdle();}
     } else if(command.type==='release_structure_cursor'){

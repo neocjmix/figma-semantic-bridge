@@ -219,9 +219,10 @@ async function captureMetadata(host:CaptureHost,command:Extract<PluginCommand,{t
 /** Export one explicit current-page node without reading its children or changing the document. */
 async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:'preview_node'|'preview_capture'}>,options:CaptureOptions):Promise<NodePreviewResult> {
   const independent=command.type==='preview_capture';
-  const maxDimension=independent?CAPTURE_PREVIEW_MAX_DIMENSION:NODE_PREVIEW_MAX_DIMENSION;
-  const maxBytes=independent?MAX_PNG_BYTES:NODE_PREVIEW_MAX_BYTES;
-  const maxDurationMs=independent?CAPTURE_PREVIEW_MAX_DURATION_MS:NODE_PREVIEW_MAX_DURATION_MS;
+  const overview=command.type==='preview_capture'?command.options:undefined;
+  const maxDimension=independent?overview?.maxDimension??CAPTURE_PREVIEW_MAX_DIMENSION:NODE_PREVIEW_MAX_DIMENSION;
+  const maxBytes=independent?overview?.maxBytes??MAX_PNG_BYTES:NODE_PREVIEW_MAX_BYTES;
+  const maxDurationMs=independent?overview?.maxDurationMs??CAPTURE_PREVIEW_MAX_DURATION_MS:NODE_PREVIEW_MAX_DURATION_MS;
   const now=options.now??Date.now,start=now();
   const checkActive=()=>{
     checkCancelled(options);
@@ -268,7 +269,7 @@ async function previewNode(host:CaptureHost,command:Extract<PluginCommand,{type:
     checkActive();
     options.onProgress?.({phase:'preview',nodes:0,bytes:0});
     checkActive();
-    const scale=Math.min(1,maxDimension/Math.max(bounds.width,bounds.height));
+    const scale=Math.min(overview?.scale??1,maxDimension/Math.max(bounds.width,bounds.height));
     const image=await node.exportAsync({format:'PNG',contentsOnly:true,useAbsoluteBounds:true,constraint:{type:'SCALE',value:scale}});
     checkActive();
     const after=readObservation();

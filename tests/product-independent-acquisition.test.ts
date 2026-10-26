@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { executePluginCommand, type CaptureHost, type FigmaReadableNode } from '../src/figma/capture.js';
 import { BridgeClient, type SocketLike } from '../src/figma/bridge-client.js';
-import { NodePreviewResultSchema, SnapshotSchema } from '../src/shared/contracts.js';
+import { NodePreviewResultSchema, SnapshotSchema, type NodePreviewResult } from '../src/shared/contracts.js';
 
 function png(width:number,height:number,length=24):Uint8Array {
   const bytes=new Uint8Array(length);
@@ -14,6 +14,16 @@ function png(width:number,height:number,length=24):Uint8Array {
 const limits={maxNodes:500,maxBytes:4_000_000,maxDurationMs:5000,maxImageDimension:2048};
 const metadataCommand={type:'capture_metadata',fileKey:'synthetic-file',pageId:'page',nodeId:'root',limits} as const;
 const previewCommand={type:'preview_capture',fileKey:'synthetic-file',pageId:'page',nodeId:'root'} as const;
+
+test('configured overview doubles both axes, keeps document bounds, and honors the requested cap',async()=>{
+  const f=fixture();
+  f.root.exportAsync=async settings=>{
+    assert.equal(settings.constraint.value,2);return png(4096,2048);
+  };
+  const result=await executePluginCommand(f.host,{...previewCommand,options:{maxDimension:4096,scale:2,maxBytes:8_000_000,maxDurationMs:55_000}},{now:()=>0}) as NodePreviewResult;
+  assert.equal(result.preview.width,4096);assert.equal(result.preview.height,2048);
+  assert.deepEqual(result.node.bbox,f.root.absoluteBoundingBox);
+});
 const isCode=(expected:string)=>(error:unknown)=>!!error&&typeof error==='object'&&'code' in error&&error.code===expected;
 
 function fixture() {

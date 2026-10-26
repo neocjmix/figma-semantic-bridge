@@ -29,6 +29,8 @@ import { SelectiveAcquisition } from './selective-acquisition.js';
 import { SourceTransfer } from './source-transfer.js';
 import { DATA_SCHEMA_VERSION, PRODUCT_VERSION, SERVICE_NAME } from '../shared/version.js';
 import { BRIDGE_MAX_WIRE_BYTES } from '../shared/bridge-auth.js';
+import { ImportSettingsStore } from './import-settings.js';
+import { ImportSettingsSchema } from '../shared/import-settings.js';
 
 export { PluginBroker } from './broker.js';
 export { ProjectStore } from './store.js';
@@ -94,9 +96,22 @@ export async function startServer(options:ServerOptions={}) {
   const store=new ProjectStore(dataDir);await store.initialize();
   const tlsIdentity=options.desktopTlsPort===undefined?null:await ensureDesktopTls(dataDir);
   const broker=new PluginBroker(token);
+  const importSettings=new ImportSettingsStore(dataDir);await importSettings.initialize();
   const acquisitions=new AcquisitionManager(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
   try{await acquisitions.initialize();}catch(error){broker.close();throw error;}
-  const collections=new StructureCollections(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
+  const collections=new StructureCollections(dataDir,store,broker,{
+    ...(options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs}),settings:()=>importSettings.get().settings,
+    overview:async(task,signal)=>{
+      const id=task.overviewAcquisitionId!;
+      let image=acquisitions.get(task.projectId,id);
+      if(image.status==='prepared'&&task.source.type!=='SECTION')image=await acquisitions.start(task.projectId,id,{plan:'overview',overview:importSettings.get().settings.overview});
+      while(image.status==='running'||image.status==='cancel_requested'){
+        if(signal.aborted){await acquisitions.cancel(task.projectId,id);throw new ServiceError('CANCELLED','Source import interrupted.',499);}
+        await new Promise(resolve=>setTimeout(resolve,50));image=acquisitions.get(task.projectId,id);
+      }
+      if(image.preview.status!=='ready')await collections.store.update(task.projectId,task.id,{warnings:[...task.warnings,'The overview is unavailable. Received source structure can still be used.']});
+    },
+  });
   try{await collections.initialize();}catch(error){broker.close();throw error;}
   const evidence=new EvidenceScopes(store,collections.store,acquisitions);
   const transfers=new SourceTransfer(store,collections.store,evidence);
@@ -148,6 +163,13 @@ export async function startServer(options:ServerOptions={}) {
           if(request.method==='GET'&&path==='/api/health'){json(response,200,{ok:true,service:SERVICE_NAME,version:PRODUCT_VERSION,schemaVersion:DATA_SCHEMA_VERSION});return;}
           if(request.method==='GET'&&path==='/api/plugin/status'){json(response,200,broker.status);return;}
           if(request.method==='GET'&&path==='/api/ai/status'){json(response,200,{...aiStatus(aiConfig),...(aiConfigurationError?{configurationError:aiConfigurationError.message}:{})});return;}
+          if(path==='/api/import-settings'){
+            if(request.method==='GET'){json(response,200,importSettings.get());return;}
+            if(request.method==='POST'){
+              const value=z.object({expectedRevision:z.number().int().min(0),settings:ImportSettingsSchema}).strict().parse(await body(request));
+              json(response,200,await importSettings.save(value.expectedRevision,value.settings));return;
+            }
+          }
           if(request.method==='POST'&&path==='/api/plugin/selection'){
             z.object({}).strict().parse(await body(request));
             const abort=new AbortController();const onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
@@ -260,9 +282,15 @@ export async function startServer(options:ServerOptions={}) {
             if(request.method==='POST'){
               const input=await body(request);
               if(!id){
-                const prepare=z.object({expectedRevision:z.number().int().min(0),expectedSessionId:IdSchema}).strict().parse(input);
+                const prepare=z.object({expectedRevision:z.number().int().min(0),expectedSessionId:IdSchema,withOverview:z.boolean().optional()}).strict().parse(input);
                 const abort=new AbortController(),onClose=()=>{if(!response.writableEnded)abort.abort();};response.on('close',onClose);
-                try{json(response,201,await collections.prepare(projectId,prepare.expectedRevision,prepare.expectedSessionId,abort.signal));}
+                try{
+                  if(prepare.withOverview){
+                    const image=await acquisitions.prepare(projectId,prepare.expectedRevision,prepare.expectedSessionId,abort.signal);
+                    try{json(response,201,await collections.preparePinned(image,abort.signal));}
+                    catch(error){await acquisitions.remove(projectId,image.id).catch(()=>{});throw error;}
+                  }else json(response,201,await collections.prepare(projectId,prepare.expectedRevision,prepare.expectedSessionId,abort.signal));
+                }
                 finally{response.off('close',onClose);}return;
               }
               if(action==='nodes'){json(response,200,await collections.store.query(projectId,id,CollectionQuerySchema.parse(input)));return;}

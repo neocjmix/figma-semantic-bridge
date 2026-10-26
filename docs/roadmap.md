@@ -1,7 +1,7 @@
 # Development roadmap — delivered source, release gates and future work
 
 The original Phase 0–6 plan produced the published MIT-licensed 0.1.1 alpha.
-**0.2.0 alpha** follows with image-first acquisition,
+**0.2.1 alpha** adds a single normal import, 2× overview images and configurable resource budgets; cross-session partial recovery remains future work under ADR 0012. **0.2.0 alpha** follows with image-first acquisition,
 collection-backed editing, selective reads, source transfer and local transport
 hardening. The release verification report identifies the packaged source and assets. [Product validation](product-validation.md) contains executed
 evidence; [completion status](completion-status.md) separates external dependencies.

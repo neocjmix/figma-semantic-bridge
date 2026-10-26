@@ -1,6 +1,9 @@
 # Release readiness
 
-Current version: **0.2.0 alpha**. Current setup and workflow instructions are in
+Current version: **0.2.1 alpha**. The [0.2.1 acceptance record](evaluation/release-0.2.1-acceptance.md)
+records its normal import/settings checks. Publication and final downloaded assets
+require the new clean-commit verifier report; old 0.2.0 results alone are insufficient.
+Current setup and workflow instructions are in
 [the installation guide](alpha-installation.en.md) and [user guide](user-guide.en.md).
 The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md) documents
 source/interface and installed-candidate checks. Exact release provenance comes

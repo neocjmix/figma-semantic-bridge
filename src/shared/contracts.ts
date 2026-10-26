@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SelectiveReadNodesCommandSchema, SelectiveReadChildrenCommandSchema } from './selective-source.js';
+import { OverviewOptionsSchema, MAX_COLLECTION_NODES, MAX_COLLECTION_BYTES } from './import-settings.js';
 
 export const SCHEMA_VERSION = '1.0.0' as const;
 export const IdSchema = z.string().min(1).max(160);
@@ -21,7 +22,7 @@ export const SourceNodeSchema = z.object({
 }).strict();
 export const PreviewSchema = z.object({
   mimeType: z.literal('image/png'), base64: z.string().max(12_000_000),
-  width: z.number().int().min(1).max(4096), height: z.number().int().min(1).max(4096),
+  width: z.number().int().min(1).max(8192), height: z.number().int().min(1).max(8192),
 }).strict();
 export const NODE_PREVIEW_MAX_DIMENSION = 1024;
 export const NODE_PREVIEW_MAX_BYTES = 2_000_000;
@@ -53,7 +54,7 @@ export const SnapshotSchema = z.object({
 /** External source identity is explicit: these records never contain an inline node prefix. */
 export const CollectionReferenceSchema = z.object({
   id: IdSchema, contentHash: z.string().regex(/^[a-f0-9]{64}$/),
-  nodeCount: z.number().int().min(1).max(200000), byteCount: z.number().int().min(1).max(64000000),
+  nodeCount: z.number().int().min(1).max(MAX_COLLECTION_NODES), byteCount: z.number().int().min(1).max(MAX_COLLECTION_BYTES),
   observedAt: z.string().datetime(),
 }).strict();
 export const EvidenceScopeSchema = z.object({
@@ -143,10 +144,12 @@ export const PluginCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('get_selection') }).strict(),
   z.object({ type: z.literal('capture_selection'), limits: CaptureLimitsSchema }).strict(),
   z.object({ type: z.literal('capture_metadata'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema, limits: CaptureLimitsSchema }).strict(),
-  z.object({ type: z.literal('preview_capture'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),
+  z.object({ type: z.literal('preview_capture'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema, options: OverviewOptionsSchema.optional() }).strict(),
   z.object({ type: z.literal('read_structure_chunk'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema,
     scopeId: IdSchema.optional(),
-    collectionId: IdSchema, sequence: z.number().int().min(0).max(200000) }).strict(),
+    maxNodes: z.number().int().min(1).max(MAX_COLLECTION_NODES).optional(),
+    cursorIdleMs: z.number().int().min(60000).max(1800000).optional(),
+    collectionId: IdSchema, sequence: z.number().int().min(0).max(MAX_COLLECTION_NODES) }).strict(),
   z.object({ type: z.literal('release_structure_cursor'), collectionId: IdSchema }).strict(),
   z.object({ type: z.literal('preview_node'), fileKey: IdSchema, pageId: IdSchema, nodeId: IdSchema }).strict(),
   z.object({ type: z.literal('highlight_nodes'), fileKey: IdSchema, pageId: IdSchema, nodeIds: z.array(IdSchema).min(1).max(100) }).strict(),

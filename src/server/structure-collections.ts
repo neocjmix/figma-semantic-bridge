@@ -7,6 +7,8 @@ import { PluginBroker } from './broker.js';
 import { ProjectStore } from './store.js';
 import { ServiceError } from './errors.js';
 import { SelectiveAcquisition } from './selective-acquisition.js';
+import { defaultImportSettings, type ImportSettings } from '../shared/import-settings.js';
+import type { AcquisitionView } from '../shared/acquisition.js';
 
 type Run={controller:AbortController;started:number;elapsed:number;pause:boolean;done:Promise<void>};
 /** Durable raw source collection. Never converts a large prefix into a Snapshot. */
@@ -17,7 +19,8 @@ export class StructureCollections {
   private cursorOwner:{projectId:string;id:string;sessionId:string}|null=null;
   private closed=false;
   constructor(dataDir:string,private readonly projects:ProjectStore,private readonly broker:PluginBroker,
-    private readonly options:{requestTimeoutMs?:number;runDurationMs?:number}={}){this.store=new CollectionStore(dataDir);}
+    private readonly options:{requestTimeoutMs?:number;runDurationMs?:number;settings?:()=>ImportSettings;
+      overview?:(task:CollectionView,signal:AbortSignal)=>Promise<void>}={}){this.store=new CollectionStore(dataDir);}
   initialize(){return this.store.initialize();}
   private session(id:string){
     if(this.closed)throw new ServiceError('SERVER_CLOSED','Collection service is stopping.',503);
@@ -33,6 +36,16 @@ export class StructureCollections {
   }
   list(projectId:string){return this.store.list(projectId).map(value=>this.view(value));}
   get(projectId:string,id:string){return this.view(this.store.get(projectId,id));}
+  async preparePinned(image:AcquisitionView,signal?:AbortSignal){
+    this.session(image.sessionId);
+    if(signal?.aborted)throw new ServiceError('CANCELLED','Source preparation cancelled.',499);
+    if(this.runs.size)throw new ServiceError('COLLECTION_BUSY','Another structure collection is running.',409);
+    if((await this.projects.get(image.projectId)).revision!==image.baseRevision)throw new ServiceError('REVISION_CONFLICT','Workspace changed during preparation.',409);
+    this.session(image.sessionId);
+    if(signal?.aborted)throw new ServiceError('CANCELLED','Source preparation cancelled.',499);
+    return this.store.create({id:randomUUID(),projectId:image.projectId,sessionId:image.sessionId,
+      source:structuredClone(image.source),overviewAcquisitionId:image.id});
+  }
   async prepare(projectId:string,expectedRevision:number,sessionId:string,signal?:AbortSignal){
     this.session(sessionId);
     if(this.runs.size)throw new ServiceError('COLLECTION_BUSY','Another structure collection is running.',409);
@@ -90,7 +103,7 @@ export class StructureCollections {
     const run:Run={controller:new AbortController(),started:Date.now(),elapsed:task.elapsedMs,pause:false,done:Promise.resolve()};
     this.cursorOwner={projectId,id,sessionId:task.sessionId};
     this.runs.set(id,run);
-    const first=this.store.update(projectId,id,{status:'running',error:null});
+    const first=this.store.update(projectId,id,{status:'running',error:null,pauseReason:null});
     run.done=first.then(()=>this.execute(task,run)).catch(async error=>{
       await this.store.update(projectId,id,{status:'failed',error:this.error(error)}).catch(()=>{});
       await this.release(task);
@@ -109,18 +122,23 @@ export class StructureCollections {
   }
   private async execute(task:CollectionView,run:Run){
     let terminal=false;
+    const settings=this.options.settings?.()??defaultImportSettings();
     try{
+      if(task.overviewAcquisitionId&&this.options.overview)await this.options.overview(task,run.controller.signal);
       while(true){
         if(run.controller.signal.aborted)throw new ServiceError('COLLECTION_INTERRUPTED','The server stopped this live traversal. Prepare a new collection.',409);
         this.session(task.sessionId);
-        if(run.pause||Date.now()-run.started>=(this.options.runDurationMs??300000)){
-          await this.store.update(task.projectId,task.id,{status:'paused',elapsedMs:run.elapsed+Date.now()-run.started});return;
-        }
         const current=this.store.get(task.projectId,task.id);
+        const reason=run.pause?'user':Date.now()-run.started>=(this.options.runDurationMs??settings.runDurationMs)?'time':
+          current.nodeCount>=settings.maxNodes?'nodes':current.chunkCount>0&&settings.maxBytes-current.byteCount<1_000_000?'bytes':null;
+        if(reason){
+          await this.store.update(task.projectId,task.id,{status:'paused',pauseReason:reason,elapsedMs:run.elapsed+Date.now()-run.started});return;
+        }
         const packet=StructureChunkSchema.parse(await this.broker.request({type:'read_structure_chunk',collectionId:task.id,
           sequence:current.chunkCount,fileKey:task.source.fileKey,pageId:task.source.pageId,nodeId:task.source.nodeId,
+          maxNodes:settings.maxNodes,cursorIdleMs:settings.cursorIdleMs,
           ...(task.source.scopeId?{scopeId:task.source.scopeId}:{})},
-          {signal:run.controller.signal,timeoutMs:this.options.requestTimeoutMs??20000}));
+          {signal:run.controller.signal,timeoutMs:this.options.requestTimeoutMs??settings.requestTimeoutMs}));
         this.session(task.sessionId);
         if(run.controller.signal.aborted)throw new ServiceError('COLLECTION_INTERRUPTED','Collection was interrupted before storing the chunk.',409);
         const next=await this.store.append(task.projectId,task.id,packet);
@@ -131,7 +149,7 @@ export class StructureCollections {
       const retryable=error instanceof ServiceError&&['PLUGIN_TIMEOUT','PLUGIN_BUSY'].includes(error.code)&&!run.controller.signal.aborted&&
         this.broker.status.connected&&this.broker.status.sessionId===task.sessionId;
       terminal=!retryable;
-      await this.store.update(task.projectId,task.id,{status:retryable?'paused':'interrupted',elapsedMs:run.elapsed+Date.now()-run.started,error:this.error(error)});
+      await this.store.update(task.projectId,task.id,{status:retryable?'paused':'interrupted',pauseReason:retryable?'busy':null,elapsedMs:run.elapsed+Date.now()-run.started,error:this.error(error)});
     }finally{if(terminal)await this.release(task);}
   }
   async stop(projectId:string,id:string){

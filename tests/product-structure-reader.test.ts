@@ -10,6 +10,17 @@ const bounds={x:0,y:0,width:100,height:80};
 type ReadCommand=Extract<PluginCommand,{type:'read_structure_chunk'}>;
 const command=(sequence:number):ReadCommand=>({type:'read_structure_chunk',fileKey,pageId,nodeId:rootId,collectionId,sequence});
 
+test('raising a node budget continues at the first unread node without rereading saved parts',async()=>{
+  const f=fixture();
+  for(let index=0;index<8;index++)f.children.push({id:`budget-${index}`,name:'Leaf',type:'RECTANGLE',parent:f.root,absoluteBoundingBox:bounds});
+  const reader=new StructureReader(f.host,{now:()=>0});
+  const first=await reader.readChunk({...command(0),maxNodes:3});
+  assert.deepEqual(first.nodes.map(node=>node.id),[rootId,'budget-0','budget-1']);assert.equal(first.complete,false);
+  const next=await reader.readChunk({...command(1),maxNodes:20});
+  assert.equal(next.nodes[0]!.id,'budget-2');assert.equal(next.complete,true);
+  assert.equal(first.nodes.length+next.nodes.length,9);assert.equal(f.rootChildReads,1);
+});
+
 function fixture() {
   const page:FigmaReadableNode & {selection:FigmaReadableNode[]}={id:pageId,type:'PAGE',name:'Synthetic page',parent:null,selection:[]};
   Object.defineProperty(page,'children',{get(){throw new Error('Reader must not preload the page.');}});
@@ -134,15 +145,15 @@ test('cancel during cooperative yield discards the draft and permits sequence-ze
   assert.equal(f.host.skipInvisibleInstanceChildren,true);
 });
 
-test('node limit fails explicitly without publishing a false complete packet', {timeout:60000},async()=>{
+test('a configured node limit preserves its final partial packet and never reports complete', {timeout:60000},async()=>{
   const f=fixture();
   for(let index=0;index<200000;index++)f.children.push({id:`leaf-${index}`,name:'Leaf',type:'RECTANGLE',parent:f.root,absoluteBoundingBox:bounds});
   const reader=new StructureReader(f.host,{now:()=>0});let sequence=0,published=0;
   await assert.rejects((async()=>{
-    while(true){const packet=await reader.readChunk(command(sequence));published+=packet.nodes.length;
+    while(true){const packet=await reader.readChunk({...command(sequence),maxNodes:200000});published+=packet.nodes.length;
       assert.equal(packet.complete,false);sequence=packet.nextSequence!;}
   })(),{code:'COLLECTION_NODE_LIMIT'});
-  assert.ok(published<200000);
+  assert.equal(published,200000);
   assert.equal(f.host.skipInvisibleInstanceChildren,true);
 });
 
@@ -159,14 +170,14 @@ test('exactly 200,000 records may complete at the configured boundary', {timeout
   assert.equal(f.host.skipInvisibleInstanceChildren,true);
 });
 
-test('64 MB cumulative wire limit fails before declaring a large exact-text scope complete', {timeout:60000},async()=>{
+test('128 MB cumulative wire ceiling rejects overflow without falsely completing exact text', {timeout:60000},async()=>{
   const f=fixture(),text='X'.repeat(50000);
-  for(let index=0;index<1400;index++)f.children.push({id:`text-${index}`,name:'Text',type:'TEXT',parent:f.root,absoluteBoundingBox:bounds,characters:text});
+  for(let index=0;index<2900;index++)f.children.push({id:`text-${index}`,name:'Text',type:'TEXT',parent:f.root,absoluteBoundingBox:bounds,characters:text});
   const reader=new StructureReader(f.host,{now:()=>0});let sequence=0,published=0;
   await assert.rejects((async()=>{
     while(true){const packet=await reader.readChunk(command(sequence));published+=packet.nodes.length;
       assert.equal(packet.complete,false);sequence=packet.nextSequence!;}
   })(),{code:'COLLECTION_BYTE_LIMIT'});
-  assert.ok(published<1401);
+  assert.ok(published<2901);
   assert.equal(f.host.skipInvisibleInstanceChildren,true);
 });

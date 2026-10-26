@@ -1,6 +1,6 @@
 # Data model and source-evidence invariants
 
-This documents the 0.2.0 implementation, not a frozen third-party SDK.
+This documents the 0.2.1 implementation, not a frozen third-party SDK.
 `src/shared/contracts.ts`, `structure-collection.ts`, `selective-source*.ts`,
 `source-transfer.ts` and `capture-bundle.ts` define the exact Zod contracts;
 `src/core/project.ts` and server storage add cross-record validation. The project
@@ -95,12 +95,14 @@ instead of presenting omitted data as complete.
 
 ## Large and selective observations outside Project JSON
 
+Import resource settings are separately persisted with their own revision. They change future reads/resumes, not saved observations or approvals. Normal collection records may refer to their overview acquisition and record a node/byte/time/user/busy pause reason.
+
 Collection packets are preorder records with root/bounds/file/page identity,
 timestamps, ordered sequence, per-node direct-child counts and a closed-frontier
-completion flag. Each packet is at most 500 nodes/1 MB; one collection is at most
-200,000 nodes/64 MB. The store validates unique IDs, ancestry, exact counts,
+completion flag. Each packet is at most 500 nodes/1 MB; one collection has a safety ceiling of
+1,000,000 nodes/128 MB (default operating budgets: 200,000 nodes/64 MB). The store validates unique IDs, ancestry, exact counts,
 bytes, order and complete traversal before exposing a descriptor. There are at
-most twelve cached collections/256 MB locally. Pause takes effect after a durable
+most twelve cached collections/512 MB locally. Pause takes effect after a durable
 packet; same-session resume is time-limited. A server restart or changed plugin
 session cannot rehydrate a live Figma cursor as an unchanged source revision.
 

@@ -1,6 +1,6 @@
 # Project context and design rationale
 
-This explains the local product in 0.2.0. The
+This explains the local product in 0.2.1. Normal imports use a 2× overview and resumable chunked structure, with adjustable budgets and automatic clean-editor binding. These changes do not implement cross-session supplementation of partial evidence; see [ADR 0013](adr/0013-configurable-import-budgets.md). The
 [validation log](product-validation.md) records executed checks; dated evaluations
 and ADRs retain the evidence available at their dates. Published 0.1.1 binaries
 do not acquire later source-build behavior merely because the repository changed.

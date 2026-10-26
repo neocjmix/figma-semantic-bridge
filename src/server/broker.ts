@@ -108,7 +108,8 @@ export class PluginBroker {
         if(pending.command.type==='get_selection')result=SelectionSchema.parse(response.result);
         else if(pending.command.type==='capture_selection'||pending.command.type==='capture_metadata'){result=SnapshotSchema.parse(response.result);validatePreview(result as z.infer<typeof SnapshotSchema>);}
         else if(pending.command.type==='preview_node'){const preview=NodePreviewResultSchema.parse(response.result);validateNodePreview(preview);result=preview;}
-        else if(pending.command.type==='preview_capture'){const preview=NodePreviewResultSchema.parse(response.result);validateNodePreview(preview,{dimension:2048,bytes:8_000_000});result=preview;}
+        else if(pending.command.type==='preview_capture'){const preview=NodePreviewResultSchema.parse(response.result),settings=pending.command.options;
+          validateNodePreview(preview,{dimension:settings?.maxDimension??2048,bytes:settings?.maxBytes??8_000_000,scale:settings?.scale??1});result=preview;}
         else if(pending.command.type==='read_structure_chunk'){
           result=StructureChunkSchema.parse(response.result);
           if(Buffer.byteLength(JSON.stringify(result))>STRUCTURE_CHUNK_BYTES)throw new Error('Chunk exceeds wire byte budget.');

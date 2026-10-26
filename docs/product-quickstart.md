@@ -1,7 +1,7 @@
-# Local source quickstart — 0.2.0
+# Local source quickstart — 0.2.1
 
 This is for contributors running the **current source**, not a substitute for
-the [0.2.0 user guide](user-guide.en.md),
+the [0.2.1 user guide](user-guide.en.md),
 [Korean user guide](user-guide.ko.md),
 [acquisition workflow](acquisition-workflow.en.md) or
 [upgrade guide](upgrade-guide.md). The published 0.1.1 app/plugin has a different

@@ -1,4 +1,4 @@
-# Install Figma Semantic Bridge 0.2.0 Alpha
+# Install Figma Semantic Bridge 0.2.1 Alpha
 
 [한국어](alpha-installation.md) · [User guide](user-guide.en.md) · [Upgrade and backup](upgrade-guide.md)
 
@@ -19,13 +19,13 @@ before replacing files. Use the same release for the app and plugin.
   to make setup pass.
 
 Download matching files from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
-Check that the selected release and files say **0.2.0**.
+Check that the selected release and files say **0.2.1**.
 
 | File | Purpose |
 | --- | --- |
-| `figma-semantic-bridge-0.2.0-macos-arm64.dmg` | Install the app into Applications |
-| `figma-semantic-bridge-0.2.0-macos-arm64.zip` | Alternative app archive |
-| `figma-semantic-bridge-plugin-0.2.0.zip` | Optional separate prebuilt plugin; the app already includes it |
+| `figma-semantic-bridge-0.2.1-macos-arm64.dmg` | Install the app into Applications |
+| `figma-semantic-bridge-0.2.1-macos-arm64.zip` | Alternative app archive |
+| `figma-semantic-bridge-plugin-0.2.1.zip` | Optional separate prebuilt plugin; the app already includes it |
 | `SHA256SUMS` and adjacent `.sha256` files | Compare downloaded bytes with the release's checksums |
 | Installation and user guides | Offline copies of these instructions |
 
@@ -94,10 +94,10 @@ record the exact access condition and use permitted imported observations meanwh
 
 1. Create a disposable synthetic workspace or choose **Load demo**. Save a harmless
    annotation, restart the app, and confirm it remains. Preserve existing work.
-2. For live Figma, select one small permitted Frame. Choose **Capture Figma selection**,
-   check its name and bounds, choose image and structure, then **Start import**.
-3. Inspect the image, node count and any warnings. Choose **Save complete capture**
-   only when the required structure is complete.
+2. For live Figma, select one small permitted Frame. Choose **Add source**, check
+   its name, bounds and budgets, then choose **Start import**.
+3. Images and structure are saved automatically. If a budget is reached, raise it
+   in Settings and Continue within the same valid Figma connection.
 4. Follow the [user guide](user-guide.en.md) to save a region, review its exact
    source nodes and, when warranted, confirm and approve it. Setup does not
    authorize an agent to approve real design meaning on the user's behalf.
@@ -160,7 +160,7 @@ also requires per-request consent for the selected content.
 | Symptom | Next step |
 | --- | --- |
 | macOS blocks launch | Verify release and integrity, then follow the per-app system procedure; respect organizational restrictions |
-| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.2.0 transports must not be mixed |
+| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.2.1 transports must not be mixed |
 | Local certificate or permissions error | Check ownership and private permissions of the actual data directory; preserve it and do not accept a network-supplied pin |
 | App editor asks for a token | Use the installed app's embedded editor and check startup status; a separately opened browser does not auto-pair |
 | Plugin will not connect | Confirm matching app/plugin versions, the current token and the running app; close and rerun the updated plugin |

@@ -7,13 +7,14 @@ import { CollectionStore } from './structure-collection-store.js';
 import { PluginBroker } from './broker.js';
 import { ProjectStore } from './store.js';
 import { ServiceError } from './errors.js';
+import type { DiagnosticLog } from './diagnostics.js';
 import { SelectiveAcquisition } from './selective-acquisition.js';
 import { defaultImportSettings, type ImportSettings } from '../shared/import-settings.js';
 import type { AcquisitionView } from '../shared/acquisition.js';
 import { SelectiveNodesResultSchema } from '../shared/selective-source-results.js';
 import { StructureReplayResultSchema, restoreReplayedStructureChunk, structureChunkContentHash } from '../shared/structure-replay.js';
 
-type Run={controller:AbortController;started:number;elapsed:number;pause:boolean;done:Promise<void>};
+type Run={diagnosticRunId:string;diagnosticStarted:number;controller:AbortController;started:number;elapsed:number;pause:boolean;done:Promise<void>};
 /** Durable raw source collection. Never converts a large prefix into a Snapshot. */
 export class StructureCollections {
   readonly store:CollectionStore;
@@ -23,7 +24,7 @@ export class StructureCollections {
   private preparing=false;
   private closed=false;
   constructor(dataDir:string,private readonly projects:ProjectStore,private readonly broker:PluginBroker,
-    private readonly options:{requestTimeoutMs?:number;runDurationMs?:number;settings?:()=>ImportSettings;
+    private readonly options:{requestTimeoutMs?:number;runDurationMs?:number;settings?:()=>ImportSettings;diagnostics?:DiagnosticLog;
       overview?:(task:CollectionView,signal:AbortSignal)=>Promise<void>}={}){this.store=new CollectionStore(dataDir);}
   initialize(){return this.store.initialize();}
   private session(id:string){
@@ -108,11 +109,13 @@ export class StructureCollections {
     if(this.cursorOwner&&this.cursorOwner.id!==id&&this.cursorOwner.sessionId===task.sessionId)
       throw new ServiceError('COLLECTION_BUSY','Resume or remove the paused collection before starting another source collection.',409);
     if(task.status!==(resume?'paused':'prepared'))throw new ServiceError('COLLECTION_STATE','Start a prepared collection or resume a paused collection in the same session.',409);
-    const run:Run={controller:new AbortController(),started:Date.now(),elapsed:task.elapsedMs,pause:false,done:Promise.resolve()};
+    const run:Run={diagnosticRunId:randomUUID(),diagnosticStarted:performance.now(),controller:new AbortController(),started:Date.now(),elapsed:task.elapsedMs,pause:false,done:Promise.resolve()};
     this.cursorOwner={projectId,id,sessionId:task.sessionId};
+    this.options.diagnostics?.emit('collection.start','info',{runId:run.diagnosticRunId,phase:resume?'resume':'start'});
     this.runs.set(id,run);
     const first=this.store.update(projectId,id,{status:'running',error:null,pauseReason:null});
     run.done=first.then(()=>this.execute(task,run)).catch(async error=>{
+      this.options.diagnostics?.error('collection.error',error,{runId:run.diagnosticRunId,phase:'storage'});
       await this.store.update(projectId,id,{status:'failed',error:this.error(error)}).catch(()=>{});
       await this.release(task);
     }).finally(()=>this.runs.delete(id));
@@ -259,7 +262,7 @@ export class StructureCollections {
     }
   }
   private async execute(task:CollectionView,run:Run){
-    let terminal=false;
+    let terminal=false,diagnosticState='running';
     const settings=this.options.settings?.()??defaultImportSettings();
     try{
       if(task.overviewAcquisitionId&&!task.recovery&&!task.partOf&&this.options.overview)await this.options.overview(task,run.controller.signal);
@@ -270,6 +273,7 @@ export class StructureCollections {
         const reason=run.pause?'user':Date.now()-run.started>=(this.options.runDurationMs??settings.runDurationMs)?'time':
           current.nodeCount>=settings.maxNodes?'nodes':current.chunkCount>0&&settings.maxBytes-current.byteCount<1_000_000?'bytes':null;
         if(reason){
+          diagnosticState='paused';
           await this.store.update(task.projectId,task.id,{status:'paused',pauseReason:reason,elapsedMs:run.elapsed+Date.now()-run.started});return;
         }
         const previous=task.recovery?await this.store.savedChunk(task.projectId,task.recovery.previousCollectionId,current.chunkCount):null;
@@ -285,17 +289,19 @@ export class StructureCollections {
         this.session(task.sessionId);
         if(run.controller.signal.aborted)throw new ServiceError('COLLECTION_INTERRUPTED','Collection was interrupted before storing the chunk.',409);
         const next=await this.store.append(task.projectId,task.id,packet);
+        this.options.diagnostics?.emit('collection.packet','debug',{runId:run.diagnosticRunId,sequence:packet.sequence,nodeCount:next.nodeCount,bytes:next.byteCount});
         await this.store.update(task.projectId,task.id,{elapsedMs:run.elapsed+Date.now()-run.started,
           ...(current.recovery?{recovery:{...current.recovery,revalidatedNodes:current.recovery.revalidatedNodes+(previous?packet.nodes.length:0),
             reusedPackets:current.recovery.reusedPackets+(receipt.success?1:0)}}:{})});
-        if(next.status==='complete'){terminal=true;return;}
+        if(next.status==='complete'){terminal=true;diagnosticState='complete';return;}
       }
     }catch(error){
+      this.options.diagnostics?.error('collection.error',error,{runId:run.diagnosticRunId});
       const retryable=error instanceof ServiceError&&['PLUGIN_TIMEOUT','PLUGIN_BUSY'].includes(error.code)&&!run.controller.signal.aborted&&
         this.broker.status.connected&&this.broker.status.sessionId===task.sessionId;
-      terminal=!retryable;
+      terminal=!retryable;diagnosticState=retryable?'paused':'interrupted';
       await this.store.update(task.projectId,task.id,{status:retryable?'paused':'interrupted',pauseReason:retryable?'busy':null,elapsedMs:run.elapsed+Date.now()-run.started,error:this.error(error)});
-    }finally{if(terminal)await this.release(task);}
+    }finally{this.options.diagnostics?.emit('collection.complete','info',{runId:run.diagnosticRunId,state:diagnosticState,durationMs:performance.now()-run.diagnosticStarted});if(terminal)await this.release(task);}
   }
   async stop(projectId:string,id:string){
     const task=this.store.get(projectId,id),run=this.runs.get(id);

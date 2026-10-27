@@ -4,6 +4,7 @@ import { StructureChunkSchema, STRUCTURE_CHUNK_BYTES, STRUCTURE_COLLECTION_BYTES
   type StructureChunk } from '../shared/structure-collection.js';
 import type { MatchResult } from './matching.js';
 import { DomainError } from './project.js';
+import { unitRatio } from './geometry-scores.js';
 
 type Rendering = 'hidden' | 'transparent' | 'unknown' | 'potential';
 type Scored = { nodeId: string; box: Rect; depth: number; enter: number; exit: number;
@@ -80,8 +81,8 @@ export async function matchCollectionRegion(scopeId: string, inputRegion: Rect, 
       let scored: Scored | null = null;
       if (effective !== 'hidden' && effective !== 'transparent' && box && box.width > 0 && box.height > 0 && (overlaps(box, region) || nearEqual(box, region, tolerance))) {
         const intersection = intersectionArea(region, box);
-        scored = { nodeId: node.id, box, depth, enter: count, exit: count + 1, coverage: intersection / area(region),
-          iou: intersection / (area(region) + area(box) - intersection), near: nearEqual(region, box, tolerance), exact: nearEqual(region, box, 0),
+        scored = { nodeId: node.id, box, depth, enter: count, exit: count + 1, coverage: unitRatio(intersection, area(region)),
+          iou: unitRatio(intersection, area(region) + area(box) - intersection), near: nearEqual(region, box, tolerance), exact: nearEqual(region, box, 0),
           inside: contains(region, box, tolerance), contains: contains(box, region, tolerance) };
         candidateCount++; retainCandidate(top, scored);
         if (scored.near) { nearCount++; if (!bestExact || compareExact(scored, bestExact) < 0) bestExact = scored; }

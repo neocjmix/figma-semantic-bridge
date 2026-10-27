@@ -1,12 +1,11 @@
-# Local source quickstart — 0.2.1
+# Local source quickstart — 0.4.0
 
 This is for contributors running the **current source**, not a substitute for
-the [0.2.1 user guide](user-guide.en.md),
+the [user guide](user-guide.en.md),
 [Korean user guide](user-guide.ko.md),
 [acquisition workflow](acquisition-workflow.en.md) or
-[upgrade guide](upgrade-guide.md). The published 0.1.1 app/plugin has a different
-bridge protocol and does not contain the later collection-backed workflow. Update
-the local server, imported plugin and packaged app as one matched version.
+[upgrade guide](upgrade-guide.md). Keep the local server, imported plugin and
+packaged app on one matched version.
 
 ## Build and run locally
 
@@ -41,12 +40,27 @@ can-view file remains unverified; follow the
 [Desktop permission procedure](desktop-verification.md#dev-seat-and-view-access-acceptance)
 before claiming that access combination.
 
-The manual product workflow is in the [user guide](user-guide.en.md). The
-[acquisition guide](acquisition-workflow.en.md) explains bounded Snapshots,
-overview-only proposed drafts, complete chunked collections, selective ID/child
-reads, branch acquisition and source-only NDJSON transfer. These have separate
-completion semantics: a partial collection, unloaded source page or visual-only
-draft cannot become approved evidence merely because some records arrived.
+## Follow the product flow
+
+1. Create or open a workspace. In Figma, select a permitted frame. Choose
+   **Add source**, check its target and cost notice, then **Start import**.
+2. Draw and name a region. **Save region** prepares links for a new region when
+   its source is ready. Inspect the named source nodes, **Confirm sources**, then
+   **Approve region**. Saved manual references survive later geometry edits;
+   **Change source nodes** contains rematching, manual search and Figma selection.
+3. From an approved region, choose **Link specification**. It preselects that
+   region as the target. **Specification source** selects the source of the exact
+   wording, including another imported source. Save and approve the specification.
+4. Open **Share** to inspect the result and download JSON or Markdown, or follow
+   the MCP instructions. Save or discard pending changes before moving to another
+   editor or sharing.
+
+Role, parent and numeric geometry are under **Region settings**. Split, merge,
+source-transfer files and recovery remain available as secondary tools.
+The [user guide](user-guide.en.md) covers these paths. The
+[acquisition guide](acquisition-workflow.en.md) explains partial-source browsing,
+prepared parts and continuation after reconnect. Image-only drafts can be saved;
+source confirmation and approval require complete evidence for the chosen scope.
 
 ## MCP and optional proposals
 
@@ -90,7 +104,39 @@ Completing the part does not mark its siblings or the original full task complet
 Manual annotation works without an AI provider. An optional OpenAI-compatible
 provider must be deliberately configured; external transfer of selected images
 and text needs per-request consent and applicable organization authorization.
-Generated output is a validated pending proposal, never an automatic approval.
+In-app generation currently accepts older bounded Snapshots, not normal
+collection-backed imports. Use manual editing or submit a structured agent proposal
+for a normal import. Generated output is a validated pending proposal, never an
+automatic approval.
+
+## Local diagnostics
+
+The packaged app exposes **Bridge → Reveal Diagnostic Logs**. The default folder
+is `~/.figma-semantic-bridge/logs`; an isolated `FSB_DATA_DIR` has its own `logs`
+subdirectory. `server.ndjson` records request IDs, normalized routes, operation
+names, duration and errors. `native.ndjson` records desktop lifecycle, WebView and
+file-save events. Browser and WebView failures include sanitized application
+stack locations; arbitrary console arguments are excluded.
+
+```sh
+tail -f ~/.figma-semantic-bridge/logs/server.ndjson
+tail -f ~/.figma-semantic-bridge/logs/native.ndjson
+```
+
+Reproduce in a synthetic workspace, note the time and action, and match the UI's
+**diagnostic reference** with `requestId` in the logs. Server validation errors
+include fixed reasons or schema paths, not request bodies or source values.
+Design text, images, node names, tokens and external model content are excluded.
+Logging is best effort, private to the local account, bounded by file size and
+retention, and never uploaded automatically. Preserve the relevant rotated files
+when investigating an older incident.
+
+For direct inspection, choose **Bridge → Enable Web Inspector** on supported
+macOS versions. This enables WebKit inspection; use Safari's Develop menu to
+inspect the app. The local logs remain available without opening an inspector.
+Development browser consoles also emit local metadata diagnostics through the
+authenticated API. Keep pairing-token terminal output private; it is separate
+from these diagnostic files.
 
 ## Validation boundaries
 

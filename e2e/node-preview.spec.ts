@@ -1,3 +1,4 @@
+import { openSourceOptions } from './workflow-controls.js';
 import { authenticatePluginSocket } from '../tests/bridge-auth-helper.js';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -161,7 +162,7 @@ test('saving cancels a pending export while retaining the normal mutation lock',
   await page.route(mutationPath, async route => { received = true; await held; await route.continue(); });
   try {
     await page.getByLabel('Component name', { exact: true }).fill('Updated search review');
-    await page.getByRole('button', { name: 'Save annotation', exact: true }).click({ timeout: 2_000 });
+    await page.getByRole('button', { name: 'Save region', exact: true }).click({ timeout: 2_000 });
     await expect.poll(() => received, { timeout: 2_000 }).toBe(true);
     await expect.poll(() => app.cancellations.length, { timeout: 2_000 }).toBe(1);
     await expect(page.locator('.component-list').getByRole('button', { name: 'Original approved region', exact: true })).toBeDisabled();
@@ -225,7 +226,7 @@ test('current exports compare distinct node images without changing captured or 
   await expect(page.locator('.node-export-image img')).toHaveCount(1);
   expect(app.previewRequests).toEqual(['search-bg', 'alternate-search']);
   expect(await app.read()).toEqual(before);
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
   await comparison.getByRole('button', { name: 'Show in Figma', exact: true }).click();
   expect(app.navigationRequests).toEqual([['alternate-search']]);
   expect(app.previewRequests).toEqual(['search-bg', 'alternate-search']);
@@ -240,6 +241,7 @@ test('current exports compare distinct node images without changing captured or 
 test('manual blank exports do not select sources and changed metadata prompts recapture', async ({ page, app }) => {
   await openReview(page, app);
   const before = await app.read();
+  await openSourceOptions(page);
   await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('hidden-source');
   const manual = page.locator('.manual-source').filter({ hasText: 'Hidden manual source' });
@@ -292,13 +294,14 @@ test('exports clear after a saved revision change and remain unavailable for an 
   await page.getByLabel('Selected source nodes').getByRole('button', { name: 'Compare current export' }).click();
   await expect(page.locator('.node-export-image img')).toBeVisible();
   await page.getByRole('textbox', { name: 'Component name', exact: true }).fill('Renamed review');
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Save region', exact: true }).click();
   await expect(page.locator('.unsaved')).toHaveCount(0);
   await expect(page.getByLabel('Current node export comparison')).toHaveCount(0);
   const after = await app.read();
   expect(after.annotations.find(annotation => annotation.id === 'original-approved')).toEqual(app.initial.annotations.find(annotation => annotation.id === 'original-approved'));
   expect(after.snapshots).toEqual(app.initial.snapshots);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
+  await openSourceOptions(page);
   await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('hidden-source');
   await expect(page.locator('.manual-sources').getByRole('button', { name: 'Compare current export' })).toBeDisabled();

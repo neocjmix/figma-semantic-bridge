@@ -112,7 +112,7 @@ export function SourceTransferPanel({ token, project, busy, dirty, beginProjectM
         return;
       }
       onImported(next); setFile(null); if (fileInput.current) fileInput.current.value = '';
-      setNotice(message('Source file imported. Add annotations, check the source nodes and confirm them before approval.'));
+      setNotice(message('Source file imported. Draw a region and review its linked nodes.'));
     } catch (cause) {
       if (!controller.signal.aborted && currentOperation()) setError(errorMessage(cause));
     } finally {

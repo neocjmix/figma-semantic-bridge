@@ -1,3 +1,4 @@
+import { openWorkspaceTools } from './workflow-controls.js';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -67,6 +68,7 @@ test('legacy source file import through the unified picker preserve sources and 
   expect(bundle).not.toHaveProperty('proposals');
   expect(await app.read(app.source.id)).toEqual(app.source);
   // Import also works before choosing any workspace, with only the local server paired.
+  await openWorkspaceTools(page);
   await page.getByRole('button', { name: 'Disconnect editor', exact: true }).click();
   await page.getByLabel('Pairing token').fill(app.token);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
@@ -75,7 +77,7 @@ test('legacy source file import through the unified picker preserve sources and 
   await page.getByLabel('Source file (.ndjson or .json)', { exact: true }).setInputFiles(path);
   await page.getByRole('button', { name: 'Import source file', exact: true }).click();
   await expect(page.locator('.project-heading')).toHaveText('Transferred review');
-  await expect(page.locator('.status-bar')).toContainText('check the source nodes and confirm them before approval');
+  await expect(page.locator('.status-bar')).toHaveText('Source file imported. Draw a region and review its linked nodes.');
   const importedId = await page.getByLabel('Open workspace').inputValue();
   expect(importedId).not.toBe(app.source.id);
   const imported = await app.read(importedId);
@@ -88,10 +90,12 @@ test('legacy source file import through the unified picker preserve sources and 
   await page.getByLabel('Open workspace').selectOption(app.source.id);
   await expect(page.locator('.component-list')).toContainText('Approved search');
   const approvedDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
   await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
   const approved = JSON.parse(await readFile((await (await approvedDownload).path())!, 'utf8')) as { annotations: unknown[]; specifications: unknown[] };
   expect(approved.annotations).toHaveLength(1);
   expect(approved.specifications).toHaveLength(1);
+  await page.getByRole('dialog', { name: 'Share approved work' }).getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByText('Source files', { exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('capture-transfer.png'), fullPage: true });
   expect(errors).toEqual([]);
@@ -153,12 +157,15 @@ test('unsaved annotations, specifications and draft input block importing', asyn
   await expect(importButton).toBeEnabled();
   await page.getByRole('tab', { name: 'Specifications', exact: true }).click();
   await page.locator('.spec-list button').click();
+  await page.locator('.component-link-options > summary').click();
+  await page.locator('.relation-options > summary').click();
   const relation = page.getByLabel('Relation to Approved search', { exact: true });
   await relation.selectOption('constraint');
   await expect(importButton).toBeDisabled();
   await relation.selectOption('behavior');
   await expect(importButton).toBeEnabled();
-  await page.getByRole('tab', { name: /^Drafts/ }).click();
+  await page.getByRole('tab', { name: /^Review suggestions/ }).click();
+  await page.locator('.structured-proposal > summary').click();
   await page.getByLabel('Draft JSON', { exact: true }).fill('{"annotations":[]');
   await expect(importButton).toBeDisabled();
   expect(await app.read(app.source.id)).toEqual(app.source);
@@ -167,6 +174,7 @@ test('unsaved annotations, specifications and draft input block importing', asyn
 
 test('pending import locks workspace changes and cannot be submitted twice', async ({ page, app }) => {
   const panel = await openTransfer(page, app);
+  await openWorkspaceTools(page);
   const { path } = await exportBundle(page, app);
   await page.locator('.component-list').getByRole('button', { name: 'Approved search', exact: true }).click();
   await page.getByLabel('Source file (.ndjson or .json)', { exact: true }).setInputFiles(path);

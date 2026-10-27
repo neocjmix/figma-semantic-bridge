@@ -31,6 +31,8 @@ import { DATA_SCHEMA_VERSION, PRODUCT_VERSION, SERVICE_NAME } from '../shared/ve
 import { BRIDGE_MAX_WIRE_BYTES } from '../shared/bridge-auth.js';
 import { ImportSettingsStore } from './import-settings.js';
 import { ImportSettingsSchema } from '../shared/import-settings.js';
+import { DiagnosticClientEventSchema } from '../shared/diagnostics.js';
+import { DiagnosticLog } from './diagnostics.js';
 
 export { PluginBroker } from './broker.js';
 export { ProjectStore } from './store.js';
@@ -73,14 +75,14 @@ function json(response:ServerResponse,status:number,value:unknown):void {
   if(response.writableEnded)return;
   response.statusCode=status;response.setHeader('Content-Type','application/json; charset=utf-8');response.end(JSON.stringify(value));
 }
-function body(request:IncomingMessage):Promise<unknown> {
+function body(request:IncomingMessage,maxBytes=MAX_BODY_BYTES):Promise<unknown> {
   if(!/^application\/json(?:\s*;|$)/i.test(request.headers['content-type']??''))return Promise.reject(new ServiceError('CONTENT_TYPE','Use application/json.',415));
   const length=Number(request.headers['content-length']);
-  if(Number.isFinite(length)&&length>MAX_BODY_BYTES)return Promise.reject(new ServiceError('BODY_LIMIT','Request body exceeds 16 MB.',413));
+  if(Number.isFinite(length)&&length>maxBytes)return Promise.reject(new ServiceError('BODY_LIMIT','Request body exceeds 16 MB.',413));
   return new Promise((resolveBody,reject)=>{
     let bytes=0;const chunks:Buffer[]=[];let done=false;
     const fail=(error:Error)=>{if(done)return;done=true;chunks.length=0;reject(error);};
-    request.on('data',(chunk:Buffer)=>{if(done)return;bytes+=chunk.length;if(bytes>MAX_BODY_BYTES){fail(new ServiceError('BODY_LIMIT','Request body exceeds 16 MB.',413));return;}chunks.push(chunk);});
+    request.on('data',(chunk:Buffer)=>{if(done)return;bytes+=chunk.length;if(bytes>maxBytes){fail(new ServiceError('BODY_LIMIT','Request body exceeds 16 MB.',413));return;}chunks.push(chunk);});
     request.on('end',()=>{if(done)return;done=true;try{resolveBody(JSON.parse(Buffer.concat(chunks).toString('utf8')));}catch{reject(new ServiceError('INVALID_JSON','Request body is not valid JSON.'));}});
     request.on('error',()=>fail(new ServiceError('REQUEST_ABORTED','Request body could not be read.')));
     request.on('aborted',()=>fail(new ServiceError('REQUEST_ABORTED','Request was aborted.')));
@@ -91,15 +93,16 @@ const MIME:Record<string,string>={'.html':'text/html; charset=utf-8','.js':'appl
 export interface ServerOptions {port?:number;desktopTlsPort?:number;token?:string;dataDir?:string;webDir?:string;requestTimeoutMs?:number;aiConfig?:AiConfig|null}
 export async function startServer(options:ServerOptions={}) {
   const dataDir=resolve(options.dataDir??join(homedir(),'.figma-semantic-bridge'));
+  const diagnostics=new DiagnosticLog(dataDir);await diagnostics.initialize();
   const token=options.token??await tokenFor(dataDir);
   if(token.length<32||token.length>1024)throw new Error('Pairing token must contain 32–1024 characters.');
   const store=new ProjectStore(dataDir);await store.initialize();
   const tlsIdentity=options.desktopTlsPort===undefined?null:await ensureDesktopTls(dataDir);
-  const broker=new PluginBroker(token);
+  const broker=new PluginBroker(token,{diagnostics});
   const importSettings=new ImportSettingsStore(dataDir);await importSettings.initialize();
-  const acquisitions=new AcquisitionManager(dataDir,store,broker,options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs});
+  const acquisitions=new AcquisitionManager(dataDir,store,broker,{diagnostics,...(options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs})});
   try{await acquisitions.initialize();}catch(error){broker.close();throw error;}
-  const collections=new StructureCollections(dataDir,store,broker,{
+  const collections=new StructureCollections(dataDir,store,broker,{diagnostics,
     ...(options.requestTimeoutMs===undefined?{}:{requestTimeoutMs:options.requestTimeoutMs}),settings:()=>importSettings.get().settings,
     overview:async(task,signal)=>{
       const id=task.overviewAcquisitionId!;
@@ -132,6 +135,9 @@ export async function startServer(options:ServerOptions={}) {
   const ownOrigins=()=>new Set([`http://127.0.0.1:${port}`,`http://localhost:${port}`]);
   const requestOrigins=(request:IncomingMessage)=>encrypted(request)?new Set([`https://127.0.0.1:${request.socket.localPort}`]):ownOrigins();
   async function serveStatic(path:string,response:ServerResponse):Promise<void> {
+    // The standalone app has no browser tab icon. Answer the browser's implicit
+    // request explicitly so ordinary launches do not create an error diagnostic.
+    if(path==='/favicon.ico'){response.statusCode=204;response.end();return;}
     if(path.includes('\0')||path.includes('\\'))throw new ServiceError('NOT_FOUND','Not found.',404);
     let target=resolve(webDir,'.'+path);
     if(!target.startsWith(webDir+sep)&&target!==webDir)throw new ServiceError('NOT_FOUND','Not found.',404);
@@ -144,10 +150,11 @@ export async function startServer(options:ServerOptions={}) {
       response.statusCode=200;response.setHeader('Content-Type',mime);response.end(await readFile(actual));
     } catch(error) {
       if(error instanceof ServiceError)throw error;
+      if(path!=='/'&&path!=='/index.html')throw new ServiceError('NOT_FOUND','Not found.',404);
       throw new ServiceError('WEB_NOT_BUILT','Web app not found. Run npm run build first.',404);
     }
   }
-  const handler=async(request:IncomingMessage,response:ServerResponse)=>{
+  const handler=async(request:IncomingMessage,response:ServerResponse)=>diagnostics.request(request,response,async()=>{
     securityHeaders(response);
     try {
       if(!hostAllowed(request))throw new ServiceError('HOST_FORBIDDEN','Only the bound loopback host is allowed.',403);
@@ -160,6 +167,11 @@ export async function startServer(options:ServerOptions={}) {
         if(path.startsWith('/api/')){
           const header=request.headers.authorization??'';
           if(!header.startsWith('Bearer ')||!tokensEqual(header.slice(7),token))throw new ServiceError('UNAUTHORIZED','A valid local pairing token is required.',401);
+          if(request.method==='POST'&&path==='/api/diagnostics/events'){
+            const event=DiagnosticClientEventSchema.parse(await body(request,16_384));
+            if(!diagnostics.client(event))throw new ServiceError('DIAGNOSTIC_RATE_LIMIT','Diagnostic event limit reached.',429);
+            json(response,202,{accepted:true});return;
+          }
           if(request.method==='GET'&&path==='/api/health'){json(response,200,{ok:true,service:SERVICE_NAME,version:PRODUCT_VERSION,schemaVersion:DATA_SCHEMA_VERSION});return;}
           if(request.method==='GET'&&path==='/api/plugin/status'){json(response,200,broker.status);return;}
           if(request.method==='GET'&&path==='/api/ai/status'){json(response,200,{...aiStatus(aiConfig),...(aiConfigurationError?{configurationError:aiConfigurationError.message}:{})});return;}
@@ -462,7 +474,7 @@ export async function startServer(options:ServerOptions={}) {
                 if(Buffer.byteLength(JSON.stringify(result))>2_000_000)throw new ServiceError('RESPONSE_LIMIT','Source result exceeds 2 MB; request fewer nodes.',413);
                 json(response,200,result);return;
               }
-              if(action==='mutate'){const mutation=MutationSchema.parse(input);json(response,200,await store.mutate(id,mutation.expectedRevision,mutation.operation,'human'));return;}
+              if(action==='mutate'){const mutation=MutationSchema.parse(input);diagnostics.operation(mutation.operation.type);json(response,200,await store.mutate(id,mutation.expectedRevision,mutation.operation,'human'));return;}
               if(action==='undo'||action==='redo'){const revision=RevisionSchema.parse(input);json(response,200,await store.history(id,revision.expectedRevision,action));return;}
               if(action==='proposals'){
                 const summary=SummarySchema.parse(Object.fromEntries(url.searchParams)).summary==='1';
@@ -512,8 +524,9 @@ export async function startServer(options:ServerOptions={}) {
       else if(error instanceof z.ZodError)json(response,400,{error:{code:'INVALID_INPUT',message:'Request does not match the validated data contract.'}});
       else if(error instanceof DomainError){const status=error.code==='NOT_FOUND'?404:error.code==='CAPTURE_BUNDLE_LIMIT'?413:error.code.includes('STALE')||error.code.includes('CONFLICT')||['SOURCE_INCOMPLETE','SOURCE_RESOLUTION_REQUIRED'].includes(error.code)?409:error.code==='FORBIDDEN'?403:400;json(response,status,{error:{code:error.code,message:error.message}});}
       else json(response,500,{error:{code:'INTERNAL_ERROR',message:'Local operation failed; reload the project to check its latest revision.'}});
+      diagnostics.error('http.error',error,{status:response.statusCode});
     }
-  };
+  });
   const server=createServer(handler);
   const desktopServer=tlsIdentity?createHttpsServer({key:tlsIdentity.key,cert:tlsIdentity.cert,minVersion:'TLSv1.2'},handler):null;
   server.requestTimeout=30000;server.headersTimeout=10000;server.keepAliveTimeout=5000;
@@ -536,14 +549,16 @@ export async function startServer(options:ServerOptions={}) {
   const address=server.address();if(!address||typeof address==='string')throw new Error('Loopback address unavailable.');port=address.port;
   const desktopAddress=desktopServer?.address();
   const desktopUrl=desktopAddress&&typeof desktopAddress!=='string'?`https://127.0.0.1:${desktopAddress.port}`:null;
+  diagnostics.emit('runtime.ready');
   let shutdown:Promise<void>|undefined;
-  return {url:`http://127.0.0.1:${port}`,desktopUrl,token,store,broker,evidence,collections,selective,acquisitions,transfers,
+  return {url:`http://127.0.0.1:${port}`,desktopUrl,token,diagnostics,store,broker,evidence,collections,selective,acquisitions,transfers,
     close(){
       if(!shutdown){
+        diagnostics.emit('runtime.stopping');
         const stopped=Promise.all([acquisitions.close(),collections.close(),selective.close(),transfers.close()]);broker.close();sockets.close();server.closeAllConnections();
         desktopServer?.closeAllConnections();
         shutdown=Promise.all([stopped,new Promise<void>((done,error)=>server.close(e=>e?error(e):done())),
-          ...(desktopServer?[new Promise<void>((done,error)=>desktopServer.close(e=>e?error(e):done()))]:[])]).then(()=>{});
+          ...(desktopServer?[new Promise<void>((done,error)=>desktopServer.close(e=>e?error(e):done()))]:[])]).then(()=>diagnostics.flush());
       }
       return shutdown;
     },

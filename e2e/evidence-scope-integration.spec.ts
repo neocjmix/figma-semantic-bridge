@@ -136,9 +136,9 @@ test('visual draft stays proposed until a complete collection is attached and hu
   const scopeId = visualProject.scopes![0]!.id;
 
   await page.getByRole('button', { name: '+ Add region' }).click();
-  await page.getByRole('button', { name: 'Save annotation' }).click();
+  await page.getByRole('button', { name: 'Save region' }).click();
   await expect.poll(async () => (await app.readProject()).annotations.length).toBe(1);
-  await expect(page.getByRole('button', { name: 'Approve annotation' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region' })).toBeDisabled();
   expect((await app.readProject()).annotations).toHaveLength(1);
   expect((await app.readProject()).annotations[0]).toMatchObject({ snapshotId: scopeId, reviewStatus: 'proposed' });
 
@@ -150,22 +150,22 @@ test('visual draft stays proposed until a complete collection is attached and hu
   await page.goto(app.url);
   await expect(page.locator('.component-list button')).toHaveCount(1);
   await page.locator('.component-list button').click();
-  await expect(page.getByText('Source structure complete · confirm sources before approval')).toBeVisible();
+  await expect(page.getByText('Source ready · review your regions')).toBeVisible();
   const attached = await app.readProject();
   expect(attached.scopes![0]).toMatchObject({ id: scopeId, kind: 'collection', preview: app.preview,
     collection: { nodeCount: 2 } });
   expect(attached.annotations[0]).toMatchObject({ snapshotId: scopeId, reviewStatus: 'proposed' });
-  await expect(page.getByRole('button', { name: 'Approve annotation' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region' })).toBeDisabled();
 
   await page.locator('.evidence-source-review details.advanced summary').click();
   const childRow = page.locator('.evidence-source-review .collection-nodes li').filter({ hasText: child.name });
   await expect(childRow).toBeVisible();
   await childRow.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Save annotation' }).click();
+  await page.getByRole('button', { name: 'Save region' }).click();
   await expect(page.getByRole('button', { name: 'Confirm sources' })).toBeEnabled();
   await page.getByRole('button', { name: 'Confirm sources' }).click();
-  await expect(page.getByRole('button', { name: 'Approve annotation' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Approve annotation' }).click();
+  await expect(page.getByRole('button', { name: 'Approve region' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Approve region' }).click();
   await expect.poll(async () => (await app.readProject()).annotations[0]?.reviewStatus).toBe('approved');
   expect((await app.readProject()).annotations[0]).toMatchObject({ reviewStatus: 'approved', sourceReview: { status: 'confirmed' } });
 
@@ -222,7 +222,7 @@ test('source transfer downloads exact source only and imports a new unreviewed s
   await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(1);
   const originalId = (await app.readProject()).scopes![0]!.id;
   await page.getByRole('button', { name: '+ Add region' }).click();
-  await page.getByRole('button', { name: 'Save annotation' }).click();
+  await page.getByRole('button', { name: 'Save region' }).click();
   await expect.poll(async () => (await app.readProject()).annotations.length).toBe(1);
 
   const panel = page.locator('details.source-transfer-panel');
@@ -324,7 +324,7 @@ test('source import holds the editor until its delayed workspace update is appli
   await page.getByRole('button', { name: '+ Add region' }).click();
   const name = page.getByLabel('Component name');
   await name.fill('Saved synthetic component');
-  await page.getByRole('button', { name: 'Save annotation' }).click();
+  await page.getByRole('button', { name: 'Save region' }).click();
   await expect.poll(async () => (await app.readProject()).annotations[0]?.name).toBe('Saved synthetic component');
   const panel = page.locator('details.source-transfer-panel');
   await panel.locator('summary').click();
@@ -345,7 +345,7 @@ test('source import holds the editor until its delayed workspace update is appli
     await panel.getByRole('button', { name: 'Import source file' }).click();
     await intercepted;
     await expect(name).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Save annotation' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Save region' })).toBeDisabled();
     await expect(page.locator('#workspace-select')).toBeDisabled();
     release?.();
     await expect(page.locator('.snapshot-list .snapshot-item')).toHaveCount(2);
@@ -369,6 +369,9 @@ test('late exact text from one specification cannot enter another specification 
   await page.getByRole('button', { name: 'Create specification' }).click();
   await page.getByRole('button', { name: 'Save specification' }).click();
   await expect.poll(async () => (await app.readProject()).specifications.length).toBe(1);
+  await page.getByRole('button', { name: 'New specification', exact: true }).click();
+  await page.locator('.evidence-text-picker summary').click();
+  await page.locator('.evidence-text-picker .collection-nodes li').filter({ hasText: child.name }).getByRole('button', { name: 'Use original text' }).click();
   await page.getByRole('button', { name: 'Create specification' }).click();
   await page.getByRole('button', { name: 'Save specification' }).click();
   await expect.poll(async () => (await app.readProject()).specifications.length).toBe(2);

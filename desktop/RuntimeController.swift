@@ -3,6 +3,7 @@ import Darwin
 
 @MainActor
 final class RuntimeController {
+    lazy var diagnostics = DesktopDiagnostics(dataDirectory: dataDirectory)
     let resources: URL
     let dataDirectory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".figma-semantic-bridge", isDirectory: true)
     private var lockDescriptor: Int32 = -1
@@ -82,10 +83,11 @@ final class RuntimeController {
 
     func start() async throws {
         stopping = false; ready = false
+        diagnostics.record("runtime.start")
         try acquireInstanceLock()
         token = try readTokenIfPresent()
         trust = try DesktopTrust.readIfPresent(dataDirectory: dataDirectory)
-        if try await probe(token: token) { reusedService = true; ready = true; return }
+        if try await probe(token: token) { reusedService = true; ready = true; diagnostics.record("runtime.reused"); return }
         let executable = resources.appendingPathComponent("runtime/node")
         let server = resources.appendingPathComponent("app/server.mjs")
         let web = resources.appendingPathComponent("app/web")
@@ -101,6 +103,7 @@ final class RuntimeController {
         process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
         process.terminationHandler = { [weak self, weak process] _ in Task { @MainActor in
             guard let self, let process, self.child === process, !self.stopping, self.ready else { return }
+            self.diagnostics.record("runtime.exit", level: "error", fields: ["status": process.terminationStatus])
             self.ready = false; self.onUnexpectedExit?()
         } }
         try process.run(); child = process; reusedService = false
@@ -110,7 +113,7 @@ final class RuntimeController {
                 guard process.isRunning else { throw HostFailure("The bundled local service could not start. Another service may be using port 4177 or 4178. Check the earlier service, then choose Retry.") }
                 token = try readTokenIfPresent()
                 if trust == nil { trust = try DesktopTrust.readIfPresent(dataDirectory: dataDirectory) }
-                if try await probe(token: token) { ready = true; return }
+                if try await probe(token: token) { ready = true; diagnostics.record("runtime.ready"); return }
                 try await Task.sleep(nanoseconds: 200_000_000)
             }
             throw HostFailure("The bundled service did not become ready within 12 seconds. Check access to ~/.figma-semantic-bridge, then choose Retry.")
@@ -119,6 +122,7 @@ final class RuntimeController {
 
     func stopOwnedChild() async {
         stopping = true; ready = false
+        diagnostics.record("runtime.stopping")
         guard let process = child else { return }
         if process.isRunning {
             process.terminate()

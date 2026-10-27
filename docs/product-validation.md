@@ -4,6 +4,61 @@ This log records executed evidence rather than changing the requirements in the
 architecture, pipeline or roadmap. The branch builds an executable local product;
 this log does not certify release readiness or every Figma Desktop acceptance gate.
 
+## 0.4.0 guided workflow candidate, 2026-10-27
+
+The [guided-workflow QA record](evaluation/guided-workflow-qa.md) tracks the final
+source/browser matrix and separates native/package observations. Current source
+adds the linear review workflow, draft protection, exact-source specification
+linking, a Share dialog and local diagnostics; see
+[ADR 0014](adr/0014-guided-workflow-and-local-diagnostics.md).
+
+The final source suite passed **495 Node tests**. The browser suite after the
+coordinate-entry correction passed **64/64 tests in 1.8 minutes**. Eleven guided
+scenarios produced **1,752 diagnostic records**: eight had no error records, and
+three injected-failure scenarios produced nine expected errors, with no unexpected
+errors. The [QA record](evaluation/guided-workflow-qa.md) identifies the commands,
+generated adapters and local diagnostic artifacts.
+
+Actual native 0.4.0 candidate checks used two owned synthetic files in Figma Dev
+Mode. The installed app imported **21-node and 56-node frames**, saved a region
+with one automatically selected source, navigated with **Show in Figma**, confirmed
+the sources and approved the region. A specification used exact text from the
+other imported source, with the originating region selected as its target; save
+and approval succeeded. Native Save dialogs produced **7,826-byte JSON** and
+**7,867-byte Markdown** files containing one region and one specification, with
+exact text and the cross-source relation checked.
+
+An intentionally out-of-bounds save kept its draft and showed a request ID that
+correlated with both server and native diagnostic records. Correcting the bounds
+allowed saving. **Reveal Diagnostic Logs** opened Finder; Korean and English
+offline guides displayed their troubleshooting and diagnostic sections. **42
+baseline data files** were unchanged, excluding the runtime lock file.
+
+The installed second candidate reopened the saved synthetic workspace at revision
+7 with both sources and the approved region/specification. Sequential keyboard
+entry preserved `-780.25`; width `120.1` and height `100.1` saved at revision 8.
+Horizontal split and Undo advanced to revisions 9 and 10, vertical split and Undo
+to 11 and 12, and one more Undo at revision 13 restored the original approved
+region at `x=-780`, `y=-480`, `width=120`, `height=100` with its specification.
+No errors were recorded during these native precision-input, split and Undo actions.
+
+The second candidate package passed its verifier before the subsequent release
+note update. Final publication provenance belongs to the clean-commit verification JSON
+attached to the release. These observations use permitted synthetic material; they do not
+establish original production-file performance, another owner's Dev-only access
+or human study results.
+
+A final independent documentation/package review found omitted troubleshooting
+and diagnostic files in the offline bundle. The explicit guide allowlist now
+includes both locale scenario guides and local diagnostics; the user HTML appends
+acquisition, troubleshooting and the current diagnostic language. The static
+inert renderer is unchanged. `tests/plugin-package.test.ts` and
+`tests/offline-guide.test.ts` passed **15/15** locally, including exact file bytes,
+checksums, selected-language diagnostics and inert HTML. TypeScript and package
+script syntax checks passed. These focused checks are separate from the full-suite
+and native observations above; final release provenance still requires the
+clean-commit verifier.
+
 ## 0.3.0 recoverable source workflow, 2026-10-27
 
 See the [recovery acceptance record](evaluation/release-0.3.0-acceptance.md) for

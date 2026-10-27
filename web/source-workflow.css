@@ -1,0 +1,15 @@
+.source-next-step { margin: 10px 0; padding: 11px 12px; border-radius: 8px; background: #eef7f4; color: #184b41; line-height: 1.5; }
+.source-next-step > strong, .source-next-step > span { display: block; }
+.source-next-step > span { margin-top: 4px; overflow-wrap: anywhere; }
+.source-next-step p:last-child { margin-bottom: 0; }
+.source-alternatives, .source-review-state, .source-node-details, .import-details, .import-switcher, .import-notes, .settings-connection { margin: 12px 0; }
+.source-alternatives > summary, .source-review-state > summary, .import-details > summary, .import-switcher > summary, .import-notes > summary, .settings-connection > summary { color: #53646b; cursor: pointer; font-size: 12px; font-weight: 600; }
+.source-alternatives > h3 { margin: 16px 0 6px; font-size: 12px; }
+.source-alternatives > button { margin-top: 8px; }
+.source-node-details > summary { color: #64757d; cursor: pointer; font-size: 11px; }
+.evidence-source-review .source-crop { margin: 12px 0; }
+.evidence-source-review .source-crop svg { width: 100%; max-height: 220px; background: #f3f5f7; }
+.source-references strong, .source-candidate label > span { overflow-wrap: anywhere; }
+.source-pagination { flex-wrap: wrap; }
+.import-settings-dialog h3 { margin-top: 20px; font-size: 13px; }
+.settings-connection .settings-grid { margin-top: 12px; }

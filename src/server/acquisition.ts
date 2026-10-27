@@ -10,13 +10,14 @@ import { validateProject } from '../core/project.js';
 import { PluginBroker } from './broker.js';
 import { ProjectStore } from './store.js';
 import { ServiceError } from './errors.js';
+import type { DiagnosticLog } from './diagnostics.js';
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_TASKS=12,MAX_FILE_BYTES=16_000_000,MAX_CACHE_BYTES=96_000_000;
 const StoredSchema=z.object({view:AcquisitionViewSchema,preview:NodePreviewResultSchema.nullable(),snapshot:SnapshotSchema.nullable(),
   structureStartedAt:z.string().datetime().nullable(),structureFinishedAt:z.string().datetime().nullable()}).strict();
 type Stored=z.infer<typeof StoredSchema>;
-type Runtime={controller:AbortController;started:number;done:Promise<void>};
+type Runtime={diagnosticRunId:string;diagnosticStarted:number;controller:AbortController;started:number;done:Promise<void>};
 const failure=(error:unknown)=>({code:error instanceof ServiceError?error.code:'ACQUISITION_FAILED',
   message:(error instanceof ServiceError?error.message:'The acquisition could not finish. Validated earlier observations remain available.').slice(0,1000)});
 const needsPreview=(plan:AcquisitionView['plan'])=>plan!==null&&plan!=='structure';
@@ -35,7 +36,7 @@ export class AcquisitionManager {
   private closed=false;
   private readonly directory:string;
   constructor(dataDir:string,private readonly store:ProjectStore,private readonly broker:PluginBroker,
-    private readonly options:{requestTimeoutMs?:number}={}) {this.directory=join(dataDir,'acquisitions');}
+    private readonly options:{requestTimeoutMs?:number;diagnostics?:DiagnosticLog}={}) {this.directory=join(dataDir,'acquisitions');}
 
   async initialize():Promise<void> {
     await mkdir(this.directory,{recursive:true,mode:0o700});
@@ -175,10 +176,12 @@ export class AcquisitionManager {
     this.checkSession(task.view.sessionId);
     if(this.activeId)throw new ServiceError('ACQUISITION_BUSY','Another source acquisition is still running.',409);
     this.activeId=task.view.id;task.view.status='running';task.view.error=null;task.view.progress.elapsedMs=0;
-    const controller=new AbortController(),run:Runtime={controller,started:Date.now(),done:Promise.resolve()};
+    const controller=new AbortController(),run:Runtime={diagnosticRunId:randomUUID(),diagnosticStarted:performance.now(),controller,started:Date.now(),done:Promise.resolve()};
+    this.options.diagnostics?.emit('acquisition.start','info',{runId:run.diagnosticRunId,phase:retry??task.view.plan??'unknown'});
     this.runs.set(task.view.id,run);
     const persisted=this.persist(task);
     run.done=persisted.then(()=>this.execute(task,run,retry)).catch(async error=>{
+      this.options.diagnostics?.error('acquisition.error',error,{runId:run.diagnosticRunId,phase:'storage'});
       task.view.status='failed';task.view.stage='done';task.view.error=failure(error);
       await this.persist(task).catch(()=>{});
     })
@@ -216,7 +219,7 @@ export class AcquisitionManager {
       view.plan==='structure_then_overview'?['structure','preview']:['preview','structure'];
     try {
       for(const step of steps) {
-        check();view.stage=step;view[step].status='running';view[step].error=null;await this.persist(task);
+        check();this.options.diagnostics?.emit('acquisition.stage','debug',{runId:run.diagnosticRunId,phase:step});view.stage=step;view[step].status='running';view[step].error=null;await this.persist(task);
         try {
           const commandSource={fileKey:source.fileKey,pageId:source.pageId,nodeId:source.nodeId};
           if(step==='preview') {
@@ -246,6 +249,7 @@ export class AcquisitionManager {
             view.warnings=[...new Set(result.warnings)].slice(0,98);
           }
         } catch(error) {
+          this.options.diagnostics?.error('acquisition.error',error,{runId:run.diagnosticRunId,phase:step});
           if(run.controller.signal.aborted)throw error;
           view[step].status='failed';view[step].error=failure(error);view.error=failure(error);
           if(step==='structure')view.structure.complete=false;
@@ -255,11 +259,13 @@ export class AcquisitionManager {
       check();
       this.finalize(task);
     } catch(error) {
+      this.options.diagnostics?.error('acquisition.error',error,{runId:run.diagnosticRunId,phase:view.stage});
       view.status=run.controller.signal.aborted?'cancelled':'failed';view.error=failure(error);
       for(const step of [view.preview,view.structure])if(step.status==='running'){step.status='failed';step.error=view.error;}
     } finally {
       view.stage='done';view.progress.elapsedMs=Date.now()-run.started;
       await this.persist(task);
+      this.options.diagnostics?.emit('acquisition.complete','info',{runId:run.diagnosticRunId,state:view.status,durationMs:performance.now()-run.diagnosticStarted,nodeCount:view.progress.nodes,bytes:view.progress.bytes});
     }
   }
   async cancel(projectId:string,id:string):Promise<AcquisitionView> {

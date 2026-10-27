@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.3.0 Alpha 설치
+# Figma Semantic Bridge 0.4.0 Alpha 설치
 
 [English](alpha-installation.en.md) · [사용 가이드](user-guide.ko.md) · [업데이트·백업](upgrade-guide.md)
 
@@ -18,13 +18,13 @@
   검증이 남아 있습니다. 설치를 통과시키기 위해 편집 권한이나 소유권을 바꾸지 않습니다.
 
 [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases)에서 같은 버전의
-파일을 받습니다. 선택한 릴리즈와 파일명이 **0.3.0**인지 확인하세요.
+파일을 받습니다. 선택한 릴리즈와 파일명이 **0.4.0**인지 확인하세요.
 
 | 파일 | 용도 |
 | --- | --- |
-| `figma-semantic-bridge-0.3.0-macos-arm64.dmg` | Applications에 앱 설치 |
-| `figma-semantic-bridge-0.3.0-macos-arm64.zip` | 앱 ZIP 배포본 |
-| `figma-semantic-bridge-plugin-0.3.0.zip` | 별도 플러그인 배포본. 앱에도 같은 플러그인이 포함됨 |
+| `figma-semantic-bridge-0.4.0-macos-arm64.dmg` | Applications에 앱 설치 |
+| `figma-semantic-bridge-0.4.0-macos-arm64.zip` | 앱 ZIP 배포본 |
+| `figma-semantic-bridge-plugin-0.4.0.zip` | 별도 플러그인 배포본. 앱에도 같은 플러그인이 포함됨 |
 | `SHA256SUMS`, 각 파일의 `.sha256` | 다운로드한 파일과 릴리즈 체크섬 비교 |
 | 설치·사용 가이드 | 이 안내의 오프라인 사본 |
 
@@ -150,7 +150,7 @@ MCP에는 승인 도구가 없습니다. Figma 원문은 에이전트 명령이 
 | 상황 | 다음 조치 |
 | --- | --- |
 | macOS 실행 차단 | 릴리즈와 무결성을 확인하고 앱별 시스템 절차를 따릅니다. 조직 제한을 우회하지 않습니다 |
-| 포트 충돌·호환되지 않는 서비스 | 확인된 이전 앱·서비스를 정상 종료하고 재시도합니다. 0.1.1과 0.3.0 연결 방식을 섞지 않습니다 |
+| 포트 충돌·호환되지 않는 서비스 | 확인된 이전 앱·서비스를 정상 종료하고 재시도합니다. 0.1.1과 0.4.0 연결 방식을 섞지 않습니다 |
 | 로컬 인증서·권한 오류 | 실제 데이터 폴더의 소유자와 비공개 권한을 확인합니다. 폴더를 보존하고 네트워크 인증서를 대신 신뢰하지 않습니다 |
 | 앱 편집기가 토큰을 요구함 | 설치 앱의 내장 편집기인지, 시작 상태에 문제가 없는지 확인합니다. 별도 브라우저는 자동 연결되지 않습니다 |
 | 플러그인 연결 실패 | 같은 앱·플러그인 버전, 현재 토큰, 실행 중인 앱을 확인합니다. 업데이트한 플러그인을 닫고 다시 실행합니다 |

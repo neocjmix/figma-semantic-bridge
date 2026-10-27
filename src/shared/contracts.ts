@@ -156,7 +156,7 @@ export const OperationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_evidence_scope'), scope: EvidenceScopeSchema }).strict(),
   z.object({ type: z.literal('attach_scope_collection'), scopeId: IdSchema, collection: CollectionReferenceSchema }).strict(),
   z.object({ type:z.literal('copy_scope_regions'),sourceScopeId:IdSchema,targetScopeId:IdSchema,annotationIds:z.array(IdSchema).min(1).max(200) }).strict(),
-  z.object({ type: z.literal('upsert_annotation'), annotation: AnnotationSchema }).strict(),
+  z.object({ type: z.literal('upsert_annotation'), annotation: AnnotationSchema, matchSources: z.boolean().optional() }).strict(),
   z.object({ type: z.literal('delete_annotation'), id: IdSchema }).strict(),
   z.object({ type: z.literal('review_annotation'), id: IdSchema, status: ReviewStatusSchema }).strict(),
   z.object({ type: z.literal('match_annotation'), id: IdSchema, tolerance: z.number().finite().min(0).max(10).default(0.5) }).strict(),

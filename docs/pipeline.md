@@ -1,6 +1,6 @@
 # Processing pipeline — implemented and proposed stages
 
-The 0.3.0 candidate source implements one local, human-first acquisition workflow.
+The 0.4.0 candidate source implements one local, human-first acquisition workflow.
 Images, saved partial records and scoped review remain available when broader
 acquisition stops. Earlier mode-based routes remain compatibility APIs.
 [Product validation](product-validation.md) records which checks ran through
@@ -56,6 +56,12 @@ selective observations remain separate from project annotations and cannot be
 promoted into full-subtree evidence merely because their requested IDs returned.
 
 ## 4. Build and ground a semantic interpretation
+
+The normal editor saves a new region with its deterministic source suggestions
+in one operation. Later edits preserve selected references; explicit rematching
+is available in the source controls. The next visible actions are source
+confirmation, region approval, optional requirement linking and Share. Draft
+guards keep unsaved changes in the active editor until saved or discarded.
 
 A person draws, resizes, names, splits, merges and reparents regions; semantic
 hierarchy is independent of Figma ancestry. Deterministic geometry computes

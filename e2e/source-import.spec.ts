@@ -36,6 +36,7 @@ test('one import route prepares without heavy reads and uses a 2x image automati
   await expect(panel).toContainText('200,000 nodes');await expect(panel).toContainText('4,096');
   await panel.getByRole('button',{name:'Start import'}).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('Image draft');
+  await panel.locator('.import-details > summary').click();
   await expect(panel.getByRole('img',{name:'Figma overview image'})).toBeVisible();
   const image=await panel.getByRole('img',{name:'Figma overview image'}).evaluate(node=>({width:(node as HTMLImageElement).naturalWidth,height:(node as HTMLImageElement).naturalHeight}));
   expect(image).toEqual({width:256,height:128});expect(app.commands.some(command=>command.type==='capture_metadata')).toBe(false);
@@ -50,8 +51,8 @@ test('settings pause at 5,000 and continue from the next unread node after raisi
   await expect(panel).toContainText('5,000 nodes');await expect(panel).toContainText('Increase it in Settings');
   const visual=(await app.readProject()).scopes![0]!;
   await page.getByRole('button',{name:'+ Add region'}).click();await page.getByLabel('Component name').fill('Preserved region');
-  await page.getByRole('button',{name:'Save annotation',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Approve annotation',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Save region',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Approve region',exact:true})).toBeDisabled();
   await saveNodes(page,10000);await panel.getByRole('button',{name:'Continue',exact:true}).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('6,001 nodes · source structure complete');
   const saved=await app.readProject();expect(saved.scopes).toHaveLength(1);expect(saved.scopes![0]!.id).toBe(visual.id);
@@ -72,7 +73,7 @@ test('automatic structure attachment waits for unsaved region edits',async({page
   await page.getByRole('button',{name:'+ Add region'}).click();await page.getByLabel('Component name').fill('Unsaved intent stays');
   app.release();await expect(page.getByRole('region',{name:'Source import'})).toContainText('Collection complete');
   expect((await app.readProject()).scopes![0]!.kind).toBe('visual');await expect(page.getByLabel('Component name')).toHaveValue('Unsaved intent stays');
-  await page.getByRole('button',{name:'Save annotation',exact:true}).click();
+  await page.getByRole('button',{name:'Save region',exact:true}).click();
   await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('source structure complete');
   expect((await app.readProject()).annotations[0]!.name).toBe('Unsaved intent stays');
 });
@@ -90,7 +91,7 @@ test('automatic image saving holds the editor until the source binding is applie
 test('automatic structure attachment holds the editor and preserves saved region intent',async({page,app})=>{
   await open(page,app);await start(page);await expect(page.locator('.snapshot-list .snapshot-item')).toContainText('Image draft');
   await page.getByRole('button',{name:'+ Add region'}).click();const name=page.getByLabel('Component name');await name.fill('Saved before attachment');
-  await page.getByRole('button',{name:'Save annotation',exact:true}).click();
+  await page.getByRole('button',{name:'Save region',exact:true}).click();
   await expect.poll(async()=>(await app.readProject()).annotations[0]?.name).toBe('Saved before attachment');
   let release:()=>void=()=>{},entered:()=>void=()=>{};
   const gate=new Promise<void>(resolve=>{release=resolve;}),seen=new Promise<void>(resolve=>{entered=resolve;});
@@ -116,4 +117,29 @@ test('Korean settings use the same limits and workflow',async({page,app})=>{
   await expect(dialog.getByLabel('이미지 배율',{exact:true})).toHaveValue('2');
   await expect(dialog.getByLabel('이미지 긴 변 (px)',{exact:true})).toHaveValue('4096');
   await dialog.getByRole('button',{name:'닫기',exact:true}).click();await expect(page.getByRole('button',{name:'원본 추가',exact:true})).toBeVisible();
+});
+
+test('settings keep an unsaved choice after a conflict and can reopen then restore defaults', async ({ page, app }) => {
+  await open(page, app);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Import settings', exact: true });
+  const value = dialog.getByLabel('Source node budget', { exact: true });
+  await expect(value).toBeEnabled();
+  const current = SettingsViewSchema.parse(await (await app.api('/api/import-settings')).json());
+  const changed = await app.api('/api/import-settings', { expectedRevision: current.revision,
+    settings: { ...current.settings, maxNodes: 300001 } });
+  expect(changed.ok).toBe(true);
+  await value.fill('250000');
+  await dialog.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await expect(value).toHaveValue('250000');
+  expect(SettingsViewSchema.parse(await (await app.api('/api/import-settings')).json()).settings.maxNodes).toBe(300001);
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(value).toHaveValue('300001');
+  await dialog.getByRole('button', { name: 'Restore defaults', exact: true }).click();
+  await expect(value).toHaveValue('200000');
+  await dialog.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(SettingsViewSchema.parse(await (await app.api('/api/import-settings')).json()).settings.maxNodes).toBe(200000);
 });

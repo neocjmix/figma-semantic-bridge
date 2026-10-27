@@ -7,6 +7,9 @@ import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { buildSync } from 'esbuild';
 
+const guideDocumentNames = ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md',
+  'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md',
+  'user-scenarios.ko.md', 'user-scenarios.en.md', 'local-diagnostics.md'];
 const guideImageNames = ['workflow.ko.png', 'workflow.en.png', 'source-review.ko.png', 'source-review.en.png'];
 const sha = (value: Uint8Array | string) => createHash('sha256').update(value).digest('hex');
 const moduleUrl = pathToFileURL(resolve('scripts/package-plugin.mjs')).href;
@@ -34,7 +37,7 @@ function entries(bytes: Buffer): Map<string, Buffer> {
 async function preparedPlugin(directory: string) {
   await writeFile(join(directory, 'package.json'), JSON.stringify({ version: '0.1.0' }));
   await mkdir(join(directory, 'docs'));
-  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md', 'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) {
+  for (const file of guideDocumentNames) {
     await writeFile(join(directory, 'docs', file), await readFile(join('docs', file)));
   }
   await mkdir(join(directory, 'docs/images'));
@@ -67,7 +70,7 @@ test('plugin release ZIP contains only the approved prebuilt files and verifiabl
     const result = await packagePlugin({ projectDir: directory, version: '0.1.0', outputDir, pluginDir: source.pluginDir });
     const zip = await readFile(result.zipPath), files = entries(zip);
     const prefix = 'figma-semantic-bridge-plugin-0.1.0/';
-    assert.deepEqual([...files.keys()].sort(), ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md', 'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/upgrade-guide.md', ...guideImageNames.map(name => `docs/images/${name}`)].map(name => prefix + name).sort());
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt', 'code.js', 'manifest.json', 'release.json', ...guideDocumentNames.map(name => `docs/${name}`), ...guideImageNames.map(name => `docs/images/${name}`)].map(name => prefix + name).sort());
     assert.deepEqual(files.get(prefix + 'manifest.json'), source.manifest);
     assert.deepEqual(files.get(prefix + 'code.js'), Buffer.from(source.code));
     assert.match(files.get(prefix+'THIRD_PARTY_NOTICES.txt')!.toString(),/Bundled dependency: @noble\/hashes/);
@@ -82,8 +85,8 @@ test('plugin release ZIP contains only the approved prebuilt files and verifiabl
     assert.equal(Object.hasOwn(metadata, 'license'), false);
     assert.match(files.get(prefix + 'README.md')!.toString(), /Project licensing has not been selected/);
     assert.match(files.get(prefix + 'README.ko.md')!.toString(), /프로젝트 라이선스는 아직 선택되지 않았습니다/);
-    for (const locale of ['ko', 'en']) {
-      assert.deepEqual(files.get(prefix + `docs/user-guide.${locale}.md`), await readFile(`docs/user-guide.${locale}.md`));
+    for (const file of guideDocumentNames) {
+      assert.deepEqual(files.get(prefix + `docs/${file}`), await readFile(`docs/${file}`));
     }
     for (const [name, info] of Object.entries(metadata.files) as [string, { sha256: string; bytes: number }][]) {
       assert.equal(sha(files.get(prefix + name)!), info.sha256);

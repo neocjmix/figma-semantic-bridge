@@ -1,75 +1,90 @@
-# Workflows, interruptions and recovery
+# Successful paths, failures and recovery
 
 [한국어](user-scenarios.ko.md) · [User guide](user-guide.en.md) · [Import and settings](acquisition-workflow.en.md)
 
-The app brings Figma evidence into a workspace where a person defines regions,
-reviews meaning and approves the result. **Receiving an image, completing source
-structure and human approval are separate steps.** These are the 0.3.0 Alpha workflows.
+The main path is **Add source → Save region → Confirm sources and approve → Link specification → Share**.
+Find your current situation below. “Available work” describes what you can still do while resolving it.
 
-## Successful paths
+## When work proceeds normally
 
-| Situation | Available work | Next action |
+| Current state | Next action | Result |
 | --- | --- | --- |
-| Adding a source | Check target, budgets and risks | Start import |
-| Image received first | Zoom, draw regions, save names and roles | Organize the needed regions |
-| Structure still loading | Browse received nodes and text; edit proposals | Wait or pause |
-| Whole structure ready | Search, match and review source even without an image | Confirm exact source nodes |
-| Whole import unfinished; a subtree is complete | Review that part on the large image; copy the selected saved proposed region | Review this part |
-| Needed container is unfinished | Read only that container and its descendants | Prepare this part |
-| Exact sources confirmed | Review names, roles and relationships | Approve annotation |
-| Annotations and specifications approved | Share approved context through MCP or a file | Deliver the needed result |
+| First launch | Create a workspace and connect the Figma plugin | Ready to import the selected Frame |
+| A Frame is selected in Figma | **Add source → Start import** | Image and source material saved locally |
+| The image appears first | Draw, name and **Save region** | Draft regions while structure arrives |
+| Structure is ready | Check each saved region's linked nodes | Review the link between source and region |
+| The linked nodes are correct | **Confirm sources → Approve region** | Region ready for implementation context |
+| An approved region has requirements | **Link specification → Choose original text → Create specification** | Draft with that region as its initial target |
+| Text and targets are correct | **Save specification → Approve specification** | Requirements linked to reviewed regions |
+| Review is complete | **Share → Export JSON / Markdown**, or MCP | Approved context delivered |
 
-Approving a part does not complete the original whole-source request. If related
-layers lie outside that part, obtain broader evidence. Overlapping images do not
-automatically establish design age or which layer contributes visible pixels.
+## Connection and import
 
-## Interrupted and failed acquisition
+| Situation | Available work | Recovery |
+| --- | --- | --- |
+| Figma is disconnected | Use saved sources and approved work | Open the plugin and connect with the app's pairing token |
+| No source or multiple sources selected | Continue existing work | Select one intended Frame, then **Add source** |
+| File, page or selection changed after preparation | Keep existing work and received material | Return to the intended source and prepare again |
+| Node, byte or reading-time limit reached | Browse received material and review prepared parts | Raise the relevant limit in **Settings**, then **Continue** |
+| Figma is busy or slow | Keep received material and existing work | Check Figma, then **Continue** |
+| App restarted or plugin reconnected | Use saved material and approvals | **Continue**, review the source recheck work and proceed |
+| Image failed; structure succeeded | Create and review regions using nodes and text | Inspect the appearance in Figma or import a suitable inner Frame |
+| Image succeeded; structure stopped | Use image drafts, received nodes and complete parts | **Continue**, **Review this part**, or **Prepare this part** according to what you need |
+| Only a needed small part is unfinished | Continue using other prepared parts | **Received sources → Prepare this part** |
+| Source deleted or access changed | Read existing saved material | Return to an accessible source or add a new one |
+| Disk is full | Keep successfully saved material | Free space and **Continue**; keep the source data folder intact |
+| Saved material is damaged | Work that uses other material remains available | Restore a valid backup, or import fresh sources and review again |
 
-| Situation | Received evidence | Recovery | What is blocked |
-| --- | --- | --- | --- |
-| Node, byte or run budget reached | Saved image and packets remain | Raise Settings and Continue | Approval only for unprepared coverage |
-| Paused in the same valid connection | Saved position remains usable | Continue from the next position | Coverage not yet prepared |
-| Temporary delay or busy Figma | Completed packets remain | Resolve the cause and Continue | New reads temporarily |
-| App restart or plugin reconnect | Saved evidence, edits and approvals remain | Continue, review the recheck cost, then confirm | Unverified coverage during new reads |
-| Work on a needed part first | Original evidence remains | Prepare the part; confirm if the current reading position must be released | Original whole request stays incomplete |
-| Image fails; structure succeeds | Source metadata and original text remain usable | Review structure or compare in Figma | Judgments requiring the missing image |
-| Image succeeds; structure stops | Image drafts, saved nodes and complete parts remain usable | Continue or prepare the needed part | Confirmation and approval without sufficient evidence |
-| Text, children or order changed | Previous observations and approvals remain | Review the new observation separately | Applying old approval automatically to new sources |
-| Source deleted, inaccessible or on another page | Saved evidence remains readable | Return to the permitted source or add a new source | New reads of that source |
-| Disk or record capacity exhausted | Successfully saved evidence remains | Free space or remove unused records, then Continue | New storage |
-| Saved evidence damaged | Separate unaffected work remains | Restore a valid backup or acquire fresh evidence | Review and export depending on damaged evidence |
+The same valid connection continues from the saved position. After reconnecting, previously saved
+nodes are also checked in Figma. Existing approvals and material remain, and the new observation is
+saved separately. Figma may still be finishing an image export just after cancellation.
 
-**Continue** does not resurrect a lost Figma reading position. After reconnecting,
-previously received nodes are also rechecked. Matching content uses compact replies
-to reduce repeated transfer. Old and new evidence are never merged into apparently
-complete coverage without verification.
+## Regions and source review
 
-Figma image export may not stop immediately. Pause applies after the current
-export or durable packet. Repeating a large render or merely increasing its wait
-does not guarantee success.
+| Situation | Available work | Recovery |
+| --- | --- | --- |
+| Only the image draft is ready | Save region names and boundaries | Confirm and approve after structure is prepared |
+| No nodes are linked | Keep the region draft | Find candidates again, browse nodes or add the Figma selection, then save |
+| Distant branches belong to one component | Link them within the same imported source scope | Add the intended nodes individually, save and confirm |
+| Required nodes are in another source scope | Use separate regions | Import their common Frame, or link separate regions to the same specification |
+| An older layer is transparent or covered | Compare saved material and candidates | Use **Show in Figma** and **Compare current export** to choose the intended nodes |
+| A region extends beyond a prepared part | Keep the draft region | Adjust its intended boundary or prepare broader sources |
+| An approved region was edited | Keep its source material and review the update | Save, confirm sources when required, then approve |
+| Parent region is awaiting approval | Edit and review the child | Approve the parent to include the hierarchy in shared results |
+| Split or merge was a mistake | Restore the previous edit | **Undo**, with **Redo** available if needed |
+| Child regions prevent deletion or splitting | Keep the existing regions | Reparent or remove the children first, then retry |
+| Saving failed | Keep the current draft | Correct the input or source selection and save again; note the diagnostic reference if it repeats |
 
-## Review and approval gates
+Overlap and layer order are review aids. The person decides the intended source and approves its
+meaning. Approving a part remains separate from completing the whole import.
 
-| Situation | Reason and next action |
-| --- | --- |
-| Only an image is available | Save proposed regions; prepare structure or a complete subtree |
-| Region exceeds the part's source coverage | Outside evidence is missing. Prepare broader sources or explicitly adjust the intended region |
-| Several candidates or overlapping design versions | Compare nodes and text; use Figma navigation and individual previews, then select exact sources |
-| A saved ancestor is hidden or transparent | Known hidden evidence is retained and excluded from automatic candidates. Manual selection requires explicit comparison and confirmation |
-| No source references | Select exact received nodes; prepare missing coverage if necessary |
-| Unsaved edits | Save or discard them before changing workspace or source |
-| Old approval exists but source was reread | The old approval stays with its old evidence. Review the new observation separately |
+## Specifications, sharing and other edits
 
-## Files and external access
+| Situation | Available work | Recovery |
+| --- | --- | --- |
+| Requirements are in another Frame | Keep current region work | Add that Frame to the workspace and select it under **Specification source** |
+| No source text is available | Review and share regions | Prepare a source containing TEXT; inspect image text and comments separately |
+| Original text failed to load | Keep saved specifications and other work | Select the text again; restore valid sources if material is damaged |
+| A specification target awaits approval | Save the specification draft | Approve linked regions, then approve the specification |
+| Draft edits prevent starting another task | Continue editing that draft | Save or discard the changes before switching |
+| Another window or agent updated the workspace | Keep saved material | Preserve your draft intent, refresh, then apply it to the latest work |
+| Shared results omit some items | Deliver the eligible approved result | Check region, parent and specification-target approvals |
+| A source file failed to import | Keep the existing workspace | Select a valid file; download a fresh copy if damaged |
+| Settings did not save | Continue with the previous settings | Use the displayed ranges; reopen settings after a conflict |
+| AI drafting is unavailable | Continue manual annotation and review | Check supported sources and provider settings, or complete the same work manually |
+| An old proposal cannot be applied | Keep the latest human edits | Reject it and prepare a new proposal from current sources |
 
-- Browsing saved evidence and reviewing imported source files need no Figma connection.
-- Source files may contain design images and original text. Share only with permission.
-  A small part's context image may still include surrounding designs.
-  Importing a source file does not approve annotations or specifications.
-- Approved-context sharing includes approved evidence. Source-file transfer and
-  full workspace backup serve different purposes.
-- Multiple reads do not guarantee one immutable source revision, even within one
-  selected region. Work requiring that guarantee is not satisfied by this path alone.
-- Another owner's view-only file, organization policy and the original very large
-  work file need validation in their actual access environments. These are separate
-  from saved-evidence functionality.
+Undo and Redo restore recent saved edits. They are separate from recovering unsaved input after
+quitting or restoring all data from a backup. For full recovery, follow the
+[upgrade and backup guide](upgrade-guide.md).
+
+## Investigating an error
+
+If an error repeats, record **the action, time and diagnostic reference shown on screen**.
+Local diagnostics connect requests with their outcomes for investigation. The
+[online QA record](https://github.com/neocjmix/figma-semantic-bridge/blob/main/docs/evaluation/guided-workflow-qa.md) describes what was verified.
+An error report does not need source images, original text or a pairing token.
+
+In this alpha, another owner's view-only file with a Dev-only account and performance on every
+large work file require checks in those actual environments. These conditions are separate from
+reviewing saved material.

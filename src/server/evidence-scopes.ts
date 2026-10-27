@@ -213,7 +213,7 @@ export class EvidenceScopes {
       if(force||!prior?.sourceReview||prior.snapshotId!==input.snapshotId||!isDeepStrictEqual(prior.bbox,input.bbox))await scan(input.snapshotId,input.bbox,tolerance);
     };
     if(operation.type==='copy_scope_regions')for(const id of operation.annotationIds){const a=project.annotations.find(value=>value.id===id);if(a)await scan(operation.targetScopeId,a.bbox);}
-    else if(operation.type==='upsert_annotation')await review(operation.annotation);
+    else if(operation.type==='upsert_annotation')await review(operation.annotation,operation.matchSources);
     else if(operation.type==='match_annotation'&&annotation)await review(annotation,true,operation.tolerance);
     else if((operation.type==='review_annotation'||operation.type==='confirm_annotation_sources')&&annotation)await review(annotation);
     else if(operation.type==='split_annotation'&&annotation){

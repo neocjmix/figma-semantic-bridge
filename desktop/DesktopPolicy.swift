@@ -2,7 +2,7 @@ import Foundation
 
 enum DesktopPolicy {
     static let service = "figma-semantic-bridge"
-    static let version = "0.3.0"
+    static let version = "0.4.0"
     static let schemaVersion = "1.0.0"
     static let releaseInfo = ["service": service, "version": version, "schemaVersion": schemaVersion]
     static let incompatibleServiceMessage = "Ports 4177/4178 are occupied by an unrecognized, HTTP-only or incompatible service. Quit or update its owning application or earlier development service, then choose Retry. The desktop requires pinned TLS, service version \(version) and schema \(schemaVersion)."

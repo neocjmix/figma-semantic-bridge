@@ -1,6 +1,6 @@
 # Architecture — local source and human review
 
-This describes the 0.3.0 candidate source. A single normal acquisition task owns
+This describes the 0.4.0 candidate source. A single normal acquisition task owns
 its image, durable partial evidence, continuation and focused parts. Earlier
 bounded/mode-based APIs remain callable compatibility paths but are omitted from
 normal MCP discovery. [ADR 0012](adr/0012-recoverable-source-evidence.md) specifies
@@ -112,6 +112,19 @@ failures are never automatically retried. Full native records, including TEXT,
 are acquired for the requested subtree; only local evidence/text queries are lazy.
 
 ## Local trust boundaries
+
+The guided editor prepares initial empty source references during an explicit
+region save. `upsert_annotation.matchSources` makes the save and deterministic
+matching one transaction and one undo entry. Existing nonempty source choices are
+preserved on later edits; rematching is explicit. Source confirmation and semantic
+approval remain separate human actions. A shared mutation lease and draft guards
+prevent unrelated results from replacing unsaved editor state.
+
+Private rotating logs correlate local HTTP, plugin commands and browser/native
+failures by generated request IDs. The native WebView bootstrap records safe
+console/error metadata even before the web bundle or API is available. Records
+exclude design content and credentials. See [ADR 0014](adr/0014-guided-workflow-and-local-diagnostics.md)
+and [local diagnostics](local-diagnostics.md).
 
 The Figma manifest permits the exact `ws://localhost:4177` endpoint. V3 uses the
 pairing token only as a pre-shared key for mutual challenge proofs and directional

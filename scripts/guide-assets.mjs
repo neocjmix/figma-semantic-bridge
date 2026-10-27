@@ -1,6 +1,10 @@
 import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+// Explicit end-user documentation only; never copy a docs directory wholesale.
+export const guideDocumentNames = ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md',
+  'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md',
+  'user-scenarios.ko.md', 'user-scenarios.en.md', 'local-diagnostics.md'];
 // Explicit public synthetic screenshots only; never collect a directory of images.
 export const guideImageNames = ['workflow.ko.png', 'workflow.en.png', 'source-review.ko.png', 'source-review.en.png'];
 export function upgradeAppendix(markdown, locale) {
@@ -8,6 +12,12 @@ export function upgradeAppendix(markdown, locale) {
   if (korean < 0 || english <= korean || !['ko', 'en'].includes(locale)) throw new Error('Upgrade guide must contain Korean and English instructions.');
   const content = locale === 'ko' ? markdown.slice(korean + '## 한국어\n'.length, english) : markdown.slice(english + '## English\n'.length);
   return `\n\n---\n\n# ${locale === 'ko' ? '업데이트·백업·복원' : 'Update, backup and restore'}\n\n${content.trim()}\n`;
+}
+export function userAppendix(acquisition, scenarios, diagnostics, locale) {
+  const korean = diagnostics.indexOf('## 한국어\n'), english = diagnostics.indexOf('## English\n');
+  if (korean < 0 || english <= korean || !['ko', 'en'].includes(locale)) throw new Error('Diagnostics guide must contain Korean and English instructions.');
+  const content = locale === 'ko' ? diagnostics.slice(korean + '## 한국어\n'.length, english) : diagnostics.slice(english + '## English\n'.length);
+  return `\n\n---\n\n${acquisition.trim()}\n\n---\n\n${scenarios.trim()}\n\n---\n\n# ${locale === 'ko' ? '로컬 진단' : 'Local diagnostics'}\n\n${content.trim()}\n`;
 }
 export async function loadGuideImages(projectDir = '.') {
   const images = {};

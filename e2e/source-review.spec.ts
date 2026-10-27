@@ -1,3 +1,4 @@
+import { openSourceOptions } from './workflow-controls.js';
 import { authenticatePluginSocket } from '../tests/bridge-auth-helper.js';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -58,12 +59,14 @@ async function openReview(page: Page, app: AppFixture) {
   }, { token: app.token, projectId: app.projectId });
   await page.goto(app.url);
   await page.locator('.component-list').getByRole('button', { name: 'Search review', exact: true }).click();
+  await openSourceOptions(page);
   await expect(page.getByRole('button', { name: 'Add current Figma selection', exact: true })).toBeEnabled();
 }
 async function addSelection(page: Page) {
   const response = page.waitForResponse(response => /\/source-selection$/.test(response.url()));
   await page.getByRole('button', { name: 'Add current Figma selection', exact: true }).click();
   await response;
+  await openSourceOptions(page);
   await expect(page.getByRole('button', { name: 'Add current Figma selection', exact: true })).toBeEnabled();
 }
 
@@ -71,7 +74,7 @@ test('native selections accumulate only in the draft, then save, confirm and app
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await openReview(page, app);
   const initial = await app.read();
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
   await expect(page.getByLabel('Source matching warnings')).toContainText('Several nodes have the same');
   const candidate = page.locator('.source-candidate').filter({ hasText: 'Legacy search layer' });
   await candidate.getByRole('button', { name: 'Preview captured area' }).click();
@@ -100,26 +103,26 @@ test('native selections accumulate only in the draft, then save, confirm and app
   await addSelection(page);
   await expect(page.locator('.source-references > div')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'Confirm sources', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Save region', exact: true }).click();
   await expect(page.locator('.unsaved')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Confirm sources', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '.bridge-local/source-review-editor-proof.png', fullPage: true });
   await page.getByRole('button', { name: 'Confirm sources', exact: true }).click();
-  await expect(page.getByText('Sources confirmed by a human', { exact: true })).toBeVisible();
+  await expect(page.getByText('Sources confirmed. Review the region name and meaning, then approve it.', { exact: true })).toBeVisible();
   expect((await app.read()).annotations[0]!.reviewStatus).toBe('proposed');
-  await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
   await expect(page.locator('.inspector-content > .section-title .badge')).toHaveText('approved');
   const approved = (await app.read()).annotations[0]!;
   expect(approved.sourceRefs.map(ref => ref.nodeId)).toEqual(['search-bg', 'table-title']);
   expect(approved.sourceReview?.status).toBe('confirmed');
   await page.reload();
   await page.locator('.component-list').getByRole('button', { name: 'Search review', exact: true }).click();
-  await expect(page.getByText('Sources confirmed by a human', { exact: true })).toBeVisible();
+  await expect(page.getByText('Sources confirmed. Review the region name and meaning, then approve it.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove source table-title', exact: true }).click();
-  await expect(page.getByText('Sources confirmed by a human', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Unsaved changes — save to refresh source review', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByText('Sources confirmed. Review the region name and meaning, then approve it.', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Save your region to update the linked nodes.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
   expect((await app.read()).annotations[0]!.sourceReview?.status).toBe('confirmed');
   expect(errors).toEqual([]);
 });
@@ -139,6 +142,7 @@ test('wrong file and outside-capture selections show errors without changing the
 
 test('manual search reaches later captured nodes and supports removing a staged reference', async ({ page, app }) => {
   await openReview(page, app);
+  await openSourceOptions(page);
   await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByRole('button', { name: 'Next nodes', exact: true }).click();
   await expect(page.getByText(/captured nodes · page 2 of/)).toBeVisible();

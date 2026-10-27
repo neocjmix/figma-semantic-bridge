@@ -1,3 +1,4 @@
+import { openSourceOptions } from './workflow-controls.js';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -55,12 +56,12 @@ async function openRegion(page: Page, app: AppFixture, name: string, captureName
   // Choose the capture first because the component list is scoped to that capture.
   await page.locator('.snapshot-list').getByRole('button', { name: captureName }).click();
   await page.locator('.component-list').getByRole('button', { name, exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Source connections', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Review linked nodes', exact: true })).toBeVisible();
 }
 
 async function save(page: Page) {
   const saved = page.waitForResponse(response => /\/mutate$/.test(response.url()) && response.request().postDataJSON()?.operation?.type === 'upsert_annotation');
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Save region', exact: true }).click();
   expect((await saved).status()).toBe(200);
   await expect(page.locator('.unsaved')).toHaveCount(0);
 }
@@ -68,12 +69,13 @@ async function save(page: Page) {
 test('excluded transparent and hidden sources remain selectable and require explicit confirmation', async ({ page, app }, testInfo) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await openRegion(page, app, 'Rendering review');
-  const approve = page.getByRole('button', { name: 'Approve annotation', exact: true });
+  const approve = page.getByRole('button', { name: 'Approve region', exact: true });
   await expect(approve).toBeEnabled();
   await expect(page.getByLabel('Selected source nodes')).toContainText('May be visible in this capture');
   await expect(page.getByLabel('Review source connections')).toContainText('Other layers, masks and clipping may cover it');
   await expect(page.locator('.source-candidate').filter({ hasText: 'Transparent alternative' })).toHaveCount(0);
   await expect(page.locator('.source-candidate').filter({ hasText: 'Hidden alternative' })).toHaveCount(0);
+  await openSourceOptions(page);
   await page.getByText('Choose source nodes manually', { exact: true }).click();
   await page.getByLabel('Search captured nodes', { exact: true }).fill('transparent-source');
   const transparent = page.locator('.manual-sources').getByRole('checkbox', { name: /Transparent alternative/ });
@@ -118,18 +120,18 @@ test('new unknown evidence requires confirmation while legacy unknown keeps its 
   await openRegion(page, app, 'Unknown rendering review');
   const selected = page.getByLabel('Selected source nodes');
   await expect(selected).toContainText('Unknown');
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
   const unknown = (await app.read()).annotations.find(annotation => annotation.id === 'unknown-region')!;
   expect(unknown.sourceReview?.ambiguous).toBe(false);
   expect(unknown.sourceReview?.renderingReviewRequired).toBe(true);
   await page.getByRole('button', { name: 'Confirm sources', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeEnabled();
   await page.locator('.snapshot-list').getByRole('button', { name: /Workspace \/ Members/ }).click();
   await page.locator('.component-list').getByRole('button', { name: 'Legacy pending region', exact: true }).click();
   await expect(selected).toContainText('Unknown');
   await expect(page.locator('.rendering-legacy-note')).toContainText('existing approvals are kept');
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
   await expect(page.locator('.inspector-content > .section-title .badge')).toHaveText('approved');
   const after = await app.read();
   expect(after.annotations.find(annotation => annotation.id === 'legacy-pending')?.reviewStatus).toBe('approved');
@@ -142,14 +144,14 @@ test('legacy pending hidden sources require confirmation even without a stored r
   expect(original.sourceReview).toMatchObject({ ambiguous: false, status: 'unconfirmed' });
   expect(original.sourceReview?.renderingReviewRequired).toBeUndefined();
   await openRegion(page, app, 'Legacy hidden pending region', /Workspace \/ Members/);
-  const approve = page.getByRole('button', { name: 'Approve annotation', exact: true });
+  const approve = page.getByRole('button', { name: 'Approve region', exact: true });
   await expect(page.getByLabel('Selected source nodes')).toContainText('Hidden');
   await expect(page.getByText('Check source visibility before confirming', { exact: true })).toBeVisible();
   await expect(approve).toBeDisabled();
   expect((await app.read()).annotations.find(annotation => annotation.id === original.id)).toEqual(original);
 
   await page.locator('.component-list').getByRole('button', { name: 'Legacy hidden confirmed region', exact: true }).click();
-  await expect(page.getByText('Sources confirmed by a human', { exact: true })).toBeVisible();
+  await expect(page.getByText('Sources confirmed. Review the region name and meaning, then approve it.', { exact: true })).toBeVisible();
   await expect(approve).toBeEnabled();
   await page.locator('.component-list').getByRole('button', { name: 'Legacy hidden pending region', exact: true }).click();
   await expect(approve).toBeDisabled();

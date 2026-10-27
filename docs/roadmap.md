@@ -1,6 +1,8 @@
 # Development roadmap — delivered source, release gates and future work
 
-**0.3.0 source** adds durable partial evidence browsing, scoped branch
+**0.4.0 candidate source** adds a guided save/review/link/share flow, protected
+editing drafts, contextual specification links and private local diagnostics.
+**0.3.0 source** added durable partial evidence browsing, scoped branch
 review, targeted acquisition of known incomplete containers and consented
 revalidation after reconnect. **0.2.1 alpha** established one normal import,
 2× overviews and configurable budgets; **0.2.0 alpha** added collection-backed
@@ -33,6 +35,16 @@ release verification report identifies the actual packaged source and assets.
 5. **Local security controls:** mutually authenticated encrypted plugin records,
    pinned desktop/MCP TLS, stricter source/import bounds and reviewed approval
    gates. These current-source controls do not retroactively fix installed 0.1.1.
+
+6. **Guided review:** Save region prepares missing source candidates; explicit
+   confirmation and approval stay separate. Existing selected references survive
+   geometry edits, and one pending editor is protected before conflicting actions.
+   An approved region starts specification linking with its target selected;
+   Share displays the actual approved export and offers JSON, Markdown and MCP.
+7. **Local diagnostics:** safe request IDs, operation timing, validation paths,
+   browser/native failure locations and app/runtime lifecycle records. Diagnostic
+   menus, bilingual guidance and offline troubleshooting are included. Logs are
+   bounded, best effort and never uploaded automatically.
 
 The [architecture](architecture.md), [pipeline](pipeline.md) and
 [data model](data-model.md) describe this implemented design. ADRs document

@@ -2,7 +2,7 @@
 
 [한국어](acquisition-workflow.ko.md) · [User guide](user-guide.en.md) · [Install](alpha-installation.en.md)
 
-**0.3.0 Alpha** has one normal import route. The app pins the selected source,
+**0.4.0 Alpha** has one normal import route. The app pins the selected source,
 prepares its image and structure, and saves received evidence automatically.
 Users do not choose an acquisition strategy or read order. Source designs stay unchanged.
 
@@ -16,7 +16,11 @@ Users do not choose an acquisition strategy or read order. Source designs stay u
 4. The received image appears automatically in the same workspace. Save proposed
    regions before structure finishes. Image failure does not discard valid structure.
 5. Complete structure attaches automatically. Save unsaved region edits first;
-   attachment waits for them. With sufficient evidence, **Confirm sources → Approve annotation**.
+   attachment waits for them. Once the source is ready, choose **Save region**, check
+   its linked nodes, then **Confirm sources → Approve region**.
+6. The import shows **Source ready** when complete. Open **Import details** for
+   detailed counts and the image. Choose **Link specification** on an approved
+   region for requirements, then **Share** to check the approved result.
 
 Image and structure are separate observations. Avoid editing the source during
 import and compare the results. Structural completeness does not settle the
@@ -26,7 +30,8 @@ meaning of overlapping layers.
 
 Open **Settings**, change values, and choose **Save settings**. Settings persist
 in local app data and apply to the next import or resume. Existing images and
-approved sources remain unchanged.
+approved sources remain unchanged. **Image quality** and **Source reading limits**
+are shown first; expand **Connection timing** to adjust waits.
 
 | Setting | Default | Supported range |
 | --- | --- | --- |
@@ -103,6 +108,19 @@ Part review does not cover outside siblings or overlapping layers. A region beyo
 the displayed source coverage cannot be approved. Obtain a sufficiently broad
 source for a component spanning several branches. Source confirmation and meaning
 approval remain separate human decisions.
+
+## Check error records
+
+Note the action and time. If the message has a diagnostic reference under
+**Error details**, keep that reference too. **Bridge → Reveal Diagnostic Logs**
+opens local records of request routes, operations, duration, error codes and
+validation reasons. WebView errors and console warnings are recorded here as well.
+Logs exclude source wording, images and tokens.
+
+The default folder is `~/.figma-semantic-bridge/logs`. Size and retention policies
+rotate these records, so inspect them soon after the error. For direct WebView
+inspection, use **Bridge → Enable Web Inspector**. See
+[Local diagnostics](local-diagnostics.md) for detailed instructions.
 
 ## Browse, clean up and transfer
 

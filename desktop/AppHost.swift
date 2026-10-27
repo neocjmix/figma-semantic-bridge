@@ -12,6 +12,13 @@ private final class LocaleMessageHandler: NSObject, WKScriptMessageHandler {
 }
 
 @MainActor
+private final class DiagnosticMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var host: AppHost?
+    init(host: AppHost) { self.host = host }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) { host?.receiveDiagnostic(message) }
+}
+
+@MainActor
 private final class GuideNavigation: NSObject, WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         decisionHandler(action.request.url?.absoluteString == "about:blank" && action.targetFrame?.isMainFrame == true ? .allow : .cancel)
@@ -22,6 +29,7 @@ private final class GuideNavigation: NSObject, WKNavigationDelegate, WKUIDelegat
 @MainActor
 private final class ExportTransfer {
     let download: WKDownload
+    let startedAt = ProcessInfo.processInfo.systemUptime
     let directory: URL
     let temporary: URL
     let destination: URL
@@ -78,7 +86,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         }
         let bridge = NSMenuItem(); bar.addItem(bridge); let menu = NSMenu(title: text("Bridge")); bridge.submenu = menu
         for (title, action) in [("Copy Pairing Token", #selector(copyPairingToken)), ("Clear Copied Token", #selector(clearCopiedToken)),
-                                ("Reveal Figma Plugin", #selector(revealPlugin)), ("Reveal Local Data", #selector(revealData)),
+                                ("Reveal Figma Plugin", #selector(revealPlugin)), ("Reveal Local Data", #selector(revealData)), ("Reveal Diagnostic Logs", #selector(revealLogs)), ("Enable Web Inspector", #selector(toggleWebInspector)),
                                 ("Copy MCP Configuration", #selector(copyMCPConfiguration)), ("Setup Guide", #selector(showGuide)), ("User Guide", #selector(showUserGuide)),
                                 ("Reload Workspace", #selector(reloadWorkspace))] {
             let item = NSMenuItem(title: text(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
@@ -95,6 +103,13 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     @objc private func changeLanguage(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, let next = DesktopLocale(rawValue: raw) else { return }
         setLocale(next, notifyWeb: true)
+    }
+
+    fileprivate func receiveDiagnostic(_ message: WKScriptMessage) {
+        guard !terminating, message.name == "fsbDiagnostics", let current = webView, message.webView === current,
+              trustedFrame(message.frameInfo), let frameURL = message.frameInfo.request.url, DesktopPolicy.isApplicationPage(frameURL),
+              let url = current.url, DesktopPolicy.isApplicationPage(url), let (event, level, fields) = DesktopDiagnostics.clientFields(message.body) else { return }
+        runtime.diagnostics.record(event, level: level, fields: fields)
     }
 
     fileprivate func receiveLocale(_ message: WKScriptMessage) {
@@ -130,7 +145,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     private func workspaceBootstrap() throws -> String {
         guard let token = runtime.token else { throw HostFailure("The local pairing token is unavailable.") }
         let encoded = String(data: try JSONEncoder().encode(token), encoding: .utf8)!
-        return "if(window.top===window&&location.origin==='\(DesktopPolicy.origin)'&&(location.pathname==='/'||location.pathname==='/index.html')&&!location.search){window.__FSB_DESKTOP_LOCALE__='\(locale.rawValue)';sessionStorage.setItem('fsb-token',\(encoded));}"
+        return "if(window.top===window&&location.origin==='\(DesktopPolicy.origin)'&&(location.pathname==='/'||location.pathname==='/index.html')&&!location.search){window.__FSB_DESKTOP_LOCALE__='\(locale.rawValue)';sessionStorage.setItem('fsb-token',\(encoded));}" + DesktopDiagnostics.bootstrap
     }
 
     @objc private func retry() {
@@ -144,6 +159,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 guard !terminating else { return }
                 try await installWorkspace()
             } catch {
+                runtime.diagnostics.record("runtime.error", level: "error", fields: ["errorCode": (error as NSError).code])
                 guard !terminating else { return }
                 let others = NSRunningApplication.runningApplications(withBundleIdentifier: DesktopPolicy.bundleIdentifier).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
                 if let other = others.first {
@@ -190,6 +206,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         let bootstrap = try workspaceBootstrap()
         config.userContentController.addUserScript(WKUserScript(source: bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.add(LocaleMessageHandler(host: self), name: "fsbLocale")
+        config.userContentController.add(DiagnosticMessageHandler(host: self), name: "fsbDiagnostics")
         let view = WKWebView(frame: window.contentView?.bounds ?? .zero, configuration: config)
         view.navigationDelegate = self; view.uiDelegate = self
         view.allowsBackForwardNavigationGestures = false
@@ -223,11 +240,13 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         guard webView === self.webView, !terminating else { return }
+        runtime.diagnostics.record("web.navigation.error", level: "error", fields: ["errorCode": (error as NSError).code])
         if (error as NSError).code != NSURLErrorCancelled { showStartupError("The local workspace could not be loaded. Check the local service and choose Retry.") }
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         guard webView === self.webView, !terminating else { return }
+        runtime.diagnostics.record("web.process.terminated", level: "error")
         showStartupError("The workspace renderer stopped. Choose Retry to reopen the saved local workspace.")
     }
 
@@ -236,6 +255,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         guard webView === self.webView, let trust = runtime.trust else { completionHandler(.cancelAuthenticationChallenge, nil); return }
         let credential = trust.credential(for: challenge)
+        if credential == nil { runtime.diagnostics.record("web.trust.rejected", level: "error") }
         completionHandler(credential == nil ? .cancelAuthenticationChallenge : .useCredential, credential)
     }
 
@@ -285,6 +305,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
                 let transfer = ExportTransfer(download: download, directory: directory, destination: destination, fileExtension: ext)
                 self.transfers[ObjectIdentifier(download)] = transfer
+                self.runtime.diagnostics.record("export.start")
                 transfer.observation = download.progress.observe(\.completedUnitCount, options: [.new]) { [weak self, weak download] _, _ in
                     Task { @MainActor in
                         guard let self, let download else { return }
@@ -295,7 +316,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                     }
                 }
                 completionHandler(transfer.temporary)
-            } catch { completionHandler(nil); self.alert("The export destination could not be prepared. Choose a writable folder outside application data.") }
+            } catch { self.runtime.diagnostics.record("export.error", level: "error", fields: ["errorCode": (error as NSError).code]); completionHandler(nil); self.alert("The export destination could not be prepared. Choose a writable folder outside application data.") }
         }
     }
 
@@ -303,6 +324,7 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     func download(_ download: WKDownload, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         guard transfers[ObjectIdentifier(download)] != nil, let trust = runtime.trust else { completionHandler(.cancelAuthenticationChallenge, nil); return }
         let credential = trust.credential(for: challenge)
+        if credential == nil { runtime.diagnostics.record("web.trust.rejected", level: "error") }
         completionHandler(credential == nil ? .cancelAuthenticationChallenge : .useCredential, credential)
     }
 
@@ -319,10 +341,11 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
             let attributes = try FileManager.default.attributesOfItem(atPath: transfer.temporary.path)
             guard let size = attributes[.size] as? NSNumber, size.int64Value <= DesktopPolicy.transferLimit(extension: transfer.fileExtension), !protectedLocation(transfer.destination) else { throw HostFailure("Invalid export.") }
             try DesktopTransfer.save(source: transfer.temporary, destination: transfer.destination, fileExtension: transfer.fileExtension)
-        } catch { alert(DesktopTransfer.invalidMessage) }
+            runtime.diagnostics.record("export.complete", fields: ["durationMs": (ProcessInfo.processInfo.systemUptime - transfer.startedAt) * 1000])
+        } catch { runtime.diagnostics.record("export.error", level: "error", fields: ["errorCode": (error as NSError).code]); alert(DesktopTransfer.invalidMessage) }
     }
 
-    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) { removeTransfer(download); alert("The export could not finish. Try exporting again.") }
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) { runtime.diagnostics.record("export.error", level: "error", fields: ["errorCode": (error as NSError).code]); removeTransfer(download); alert("The export could not finish. Try exporting again.") }
 
     @objc private func copyPairingToken() {
         guard let token = runtime.token else { alert("Start the local service before copying its pairing token."); return }
@@ -334,6 +357,13 @@ final class AppHost: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         copiedTokenChangeCount = nil
     }
     @objc private func revealPlugin() { NSWorkspace.shared.activateFileViewerSelecting([runtime.resources.appendingPathComponent("plugins/semantic-bridge/manifest.json")]) }
+    @objc private func revealLogs() {
+        try? FileManager.default.createDirectory(at: runtime.diagnostics.directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        NSWorkspace.shared.activateFileViewerSelecting([runtime.diagnostics.directory])
+    }
+    @objc private func toggleWebInspector(_ sender: NSMenuItem) {
+        if #available(macOS 13.3, *) { webView?.isInspectable.toggle(); sender.state = webView?.isInspectable == true ? .on : .off }
+    }
     @objc private func revealData() { NSWorkspace.shared.activateFileViewerSelecting([runtime.dataDirectory]) }
     @objc private func copyMCPConfiguration() {
         let value: [String: Any] = ["mcpServers": ["figma-semantic-bridge": ["command": runtime.resources.appendingPathComponent("runtime/node").path,

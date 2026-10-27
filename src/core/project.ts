@@ -9,7 +9,9 @@ import { sourceScopes, sourceScope, inlineScope, completeScope, type SourceScope
 
 /** Stable error codes are safe to expose; source text is never embedded in errors. */
 export class DomainError extends Error {
-  constructor(readonly code: string, message: string) { super(message); this.name = 'DomainError'; }
+  constructor(readonly code: string, message: string, readonly diagnosticIssues: readonly {
+    path: PropertyKey[]; code: string; minimum?: number | bigint; maximum?: number | bigint;
+  }[] = []) { super(message); this.name = 'DomainError'; }
 }
 function fail(message: string): never { throw new DomainError('INVALID_PROJECT', message); }
 const lookup = <T extends {id:string}>(items:readonly T[], id:string, kind:string):T => {
@@ -148,7 +150,7 @@ function validateContents(project:Project,access?:SourceAccess):void {
 /** Runtime schema plus cross-record invariants; returns a detached validated value. */
 export function validateProject(value:unknown,access?:SourceAccess):Project {
   const parsed = ProjectSchema.safeParse(value);
-  if (!parsed.success) throw new DomainError('INVALID_PROJECT','Project does not satisfy the versioned data contract.');
+  if (!parsed.success) throw new DomainError('INVALID_PROJECT','Project does not satisfy the versioned data contract.', parsed.error.issues);
   validateContents(parsed.data,access);
   return parsed.data;
 }
@@ -241,7 +243,7 @@ function replaceTargets(project:Project, oldIds:ReadonlySet<string>, replacement
 export function applyOperation(value:Project, input:Operation, context:OperationContext):Project {
   const project = validateProject(value,context.sources);
   const parsed = OperationSchema.safeParse(input);
-  if (!parsed.success) throw new DomainError('INVALID_OPERATION','Operation does not satisfy its runtime contract.');
+  if (!parsed.success) throw new DomainError('INVALID_OPERATION','Operation does not satisfy its runtime contract.', parsed.error.issues);
   const operation = parsed.data;
   if (context.actor !== 'human' && context.actor !== 'ai') throw new DomainError('FORBIDDEN','Unknown operation actor.');
   if (context.actor === 'ai' && operation.type !== 'submit_proposal') throw new DomainError('FORBIDDEN','Agents can submit proposals only. Human review is required.');
@@ -282,7 +284,16 @@ export function applyOperation(value:Project, input:Operation, context:Operation
       break;
     }
     case 'rename_project': project.name = operation.name; break;
-    case 'upsert_annotation': putAnnotation(project,operation.annotation,'human',context); break;
+    case 'upsert_annotation': {
+      const scope = scopeFor(project, operation.annotation.snapshotId);
+      if (operation.matchSources) {
+        requireCompleteSource(scope);
+        requireRegionCoverage(scope, operation.annotation.bbox);
+        const result = matchScope(scope, operation.annotation.bbox, context);
+        putAnnotation(project, { ...operation.annotation, sourceRefs: result.sourceRefs }, 'human', context, result);
+      } else putAnnotation(project, operation.annotation, 'human', context);
+      break;
+    }
     case 'delete_annotation': {
       lookup(project.annotations,operation.id,'Annotation');
       if (project.annotations.some(a => a.parentId === operation.id)) throw new DomainError('HAS_CHILDREN','Reparent or remove child annotations before deleting their parent.');

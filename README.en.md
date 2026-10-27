@@ -1,4 +1,4 @@
-# Figma Semantic Bridge 0.3.0 Alpha
+# Figma Semantic Bridge 0.4.0 Alpha
 
 [한국어](README.md) · [Install](docs/alpha-installation.en.md) · [User guide](docs/user-guide.en.md) · [Upgrade](docs/upgrade-guide.md)
 
@@ -14,7 +14,7 @@ as fact.
 
 ## Start here
 
-1. Install the **0.3.0 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
+1. Install the **0.4.0 alpha app** from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
    The Apple Silicon app includes its runtime, local service, editor, MCP server
    and prebuilt Figma plugin. No Node.js installation is needed.
 2. Open the app, choose **Bridge → Reveal Figma Plugin**, and import its
@@ -22,13 +22,17 @@ as fact.
    the plugin. The app's own editor connects automatically.
 3. Open a workspace, select a permitted Frame in Figma, and choose
    **Add source**. Check the target and budgets, then choose **Start import**.
-4. Save a region, review its source nodes, confirm them when required, then approve
-   its meaning. Share through **Export JSON**, **Markdown** or MCP.
+4. Draw a region, name it, and choose **Save region**. The app prepares source
+   links for a new region. Review the linked nodes, then **Confirm sources → Approve region**.
+5. For requirements, choose **Link specification** from the approved region.
+   Pick original text through **Specification source**, then save and approve the
+   specification. The selected region is already linked.
+6. Open **Share**, check the included region and specification counts, then use
+   **Export JSON**, **Markdown** or MCP. Save or discard current edits first.
 
 [Detailed installation and MCP setup](docs/alpha-installation.en.md) covers
 checksums, Figma access, macOS prompts and connection checks. Already using an
 older version? [Update the app and plugin together](docs/upgrade-guide.md).
-The 0.1.1 downloads do not contain the 0.3.0 workflow or transport changes.
 
 ## Add a source and adjust settings
 
@@ -52,7 +56,7 @@ can be browsed without Figma.
 ## Review before sharing
 
 - **Source confirmation** records the exact saved node set you reviewed.
-- **Annotation approval** records your judgment about a component's meaning,
+- **Region approval** records your judgment about a component's meaning,
   boundary, role and parent. Geometry alone cannot make that judgment.
 - **Specifications** preserve selected original TEXT and connect it to components.
 - **Approved export and MCP** expose reviewed implementation context. Raw source
@@ -60,7 +64,16 @@ can be browsed without Figma.
 
 The [user guide](docs/user-guide.en.md) walks through overlapping layers, current
 node previews, exact text and the final coding-agent handoff. The manual workflow
-needs no model provider. Optional AI output stays a proposal for human review.
+needs no model provider. **Review suggestions** accepts agent proposals for human
+review. In-app AI generation supports older small captures; for normal imports,
+work manually or use an agent proposal.
+
+## Check an error
+
+Note the action and time, together with the **diagnostic reference** when shown.
+Choose **Bridge → Reveal Diagnostic Logs** to open local request and error records.
+Logs exclude source wording, images and pairing tokens. Use
+**Bridge → Enable Web Inspector** when you need to inspect the WebView directly.
 
 ## Connect a coding agent
 

@@ -1,4 +1,4 @@
-import { guideImageNames, loadGuideImages, upgradeAppendix } from './guide-assets.mjs';
+import { guideDocumentNames, guideImageNames, loadGuideImages, upgradeAppendix, userAppendix } from './guide-assets.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, X509Certificate } from 'node:crypto';
@@ -100,8 +100,7 @@ try {
   const pluginChecksumBytes = await readFile(`${pluginZip}.sha256`);
   assert.equal(pluginChecksumBytes.toString().trim(), `${assetSha256[`${pluginName}.zip`]}  ${pluginName}.zip`, 'Plugin ZIP checksum sidecar differs from the verified archive.');
   const expectedPluginFiles = ['README.md', 'README.en.md', 'README.ko.md', 'SHA256SUMS', 'THIRD_PARTY_NOTICES.txt',
-    'code.js', 'manifest.json', 'release.json', 'docs/user-guide.ko.md', 'docs/user-guide.en.md',
-    'docs/alpha-installation.md', 'docs/alpha-installation.en.md', 'docs/acquisition-workflow.ko.md', 'docs/acquisition-workflow.en.md', 'docs/upgrade-guide.md', ...guideImageNames.map(name => `docs/images/${name}`), ...(projectLicense.bytes ? ['LICENSE'] : [])];
+    'code.js', 'manifest.json', 'release.json', ...guideDocumentNames.map(name => `docs/${name}`), ...guideImageNames.map(name => `docs/images/${name}`), ...(projectLicense.bytes ? ['LICENSE'] : [])];
   // List and read only allowlisted entries without extracting an archive path.
   // unzip independently checks ZIP structure and CRC; SHA checks bind every byte.
   assert.ok((await stat(pluginZip)).size <= 10_000_000, 'Plugin ZIP exceeds its bounded production package size.');
@@ -145,7 +144,9 @@ try {
   for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(resources, 'plugins/semantic-bridge', name)), `Plugin ZIP and app differ: ${name}`);
   const guideImages = await loadGuideImages();
   const upgradeMarkdown = await readFile(join(resources, 'docs/upgrade-guide.md'), 'utf8');
-  const guideAssets = new Map();
+  const releaseNotes = (await readFile(join('docs/releases', `${pkg.version}.md`), 'utf8')).replaceAll('(../local-diagnostics.md)', '(local-diagnostics.md)');
+  assert.equal(await readFile(join(resources, 'RELEASE-NOTES.md'), 'utf8'), releaseNotes);
+  const guideAssets = new Map([['RELEASE-NOTES.md', sha(releaseNotes)]]);
   for (const name of guideImageNames) {
     const content = await readFile(join(resources, 'docs/images', name));
     assert.deepEqual(content, await readFile(join('docs/images', name)));
@@ -154,11 +155,13 @@ try {
     guideAssets.set(`docs/images/${name}`, sha(content));
     guideAssets.set(`images/${name}`, sha(content));
   }
-  for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) {
+  for (const file of guideDocumentNames) {
     const content = await readFile(join(resources, 'docs', file));
     assert.equal(sha(content), sha(await readFile(join('docs', file))));
     assert.equal(sha(content), sha(pluginFiles.get(`docs/${file}`)));
+    assert.equal(sha(content), sha(await readFile(join(resources, file))));
     guideAssets.set(`docs/${file}`, sha(content));
+    guideAssets.set(file, sha(content));
   }
   for (const locale of release.locales) {
     const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
@@ -172,8 +175,10 @@ try {
       assert.equal(sha(pluginFiles.get(`docs/${file}`)), sha(markdown), 'Plugin and app guides differ.');
       const title = `Figma Semantic Bridge ${pkg.version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
       const appendix = kind === 'setup' ? upgradeAppendix(upgradeMarkdown, locale)
-        : '\n\n---\n\n' + await readFile(join(resources, `docs/acquisition-workflow.${locale}.md`), 'utf8');
-      assert.equal(html, renderOfflineGuide(title, markdown + appendix, { locale, kind, images: guideImages }), 'Offline HTML must render the packaged guide and matching workflow or update instructions.');
+        : userAppendix(await readFile(join(resources, `docs/acquisition-workflow.${locale}.md`), 'utf8'),
+          await readFile(join(resources, `docs/user-scenarios.${locale}.md`), 'utf8'),
+          await readFile(join(resources, 'docs/local-diagnostics.md'), 'utf8'), locale);
+      assert.equal(html, renderOfflineGuide(title, markdown + appendix, { locale, kind, images: guideImages }), 'Offline HTML must render the packaged guide and its matching workflow, scenarios, diagnostics or update instructions.');
       const alias = kind === 'user' ? `USER-GUIDE.${locale}.md` : locale === 'ko' ? 'INSTALLATION.md' : 'INSTALLATION.en.md';
       assert.equal(sha(await readFile(join(resources, alias))), sha(markdown));
       assert.equal(sha(await readFile(join(releaseDir, `figma-semantic-bridge-${pkg.version}-${alias}`))), sha(markdown));
@@ -195,7 +200,7 @@ try {
   for (const name of ['manifest.json', 'code.js']) assert.deepEqual(pluginFiles.get(name), await readFile(join(diskApp, 'Contents/Resources/plugins/semantic-bridge', name)), `Plugin ZIP and DMG differ: ${name}`);
   assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources/release.json'))), sha(await readFile(join(resources, 'release.json'))));
   for (const [name, hash] of guideAssets) assert.equal(sha(await readFile(join(diskApp, 'Contents/Resources', name))), hash, `DMG guide differs from ZIP: ${name}`);
-  for (const alias of ['INSTALLATION.md', 'INSTALLATION.en.md', 'USER-GUIDE.ko.md', 'USER-GUIDE.en.md']) {
+  for (const alias of ['INSTALLATION.md', 'INSTALLATION.en.md', 'USER-GUIDE.ko.md', 'USER-GUIDE.en.md', ...guideDocumentNames]) {
     assert.equal(sha(await readFile(join(mountpoint, alias))), guideAssets.get(alias), `DMG root guide differs from app: ${alias}`);
   }
   assert.equal(run(join(diskApp, 'Contents/Resources/runtime/node'), ['--version']).trim(), `v${release.node.version}`);

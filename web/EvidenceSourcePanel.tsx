@@ -4,7 +4,7 @@ import { SourceNodeSchema, type Annotation, type EvidenceScope, type SourceRefer
 import { request } from './api.js';
 import { useLocale } from './i18n.js';
 import { errorMessage, type UIMessage } from './locale.js';
-import type { NodePreviewState } from './SourceReviewPanel.js';
+import { CapturedArea, type NodePreviewState } from './SourceReviewPanel.js';
 import { completeScope } from '../src/core/source-scopes.js';
 import { contains } from '../src/fixture-analysis/index.js';
 
@@ -91,45 +91,103 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
     const remaining = annotation.sourceRefs.filter(ref => ref.nodeId !== nodeId);
     onReferencesChange(checked ? [...remaining, { snapshotId: scope.id, nodeId, matchType: 'partial' }] : remaining);
   }
+  const [referencePage, setReferencePage] = useState(0);
+  const referencePages = Math.max(1, Math.ceil(annotation.sourceRefs.length / 25));
+  const currentReferencePage = Math.min(referencePage, referencePages - 1);
+  const referenceOffset = currentReferencePage * 25;
+  const visibleReferences = annotation.sourceRefs.slice(referenceOffset, referenceOffset + 25);
+  const [candidatesOpen, setCandidatesOpen] = useState(false);
+  const [namedNodes, setNamedNodes] = useState<Record<string, Omit<z.infer<typeof SourceNodeSchema>, 'text'>>>({});
+  const [namesLoading, setNamesLoading] = useState(false);
+  const [namesError, setNamesError] = useState<UIMessage | null>(null);
+  const [nameAttempt, setNameAttempt] = useState(0);
+  const nameCache = useRef(new Map<string, Omit<z.infer<typeof SourceNodeSchema>, 'text'>>());
+  const visibleNodeIds = JSON.stringify([...new Set([...visibleReferences.map(ref => ref.nodeId),
+    ...(candidatesOpen ? candidates.slice(candidateOffset, candidateOffset + 25).map(candidate => candidate.nodeId) : [])])]);
+  useEffect(() => {
+    nameCache.current.clear(); setNamedNodes({}); setNamesError(null); setReferencePage(0); setCandidatePage(0);
+  }, [token, projectId, scope.id]);
+  useEffect(() => {
+    if (!complete) return;
+    const ids = (JSON.parse(visibleNodeIds) as string[]).filter(id => !nameCache.current.has(id));
+    if (!ids.length) { setNamesLoading(false); return; }
+    const controller = new AbortController(); setNamesLoading(true); setNamesError(null);
+    void (async () => {
+      // Resolve only visible rows. Four maximum-size TEXT records fit below the
+      // endpoint's 2 MB budget; exact text is discarded from this display cache.
+      for (let offset = 0; offset < ids.length; offset += 4) {
+        const batch = ids.slice(offset, offset + 4);
+        const value = await request<unknown>(token,
+          `/api/projects/${encodeURIComponent(projectId)}/evidence-scopes/${encodeURIComponent(scope.id)}/resolve`,
+          { nodeIds: batch }, controller.signal);
+        const result = z.object({ nodes: z.array(SourceNodeSchema).max(100), source: z.unknown() }).parse(value);
+        if (controller.signal.aborted) return;
+        for (const node of result.nodes) {
+          if (!batch.includes(node.id)) continue;
+          const { text: _text, ...metadata } = node;
+          nameCache.current.set(node.id, metadata);
+        }
+        setNamedNodes(Object.fromEntries(nameCache.current));
+      }
+    })().catch(cause => { if (!controller.signal.aborted) setNamesError(errorMessage(cause)); })
+      .finally(() => { if (!controller.signal.aborted) setNamesLoading(false); });
+    return () => controller.abort();
+  }, [token, projectId, scope.id, complete, visibleNodeIds, nameAttempt]);
   const preview = nodePreview?.status === 'ready' ? nodePreview.result : null;
+  const nodeLabel = (nodeId: string) => namedNodes[nodeId]?.name || namedNodes[nodeId]?.type || nodeId;
   return <section className="source-review evidence-source-review" aria-label={t('Review source connections')}>
-    <div className="section-title"><h2>{t('Source connections')}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
-    {scope.kind === 'visual' ? <p className="small evidence-warning">{t('This draft has an image only. Save your regions, then attach complete source structure to match nodes, confirm sources and approve.')}</p> : <>
-      <p className="small muted">{t(scope.kind === 'branch'
-        ? 'Only this part has complete saved sources. Check its nodes before approval; other parts of the full image are outside this review.'
-        : 'All source nodes have been collected. Compare them with the image, then save and confirm your chosen sources before approval.')}</p>
+    <div className="section-title"><h2>{t('Review linked nodes')}</h2><span className="count">{annotation.sourceRefs.length}</span></div>
+    {scope.kind === 'visual' ? <p className="source-next-step">{t('Image ready. Save your region while the source finishes loading.')}</p> : <>
+      <p className="source-next-step">{t(dirty ? 'Save your region to update the linked nodes.' : review?.status === 'confirmed'
+        ? 'Sources confirmed. Review the region name and meaning, then approve it.' : annotation.sourceRefs.length
+          ? 'Check that these nodes describe your region, then confirm them.' : 'Find the intended nodes in the alternatives below.')}</p>
+      {scope.kind === 'branch' && <p className="small muted">{t('This prepared part is ready to review. Keep the region inside its dashed boundary.')}</p>}
+      {regionIncomplete && <p className="small evidence-warning">{t('This region extends beyond the prepared source part. Acquire its full required source before confirming or approving it.')}</p>}
+      {review?.ambiguous && <p className="small source-confirmation-required">{t('Some layers overlap. Compare the candidates with the image or open them in Figma.')}</p>}
       {scope.branch?.ancestorRendering.status==='hidden'&&<p className="small evidence-warning">{t('A parent layer ({nodeId}) was hidden when this source was saved. Its children are excluded from automatic matching. Check visibility in Figma before choosing sources.',{nodeId:scope.branch.ancestorRendering.sourceNodeId??''})}</p>}
       {scope.branch?.ancestorRendering.status==='transparent'&&<p className="small evidence-warning">{t('A parent layer ({nodeId}) had zero opacity when this source was saved. Its children are excluded from automatic matching. Check visibility in Figma before choosing sources.',{nodeId:scope.branch.ancestorRendering.sourceNodeId??''})}</p>}
       {scope.branch?.ancestorRendering.status==='unknown'&&<p className="small evidence-warning">{t('Some parent layers were not recorded. Check in Figma that this part is visible and is the version you intend to use.')}</p>}
-      <p className="small muted">{t('Nodes are loaded a page at a time. Matching positions alone cannot tell you which overlapping layer is visible.')}</p>
-      <button className="wide" disabled={busy || !saved || dirty} onClick={onMatch}>{t('Match source')}</button>
-      <button className="wide" disabled={busy || !saved || !connected || !sessionId} onClick={onAddCurrent}>{t('Add current Figma selection')}</button>
-      {review && <div className={`source-review-state ${review.status === 'confirmed' ? '' : 'needs-review'}`}>
-        <strong>{dirty ? t('Unsaved changes — save to refresh source review') : review.status === 'confirmed' ? t('Sources confirmed by a human') : t('Sources not confirmed')}</strong>
-        {review.confirmedAt && <p className="small muted">{t('Confirmed {date}', { date: formatDate(review.confirmedAt) })}</p>}
-        {review.warnings.map((warning, index) => <p className="small muted" key={`${index}:${warning}`}>{systemText(warning)}</p>)}
-      </div>}
-      <div className="source-references" aria-label={t('Selected source nodes')}>{annotation.sourceRefs.map(ref => <div key={ref.nodeId}>
-        <strong>{ref.nodeId}</strong><span>{t(ref.matchType)}</span>
+      {scope.preview && <CapturedArea snapshot={scope} bounds={annotation.bbox} label={t('Annotated region')} />}
+      {namesLoading && <p className="small muted" role="status">{t('Loading node names…')}</p>}
+      {namesError && <div className="small error" role="alert">{renderMessage(namesError)}<button className="text-button" disabled={namesLoading} onClick={() => setNameAttempt(value => value + 1)}>{t('Retry node names')}</button></div>}
+      <div className="source-references" aria-label={t('Selected source nodes')}>{visibleReferences.map(ref => <div key={ref.nodeId}>
+        <strong>{nodeLabel(ref.nodeId)}</strong><small>{ref.nodeId}</small>
         <div className="source-row-actions"><button className="text-button" disabled={!connected || busy} onClick={() => onShowInFigma(ref.nodeId)}>{t('Show in Figma')}</button>
           <button className="text-button" disabled={!connected || !saved || busy} onClick={() => onPreviewNode(ref.nodeId)}>{t('Compare current export')}</button>
           <button className="text-button" disabled={busy} onClick={() => toggle(ref.nodeId, false)}>{t('Remove')}</button></div>
       </div>)}</div>
-      {nodePreview && <div className="current-node-preview"><strong>{nodePreview.nodeId}</strong>
+      {referencePages > 1 && <div className="source-pagination"><button disabled={currentReferencePage === 0} onClick={() => setReferencePage(value => value - 1)}>{t('Previous linked nodes')}</button>
+        <span>{t('Linked nodes {from}–{to} of {total}', { from: referenceOffset + 1, to: referenceOffset + visibleReferences.length, total: formatNumber(annotation.sourceRefs.length) })}</span>
+        <button disabled={currentReferencePage + 1 >= referencePages} onClick={() => setReferencePage(value => value + 1)}>{t('Next linked nodes')}</button></div>}
+      {nodePreview && <div className="current-node-preview"><strong>{nodeLabel(nodePreview.nodeId)}</strong>
         {nodePreview.status === 'loading' && <p role="status" className="small muted">{t('Requesting this node from Figma…')}</p>}
         {nodePreview.status === 'error' && <p role="alert" className="small error">{renderMessage(nodePreview.message)}</p>}
-        {preview && <figure className="node-export-image"><img alt={t('Current node export: {label}', { label: nodePreview.nodeId })}
+        {preview && <figure className="node-export-image"><img alt={t('Current node export: {label}', { label: nodeLabel(nodePreview.nodeId) })}
           src={`data:image/png;base64,${preview.preview.base64}`} /><figcaption>{t('This is the current Figma image. Viewing it does not confirm your saved sources.')}</figcaption></figure>}
         <button className="text-button" onClick={onCloseNodePreview}>{t('Close current export')}</button></div>}
-      {candidates.length > 0 && <details className="source-candidates"><summary>{t('Compare {count} matching candidates', { count: formatNumber(candidates.length) })}</summary>
+      <button className="primary wide" disabled={busy || !saved || dirty || regionIncomplete || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t('Confirm sources')}</button>
+      <details className="source-review-state"><summary>{t('Source details')}</summary>
+        <p className="small muted">{t('Check this saved image against the intended Figma design before confirming sources.')}</p>
+        <p className="small muted">{t('Nodes are loaded a page at a time. Matching positions alone cannot tell you which overlapping layer is visible.')}</p>
+        {review?.confirmedAt && <p className="small muted">{t('Confirmed {date}', { date: formatDate(review.confirmedAt) })}</p>}
+        {review?.warnings.map((warning, index) => <p className="small muted" key={`${index}:${warning}`}>{systemText(warning)}</p>)}
+      </details>
+      {candidates.length > 0 && <details className="source-candidates" onToggle={event => setCandidatesOpen(event.currentTarget.open)}><summary>{t('Compare {count} matching candidates', { count: formatNumber(candidates.length) })}</summary>
         {candidates.slice(candidateOffset, candidateOffset + 25).map(candidate => <article className="source-candidate" key={candidate.nodeId}>
           <label className="checkbox"><input type="checkbox" checked={selectedIds.has(candidate.nodeId)} disabled={busy}
-            onChange={event => toggle(candidate.nodeId, event.target.checked)} /><span>{candidate.nodeId}<small>{systemText(candidate.reason)}</small></span></label>
+            onChange={event => toggle(candidate.nodeId, event.target.checked)} /><span>{nodeLabel(candidate.nodeId)}<small>{candidate.nodeId} · {systemText(candidate.reason)}</small></span></label>
           <p className="small muted">{t('Area coverage {coverage}% · overlap {iou}% · position only', { coverage: Math.round(candidate.coverage * 100), iou: Math.round(candidate.iou * 100) })}</p>
+          <button className="text-button" disabled={!connected || busy} onClick={() => onShowInFigma(candidate.nodeId)}>{t('Show in Figma')}</button>
         </article>)}
-        <div className="collection-page-actions"><button disabled={candidatePage === 0} onClick={() => setCandidatePage(value => value - 1)}>{t('Previous candidates')}</button>
-          <button disabled={candidateOffset + 25 >= candidates.length} onClick={() => setCandidatePage(value => value + 1)}>{t('Next candidates')}</button></div>
+        {candidates.length > 25 && <div className="collection-page-actions"><button disabled={candidatePage === 0} onClick={() => setCandidatePage(value => value - 1)}>{t('Previous candidates')}</button>
+          <button disabled={candidateOffset + 25 >= candidates.length} onClick={() => setCandidatePage(value => value + 1)}>{t('Next candidates')}</button></div>}
       </details>}
+      <details className="source-alternatives" open={annotation.sourceRefs.length === 0}><summary>{t('Change source nodes')}</summary>
+        <button className="wide" disabled={busy || !saved || dirty} onClick={onMatch}>{t('Match source')}</button>
+        <h3>{t('Choose nodes in Figma')}</h3>
+        <p className="small muted">{t('Select a node in the original Figma file, then add it to this region.')}</p>
+        <button className="wide" disabled={busy || !saved || !connected || !sessionId} onClick={onAddCurrent}>{t('Add current Figma selection')}</button>
+        {!connected && <p className="small muted">{t('Connect the Figma plugin to bring in a new source.')}</p>}
       <details className="advanced" onToggle={event => setBrowseOpen(event.currentTarget.open)}><summary>{t('Browse collected source nodes')}</summary>
         <form onSubmit={event => { event.preventDefault(); browser.setOffsets([0]); browser.setSearched(browser.query.trim()); }}>
           <label>{t('Search captured nodes')}<input value={browser.query} maxLength={300} onChange={event => browser.setQuery(event.target.value)} placeholder={t('Name, node ID or type')} /></label>
@@ -143,9 +201,7 @@ export function EvidenceSourcePanel({ token, projectId, scope, annotation, saved
         <PageControls offset={browser.offset} page={browser.page} loading={browser.loading}
           previous={() => browser.setOffsets(value => value.slice(0, -1))}
           next={() => { if (browser.page?.nextOffset !== null && browser.page) browser.setOffsets(value => [...value, browser.page!.nextOffset!]); }} />
-      </details>
-      <button className="wide" disabled={busy || !saved || dirty || regionIncomplete || annotation.sourceRefs.length === 0 || review?.status === 'confirmed'} onClick={onConfirm}>{t('Confirm sources')}</button>
-      {review?.status !== 'confirmed' && <p className="small evidence-warning">{t('Confirm the saved source nodes before approving the annotation.')}</p>}
+      </details></details>
     </>}
   </section>;
 }
@@ -171,7 +227,7 @@ export function EvidenceTextPicker({ token, projectId, scope, selected, busy, on
     finally { if (pending.current === controller) pending.current = null; setReading(null); }
   }
   return <details className="evidence-text-picker" onToggle={event => setExpanded(event.currentTarget.open)}><summary>{t('Choose original text')}</summary>
-    <p className="small muted">{t('Only the text you choose is loaded. Its original wording and selection order are preserved.')}</p>
+    <p className="small muted">{t('Select the original wording that describes the component.')}</p>
     <form onSubmit={event => { event.preventDefault(); browser.setOffsets([0]); browser.setSearched(browser.query.trim()); }}>
       <label>{t('Search source text nodes')}<input value={browser.query} maxLength={300} onChange={event => browser.setQuery(event.target.value)} /></label>
       <button disabled={browser.loading}>{t('Search')}</button></form>

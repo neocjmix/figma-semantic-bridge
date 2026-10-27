@@ -1,5 +1,6 @@
 import { contains, nearEqual, overlaps } from '../fixture-analysis/index.js';
 import { buildRenderingEvidence } from './rendering-evidence.js';
+import { unitRatio } from './geometry-scores.js';
 import { NodeBoundsSchema, RectSchema, type Rect, type Snapshot, type SourceNode, type SourceReference } from '../shared/contracts.js';
 
 export interface MatchCandidate { nodeId: string; coverage: number; iou: number; reason: string }
@@ -87,7 +88,7 @@ export function matchRegion(snapshot: Snapshot, region: Rect, options: { toleran
   const scored = index.query(region, tolerance).map(node => {
     const box = node.bbox!;
     const intersection = intersectionArea(region, box);
-    const coverage = intersection / area(region), iou = intersection / (area(region) + area(box) - intersection);
+    const coverage = unitRatio(intersection, area(region)), iou = unitRatio(intersection, area(region) + area(box) - intersection);
     return { node, box, coverage, iou, near: nearEqual(region, box, tolerance), inside: contains(region, box, tolerance), contains: contains(box, region, tolerance) };
   }).sort((a, b) => Number(b.near) - Number(a.near) || b.iou - a.iou || index.depth(a.node.id) - index.depth(b.node.id) || compareId(a.node.id, b.node.id));
   const candidates: MatchCandidate[] = scored.slice(0, maxCandidates).map(item => ({ nodeId: item.node.id, coverage: item.coverage, iou: item.iou, reason: item.near ? 'equal or near-equal bounds' : item.inside ? 'inside the selected region' : item.contains ? 'contains the selected region' : 'partial spatial intersection' }));

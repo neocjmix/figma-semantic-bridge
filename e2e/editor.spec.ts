@@ -1,3 +1,4 @@
+import { openRegionSettings, openSourceOptions, openWorkspaceTools } from './workflow-controls.js';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -19,6 +20,7 @@ async function openDemo(page: Page, app: { url: string; token: string }) {
   await page.goto(app.url);
   await page.getByLabel('Pairing token').fill(app.token);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await openWorkspaceTools(page);
   await page.getByRole('button', { name: 'Load demo', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Design canvas' })).toBeVisible();
 }
@@ -29,7 +31,7 @@ async function saveAnnotation(page: Page, whilePending?: () => Promise<void>) {
     return request.method() === 'POST' && /\/api\/projects\/[^/]+\/mutate$/.test(new URL(response.url()).pathname)
       && request.postDataJSON()?.operation?.type === 'upsert_annotation';
   });
-  const button = page.getByRole('button', { name: 'Save annotation', exact: true });
+  const button = page.getByRole('button', { name: 'Save region', exact: true });
   await button.click();
   await whilePending?.();
   const response = await savedResponse;
@@ -37,7 +39,7 @@ async function saveAnnotation(page: Page, whilePending?: () => Promise<void>) {
   const saved: Project = await response.json();
   expect(saved.revision).toBe(response.request().postDataJSON().expectedRevision + 1);
   await expect(page.locator('.revision')).toHaveText(`Saved version ${saved.revision}`);
-  await expect(page.getByRole('status')).toHaveText('Annotation saved. Match source nodes, then review it.');
+  await expect(page.getByRole('status')).toHaveText('Region saved. Check the linked source nodes.');
   await expect(page.locator('.unsaved')).toHaveCount(0);
   await expect(button).toBeEnabled();
   return saved;
@@ -65,23 +67,28 @@ test('draw, ground, approve, map many-to-many specs, export and restore a worksp
   page.on('pageerror', error => pageErrors.push(error.message));
   await openDemo(page, app);
   await drawRegion(page, { x: 320, y: 330, width: 720, height: 300 }, 'Members table');
+  await openSourceOptions(page);
   await page.getByRole('button', { name: 'Match source', exact: true }).click();
   await expect(page.locator('.source-references')).toContainText('table-bg');
-  await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
   await expect(page.locator('.inspector-content .badge').first()).toHaveText('approved');
   await drawRegion(page, { x: 320, y: 250, width: 480, height: 48 }, 'Member search');
+  await openSourceOptions(page);
   await page.getByRole('button', { name: 'Match source', exact: true }).click();
   await expect(page.locator('.source-references')).toContainText('search-bg');
-  await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
   await page.getByRole('tab', { name: 'Specifications', exact: true }).click();
+  await page.getByLabel('Specification source', { exact: true }).selectOption('demo-notes');
   await page.getByLabel(/When no members match/).check();
   await page.getByRole('button', { name: 'Create specification', exact: true }).click();
   await page.locator('.relation-list input[type=checkbox]').nth(0).check();
+  await page.locator('.component-link-options > summary').click();
   await page.locator('.relation-list input[type=checkbox]').nth(1).check();
   await page.getByRole('button', { name: 'Save specification', exact: true }).click();
   await page.getByRole('button', { name: 'Approve specification', exact: true }).click();
   await expect(page.locator('.spec-list .badge').first()).toHaveText('approved');
   const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
   await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
   const download = await downloadEvent;
   const path = await download.path();
@@ -105,7 +112,9 @@ test('coordinate editing, hierarchy, undo/redo and malformed proposals remain re
   await saveAnnotation(page);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   await page.getByLabel('Component name').fill('Child');
+  await openRegionSettings(page);
   await page.getByLabel('Parent component').selectOption({ label: 'Parent' });
+  await openRegionSettings(page);
   await page.getByLabel('Region width', { exact: true }).fill('120');
   await saveAnnotation(page);
   await expect(page.locator('.component-list')).toContainText('Child');
@@ -113,7 +122,8 @@ test('coordinate editing, hierarchy, undo/redo and malformed proposals remain re
   await expect(page.locator('.component-list')).not.toContainText('Child');
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(page.locator('.component-list')).toContainText('Child');
-  await page.getByRole('tab', { name: /^Drafts/ }).click();
+  await page.getByRole('tab', { name: /^Review suggestions/ }).click();
+  await page.locator('.structured-proposal > summary').click();
   await page.getByLabel('Draft JSON').fill('{"annotations":[{"malformed":true}],"specifications":[]}');
   await page.getByRole('button', { name: 'Submit draft for review' }).click();
   await expect(page.getByRole('alert')).toBeVisible();
@@ -136,6 +146,44 @@ test('invalid pairing token cannot open local projects', async ({ page, app }) =
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('pairing token was not accepted');
   await expect(page.getByRole('button', { name: 'Load demo', exact: true })).toHaveCount(0);
+});
+
+test('accepted suggestions stay unapproved and stale suggestions can be rejected without losing human edits', async ({ page, app }) => {
+  await openDemo(page, app);
+  await drawRegion(page, { x: 320, y: 330, width: 720, height: 300 }, 'Human approved region');
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
+  const projectId = await page.getByLabel('Open workspace').inputValue();
+  const readProject = async (): Promise<Project> => (await page.request.get(`${app.url}/api/projects/${projectId}`, {
+    headers: { Authorization: `Bearer ${app.token}` },
+  })).json();
+  const source = (await readProject()).annotations[0]!;
+  const submit = async (id: string) => {
+    await page.getByRole('tab', { name: /^Review suggestions/ }).click();
+    const details = page.locator('.structured-proposal');
+    if (!await details.evaluate(element => (element as HTMLDetailsElement).open)) await details.locator('summary').click();
+    await page.getByLabel('Draft JSON').fill(JSON.stringify({ annotations: [{ ...source, id, name: id, origin: 'ai', revision: 0 }], specifications: [] }));
+    await page.getByRole('button', { name: 'Submit draft for review', exact: true }).click();
+    await expect(page.locator('.proposal')).toHaveCount(1);
+  };
+  await submit('accepted suggestion');
+  await page.getByRole('button', { name: 'Accept draft', exact: true }).click();
+  await expect(page.locator('.proposal')).toHaveCount(0);
+  expect((await readProject()).annotations.find(value => value.id === 'accepted suggestion')).toMatchObject({ origin: 'ai', reviewStatus: 'proposed' });
+  expect((await readProject()).annotations.find(value => value.id === source.id)?.reviewStatus).toBe('approved');
+  await submit('stale suggestion');
+  await page.getByRole('tab', { name: 'Component', exact: true }).click();
+  await page.locator('.component-list').getByRole('button', { name: 'accepted suggestion', exact: true }).click();
+  await page.getByLabel('Component name', { exact: true }).fill('Human correction');
+  await saveAnnotation(page);
+  await page.getByRole('tab', { name: /^Review suggestions/ }).click();
+  await page.getByRole('button', { name: 'Accept draft', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('STALE_PROPOSAL');
+  expect((await readProject()).annotations.find(value => value.id === 'accepted suggestion')?.name).toBe('Human correction');
+  expect((await readProject()).annotations.some(value => value.id === 'stale suggestion')).toBe(false);
+  await page.getByRole('button', { name: 'Dismiss error', exact: true }).click();
+  await page.getByRole('button', { name: 'Reject draft', exact: true }).click();
+  await expect(page.locator('.proposal')).toHaveCount(0);
+  expect((await readProject()).annotations.find(value => value.id === source.id)?.reviewStatus).toBe('approved');
 });
 
 test('zoomed and panned canvas moves and resizes in original document coordinates', async ({ page, app }) => {
@@ -162,11 +210,14 @@ test('zoomed and panned canvas moves and resizes in original document coordinate
     await page.mouse.up();
   }
   await dragPoints({ x: 550, y: 430 }, { x: 575, y: 415 });
-  expect(Number(await page.getByLabel('Region x', { exact: true }).inputValue())).toBeCloseTo(525, 1);
-  expect(Number(await page.getByLabel('Region y', { exact: true }).inputValue())).toBeCloseTo(385, 1);
+  const coordinateTolerance = await canvas.evaluate(element => 1 / Math.abs((element as SVGSVGElement).getScreenCTM()!.a));
+  expect(Math.abs(Number(await page.getByLabel('Region x', { exact: true }).inputValue()) - 525)).toBeLessThan(coordinateTolerance);
+  expect(Math.abs(Number(await page.getByLabel('Region y', { exact: true }).inputValue()) - 385)).toBeLessThan(coordinateTolerance);
   await dragPoints({ x: 645, y: 465 }, { x: 675, y: 485 });
-  expect(Number(await page.getByLabel('Region width', { exact: true }).inputValue())).toBeCloseTo(150, 1);
-  expect(Number(await page.getByLabel('Region height', { exact: true }).inputValue())).toBeCloseTo(100, 1);
+  expect(Math.abs(Number(await page.getByLabel('Region width', { exact: true }).inputValue()) - 150)).toBeLessThan(coordinateTolerance);
+  expect(Math.abs(Number(await page.getByLabel('Region height', { exact: true }).inputValue()) - 100)).toBeLessThan(coordinateTolerance);
+  const expectedX = await page.getByLabel('Region x', { exact: true }).inputValue();
+  const expectedWidth = await page.getByLabel('Region width', { exact: true }).inputValue();
   // Hold the real mutation before it reaches the server so pending-save feedback
   // and the subsequent reload cannot accidentally pass on a fast local machine.
   let releaseSave!: () => void;
@@ -181,15 +232,15 @@ test('zoomed and panned canvas moves and resizes in original document coordinate
   await saveAnnotation(page, async () => {
     try {
       await intercepted;
-      await expect(page.getByRole('button', { name: 'Save annotation', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Save region', exact: true })).toBeDisabled();
       await expect(page.getByRole('status')).toHaveText('Working…');
       await expect(page.locator('.unsaved')).toBeVisible();
     } finally { releaseSave(); }
   });
   await page.reload();
   await page.locator('.component-list').getByRole('button', { name: 'Movable region', exact: true }).click();
-  expect(Number(await page.getByLabel('Region width', { exact: true }).inputValue())).toBeCloseTo(150, 1);
-  expect(Number(await page.getByLabel('Region x', { exact: true }).inputValue())).toBeCloseTo(525, 1);
+  expect(await page.getByLabel('Region width', { exact: true }).inputValue()).toBe(expectedWidth);
+  expect(await page.getByLabel('Region x', { exact: true }).inputValue()).toBe(expectedX);
 });
 
 test('external AI destination is disclosed and consent resets after each attempted request', async ({ page, app }) => {
@@ -201,7 +252,7 @@ test('external AI destination is disclosed and consent resets after each attempt
     await route.fulfill({ status: 502, json: { error: { code: 'TEST_PROVIDER', message: 'Synthetic provider failure; nothing was sent externally.' } } });
   });
   await openDemo(page, app);
-  await page.getByRole('tab', { name: /^Drafts/ }).click();
+  await page.getByRole('tab', { name: /^Review suggestions/ }).click();
   const panel = page.getByLabel('Optional AI draft');
   await expect(panel).toContainText('https://provider.example');
   await expect(panel).toContainText('test-model');

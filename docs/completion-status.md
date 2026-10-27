@@ -1,15 +1,47 @@
 # Completion status
 
-Current version: **0.3.0 alpha**. The [recovery acceptance record](evaluation/release-0.3.0-acceptance.md)
-separates partial evidence, reconnect rechecks, focused subtree acquisition,
-branch review, transfer and native/package validation. Earlier observations and
-human approvals are retained; a completed part does not complete its enclosing task.
-The [user guide](user-guide.en.md),
-[한국어 가이드](user-guide.ko.md) and [upgrade guide](upgrade-guide.md) describe
-current use. The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md)
-separates source/browser checks, installed-candidate observations and final
-artifact provenance. Earlier sections below retain their original dates and
-version boundaries.
+Current source: **0.4.0 alpha**. Guided import → region review →
+specification linking → Share, draft protection and local diagnostics are
+implemented. See the [guided-workflow QA record](evaluation/guided-workflow-qa.md)
+for final suite execution and the [0.4.0 changes](releases/0.4.0.md).
+The source suite passed 495 tests and the final browser suite passed 64 cases.
+The native candidate passed the synthetic import/review/specification/export and
+diagnostics workflow, then restart, precise coordinate entry, both split directions
+and Undo. Final artifact identity comes from the clean-commit release verification; see the
+[current validation record](product-validation.md#040-guided-workflow-candidate-2026-10-27).
+
+The [0.3.0 recovery acceptance record](evaluation/release-0.3.0-acceptance.md)
+retains its earlier partial-evidence, reconnect, branch and packaging results.
+The [user guide](user-guide.en.md), [한국어 가이드](user-guide.ko.md),
+[diagnostic guide](local-diagnostics.md) and [upgrade guide](upgrade-guide.md)
+describe current use. Historical sections below retain their original dates,
+versions and evidence boundaries.
+
+## Implemented 0.4.0 scope
+
+New regions prepare missing source links when complete evidence is available.
+Source confirmation and meaning approval remain explicit; later geometry edits
+preserve existing chosen references. Specification linking starts from an approved
+region and can select wording from another saved source. Share uses the actual
+approved export, with pending edits protected before conflicting work.
+
+Coordinates, role, hierarchy, manual source changes and recovery are secondary
+controls. Local server/browser/native diagnostics retain timing, safe validation
+reasons and call locations without source content or tokens. App and plugin guides
+include troubleshooting and diagnostics; offline HTML includes the current
+language's supporting instructions. Broader live-source/account/research limits
+below are unchanged. Implementation and source tests do not establish native
+production-scale behavior or final released artifact identity.
+
+The native candidate imported owned synthetic 21-node and 56-node frames in Dev
+Mode, confirmed and approved a region, linked exact text from the other source
+and saved JSON/Markdown through native dialogs. Invalid bounds preserved the
+draft and produced correlated local logs; correction, Finder log access and both
+offline guide languages passed. The 42 baseline data files were unchanged,
+excluding the runtime lock. Restart retained both sources and the approved
+region/specification. Native negative/decimal coordinate entry, horizontal and
+vertical splits and Undo completed without errors and restored the original
+approved state. Final clean-commit package provenance and publication remain.
 
 ## Completed 0.2.0 scope
 

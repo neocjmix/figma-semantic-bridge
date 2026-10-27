@@ -101,3 +101,30 @@ test('the shipped installation guide becomes structured, self-contained HTML', a
   assert.doesNotMatch(html, /<a\b|<script\b|<link\b|<img\b/i);
   assert.doesNotMatch(html, /<pre># 0\.1\.0/);
 });
+
+
+test('offline user guide includes troubleshooting and only the selected diagnostic language', async () => {
+  const { userAppendix } = await import(new URL('../scripts/guide-assets.mjs', import.meta.url).href) as {
+    userAppendix(acquisition: string, scenarios: string, diagnostics: string, locale: string): string;
+  };
+  const diagnostics = '# Local diagnostics\n\n## 한국어\n\n한국어 진단 절차\n\n## English\n\nEnglish diagnostic procedure\n';
+  for (const locale of ['ko', 'en']) {
+    const appendix = userAppendix('# Acquisition\n\nImport steps.', '# Recovery\n\nSaved drafts stay available.', diagnostics, locale);
+    const html = renderOfflineGuide('User guide', '# Main workflow' + appendix, { locale, kind: 'user' });
+    assert.match(html, /<h1>Acquisition<\/h1>/);
+    assert.match(html, /<h1>Recovery<\/h1>/);
+    assert.match(html, /Saved drafts stay available/);
+    assert.ok(html.includes(locale === 'ko' ? '한국어 진단 절차' : 'English diagnostic procedure'));
+    assert.ok(!html.includes(locale === 'ko' ? 'English diagnostic procedure' : '한국어 진단 절차'));
+    const shipped = userAppendix(await readFile(`docs/acquisition-workflow.${locale}.md`, 'utf8'),
+      await readFile(`docs/user-scenarios.${locale}.md`, 'utf8'), await readFile('docs/local-diagnostics.md', 'utf8'), locale);
+    const rendered = renderOfflineGuide('User guide', await readFile(`docs/user-guide.${locale}.md`, 'utf8') + shipped, { locale, kind: 'user' });
+    assert.match(rendered, /server\.ndjson/);
+    assert.match(rendered, /native\.ndjson/);
+    assert.match(rendered, /X-FSB-Request-Id/);
+    assert.doesNotMatch(rendered, /<(?:script|iframe|a|link|object)\b/i);
+    assert.ok(Buffer.byteLength(rendered) < 4_000_000);
+  }
+  assert.throws(() => userAppendix('', '', diagnostics, 'fr'), /Diagnostics guide/);
+  assert.throws(() => userAppendix('', '', '## English\nOnly one language.', 'en'), /Diagnostics guide/);
+});

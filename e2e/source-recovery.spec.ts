@@ -1,3 +1,4 @@
+import { openRegionSettings, openSourceOptions } from './workflow-controls.js';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { test as base, expect, type Page } from '@playwright/test';
@@ -97,9 +98,10 @@ test('a complete saved part keeps the full image and copies a proposed region fo
   const panel = await pausedImport(page, app);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   await page.getByLabel('Component name', { exact: true }).fill('Region kept at its original position');
+  await openRegionSettings(page);
   for (const [key, value] of Object.entries({ x: -10, y: 20, width: 10, height: 10 }))
     await page.getByLabel(`Region ${key}`, { exact: true }).fill(String(value));
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Save region', exact: true }).click();
   await expect.poll(async () => (await app.readProject()).annotations.length).toBe(1);
   const before = await app.readProject(), original = before.annotations[0]!;
   await panel.getByText('Received sources', { exact: true }).click();
@@ -110,10 +112,11 @@ test('a complete saved part keeps the full image and copies a proposed region fo
   await expect(page.locator('.design-canvas image')).toHaveAttribute('x', '-20');
   await expect(page.locator('.design-canvas image')).toHaveAttribute('width', '128');
   await expect(page.getByLabel('Complete source area', { exact: true })).toHaveAttribute('width', '10');
-  await expect(page.getByRole('button', { name: 'Approve annotation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Approve region', exact: true })).toBeDisabled();
+  await openSourceOptions(page);
   await page.getByRole('button', { name: 'Match source', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm sources', exact: true }).click();
-  await page.getByRole('button', { name: 'Approve annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve region', exact: true }).click();
   await expect.poll(async () => (await app.readProject()).annotations.filter(value => value.reviewStatus === 'approved').length).toBe(1);
   const after = await app.readProject(), copied = after.annotations.find(value => value.id !== original.id)!;
   expect(after.annotations.find(value => value.id === original.id)).toEqual(original);
@@ -127,7 +130,7 @@ test('a restarted connection continues through one confirmed recovery and preser
   const panel = await pausedImport(page, app);
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   await page.getByLabel('Component name', { exact: true }).fill('Keep across restart');
-  await page.getByRole('button', { name: 'Save annotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Save region', exact: true }).click();
   await expect.poll(async () => (await app.readProject()).annotations.length).toBe(1);
   const before = await app.readProject(), visual = before.scopes![0]!;
   await app.restart();
@@ -158,9 +161,10 @@ test('an unfinished saved part is prepared on demand without completing or reren
     const panel=await pausedImport(page,app);
     await page.getByRole('button',{name:'+ Add region',exact:true}).click();
     await page.getByLabel('Component name',{exact:true}).fill('Focused region');
+    await openRegionSettings(page);
     for(const [key,value]of Object.entries({x:-10,y:20,width:50,height:30}))
       await page.getByLabel(`Region ${key}`,{exact:true}).fill(String(value));
-    await page.getByRole('button',{name:'Save annotation',exact:true}).click();
+    await page.getByRole('button',{name:'Save region',exact:true}).click();
     await expect.poll(async()=>(await app.readProject()).annotations.length).toBe(1);
     const before=await app.readProject(),original=before.annotations[0]!;
     const settings=SettingsViewSchema.parse(await(await app.api('/api/import-settings')).json());

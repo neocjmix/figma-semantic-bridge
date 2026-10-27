@@ -1,4 +1,4 @@
-import { guideImageNames, loadGuideImages, upgradeAppendix } from './guide-assets.mjs';
+import { guideDocumentNames, guideImageNames, loadGuideImages, upgradeAppendix, userAppendix } from './guide-assets.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
@@ -65,7 +65,8 @@ await cp('docs/alpha-installation.md', join(resources, 'INSTALLATION.md'));
 await cp('docs/alpha-installation.en.md', join(resources, 'INSTALLATION.en.md'));
 await cp('README.md', join(resources, 'README.md'));
 await cp('README.en.md', join(resources, 'README.en.md'));
-await cp(join('docs/releases', `${version}.md`), join(resources, 'RELEASE-NOTES.md'));
+const releaseNotes = await readFile(join('docs/releases', `${version}.md`), 'utf8');
+await writeFile(join(resources, 'RELEASE-NOTES.md'), releaseNotes.replaceAll('(../local-diagnostics.md)', '(local-diagnostics.md)'));
 if (projectLicense.bytes) await writeFile(join(resources, 'LICENSE'), projectLicense.bytes);
 
 const guideImages = await loadGuideImages(root);
@@ -76,7 +77,10 @@ for (const name of guideImageNames) {
   await cp(join('docs/images', name), join(resources, 'docs/images', name));
   await cp(join('docs/images', name), join(resources, 'images', name));
 }
-for (const file of ['acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) await cp(join('docs', file), join(resources, 'docs', file));
+for (const file of guideDocumentNames) {
+  await cp(join('docs', file), join(resources, 'docs', file));
+  await cp(join('docs', file), join(resources, file));
+}
 for (const locale of ['ko', 'en']) {
   const setupFile = locale === 'ko' ? 'alpha-installation.md' : 'alpha-installation.en.md';
   const userFile = `user-guide.${locale}.md`;
@@ -86,7 +90,8 @@ for (const locale of ['ko', 'en']) {
     const title = `Figma Semantic Bridge ${version} — ${locale === 'ko' ? (kind === 'user' ? '사용 가이드' : '설치 안내') : (kind === 'user' ? 'User Guide' : 'Setup Guide')}`;
     const markdown = await readFile(join('docs', file), 'utf8');
     const appendix = kind === 'setup' ? upgradeAppendix(upgradeMarkdown, locale)
-      : '\n\n---\n\n' + await readFile(`docs/acquisition-workflow.${locale}.md`, 'utf8');
+      : userAppendix(await readFile(`docs/acquisition-workflow.${locale}.md`, 'utf8'),
+        await readFile(`docs/user-scenarios.${locale}.md`, 'utf8'), await readFile('docs/local-diagnostics.md', 'utf8'), locale);
     const html = renderOfflineGuide(title, markdown + appendix, { locale, kind, images: guideImages });
     await writeFile(join(resources, `${kind}-guide-${locale}.html`), html);
   }
@@ -155,6 +160,7 @@ run('/bin/ln', ['-s', '/Applications', join(disk, 'Applications')]);
 await cp('docs/alpha-installation.md', join(disk, 'INSTALLATION.md'));
 await cp('docs/alpha-installation.en.md', join(disk, 'INSTALLATION.en.md'));
 for (const locale of ['ko', 'en']) await cp(`docs/user-guide.${locale}.md`, join(disk, `USER-GUIDE.${locale}.md`));
+for (const file of guideDocumentNames) await cp(join('docs', file), join(disk, file));
 run('/usr/bin/hdiutil', ['create', '-volname', `Figma Semantic Bridge ${version}`, '-srcfolder', disk, '-ov', '-format', 'UDZO', dmg]);
 await writeFile(join(releases, `figma-semantic-bridge-${version}-release.json`), JSON.stringify(manifest, null, 2) + '\n');
 await cp('docs/alpha-installation.md', join(releases, `figma-semantic-bridge-${version}-INSTALLATION.md`));

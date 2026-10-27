@@ -1,3 +1,4 @@
+import { openRegionSettings } from './workflow-controls.js';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -41,26 +42,28 @@ test('language changes preserve unsaved annotations and original sources, then s
   await page.getByRole('button', { name: '+ Add region', exact: true }).click();
   const name = '고객 계정 — Billing name remains exact';
   await page.getByLabel('Component name', { exact: true }).fill(name);
+  await openRegionSettings(page);
   await page.getByLabel('Region width', { exact: true }).fill('123.4');
   const original = await app.read();
   await page.getByLabel('Language / 언어', { exact: true }).selectOption('ko');
   await expect(page.getByLabel('구성요소 이름', { exact: true })).toHaveValue(name);
   await expect(page.getByLabel('영역 너비', { exact: true })).toHaveValue('123.4');
-  await expect(page.locator('.unsaved')).toContainText('저장하지 않은 변경');
-  await expect(page.getByRole('status')).toHaveText('새 영역을 그렸습니다. 이름을 정한 뒤 주석을 저장하세요.');
+  await expect(page.locator('.unsaved')).toContainText('변경한 내용을 유지하려면 영역을 저장하세요.');
+  await expect(page.getByRole('status')).toHaveText('영역의 이름을 입력한 뒤 영역 저장을 누르세요.');
   await page.locator('.scope-warning summary').click();
   await expect(page.locator('.scope-warning')).toContainText('Original source diagnostic stays verbatim.');
   expect(await app.read()).toEqual(original);
   await page.getByLabel('역할', { exact: true }).selectOption({ label: '구역' });
-  await page.getByRole('button', { name: '주석 저장', exact: true }).click();
-  await expect(page.getByRole('status')).toHaveText('주석을 저장했습니다. 원본 노드를 연결한 뒤 검토하세요.');
+  await page.getByRole('button', { name: '영역 저장', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('영역을 저장했습니다. 연결된 원본 노드를 확인하세요.');
   const saved = await app.read();
   expect(saved.annotations.at(-1)).toMatchObject({ name, role: 'section', reviewStatus: 'proposed', origin: 'human', bbox: { width: 123.4 } });
   expect(saved.snapshots).toEqual(original.snapshots);
   await page.getByLabel('Language / 언어', { exact: true }).selectOption('en');
-  await expect(page.getByRole('status')).toHaveText('Annotation saved. Match source nodes, then review it.');
+  await expect(page.getByRole('status')).toHaveText('Region saved. Check the linked source nodes.');
   await expect(page.getByLabel('Component name', { exact: true })).toHaveValue(name);
   await page.getByRole('tab', { name: 'Specifications', exact: true }).click();
+  await page.getByLabel('Specification source', { exact: true }).selectOption('demo-notes');
   await expect(page.locator('.text-nodes')).toContainText('When no members match, show an empty state and keep the active filters visible.');
   await page.reload();
   await page.locator('.component-list').getByRole('button', { name, exact: true }).click();
@@ -100,22 +103,21 @@ test('storage denial still permits session language changes and the narrow heade
   await page.goto(app.url);
   const selector = page.getByLabel('Language / 언어', { exact: true });
   await expect(selector).toHaveValue('ko');
-  await expect(page.getByRole('button', { name: '편집기 연결 해제', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '설정', exact: true })).toBeVisible();
   for (const locale of ['ko', 'en']) {
     await selector.selectOption(locale);
     const layout = await page.evaluate(() => {
       const rect = (selector: string) => { const box = document.querySelector(selector)!.getBoundingClientRect(); return { left: box.left, right: box.right, top: box.top, bottom: box.bottom }; };
-      return { brand: rect('.brand'), pill: rect('.local-pill'), settings:rect('.header-actions button'), language: rect('.language-selector'), connection: rect('.connection'), unpair: rect('.header-actions button.quiet.inverse'), width: innerWidth };
+      return { brand: rect('.brand'), pill: rect('.local-pill'), settings:rect('.header-actions button'), language: rect('.language-selector'), connection: rect('.connection'), width: innerWidth };
     });
     expect(layout.brand.right).toBeLessThanOrEqual(layout.pill.left);
     expect(layout.pill.right).toBeLessThanOrEqual(layout.language.left);
     expect(layout.pill.right).toBeLessThanOrEqual(layout.settings.left);
     expect(layout.settings.right).toBeLessThanOrEqual(layout.language.left);
     expect(layout.language.right).toBeLessThanOrEqual(layout.connection.left);
-    expect(layout.connection.right).toBeLessThanOrEqual(layout.unpair.left);
-    expect(layout.unpair.right).toBeLessThanOrEqual(layout.width);
+    expect(layout.connection.right).toBeLessThanOrEqual(layout.width);
   }
-  await expect(page.getByRole('button', { name: 'Save annotation', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save region', exact: true })).toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(errors).toEqual([]);
 });

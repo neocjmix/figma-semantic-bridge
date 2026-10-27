@@ -222,33 +222,41 @@ export function SourceImportPanel({token,project,sessionId,connected,busy,dirty,
   return <section className="acquisition-panel" aria-label={t('Source import')}>
     <button className="primary wide" disabled={!project||!connected||!sessionId||busy||dirty||acting||running||partTask?.status==='running'}
       onClick={prepare}>{t('Add source')}</button>
-    <p className="small muted">{t('Received sources are saved automatically. Review their meaning before approval.')}</p>
-    {history.some(item=>!item.partOf)&&<label>{t('Recent imports')}<select value={task?.id??''} disabled={acting||running||partTask?.status==='running'} onChange={event=>{choice.current++;setTask(history.find(item=>!item.partOf&&item.id===event.target.value)??null);setError(null);}}>
+    {!task && <p className="small muted">{t(connected ? 'Choose the frame in Figma, then add it here.' : 'Connect the Figma plugin to bring in a new source.')}</p>}
+    {history.filter(item=>!item.partOf).length>1&&<details className="import-switcher"><summary>{t('Recent imports')}</summary><label>{t('Recent imports')}<select value={task?.id??''} disabled={acting||running||partTask?.status==='running'} onChange={event=>{choice.current++;setTask(history.find(item=>!item.partOf&&item.id===event.target.value)??null);setError(null);}}>
       {history.filter(item=>!item.partOf).map(item=><option key={item.id} value={item.id}>{item.source.name}</option>)}
-    </select></label>}
+    </select></label></details>}
     {dirty&&<p className="small acquisition-warning">{t('Save your unsaved work before starting or saving a capture.')}</p>}
     {error&&<p className="error small" role="alert">{renderMessage(error)}</p>}
     {task&&<div className="acquisition-detail">
-      <strong>{task.source.name}</strong>
+      <div className="source-next-step" role="status"><strong>{t(task.status==='complete'?'Source ready':task.status==='running'?'Preparing your source':task.status==='prepared'?'Review the selected frame, then start importing.':'Ready to continue')}</strong>
+        <span>{task.source.name}</span>
+        {task.status==='complete'&&<p className="small">{t(dirty&&!linked?'Save your region to finish preparing its source.':'Draw a region to name and review a component.')}</p>}
+        {task.status==='running'&&<p className="small">{t('Your source is saved as it arrives. You can start drawing when the image is ready.')}</p>}
+      </div>
+      {task.status==='prepared'&&<p className="small acquisition-warning">{t('Large frames can take several minutes and use more Figma memory. You can pause; received material stays saved.')}</p>}
+      <details className="import-details" open={task.status==='prepared'}><summary>{t('Import details')}</summary>
       <p className="small muted">{t('Document bounds: x {x}, y {y}, width {width}, height {height}',task.source.bounds)}</p>
       <p className="small muted">{t('Import allows {nodes} nodes and {megabytes} MB, pausing after {seconds} seconds. Change these in Settings.',{
         nodes:formatNumber(settings.maxNodes),megabytes:settings.maxBytes/1_000_000,seconds:settings.runDurationMs/1000})}</p>
       <p className="small muted">{t('The overview uses scale {scale}, up to {pixels} px on its long edge.',{scale:settings.overview.scale,pixels:formatNumber(settings.overview.maxDimension)})}</p>
       {visibleImage&&<figure className="acquisition-preview"><img alt={t('Figma overview image')} src={`data:image/png;base64,${visibleImage.preview.base64}`}/>
         <figcaption>{visibleImage.preview.width} × {visibleImage.preview.height} px</figcaption></figure>}
-      {running&&<><progress aria-label={t('Collection progress')}/>
-        {validOverview?.preview.status==='running'&&<p className="small muted">{t('Preparing the image. Figma rendering may take time and cannot stop immediately.')}</p>}
-        <button className="wide" disabled={acting||task.pauseRequested} onClick={()=>operate('stop')}>{t('Pause collection')}</button></>}
       <p className="small muted" aria-live="polite">{t('{status} · {nodes} nodes · {chunks} saved parts · {bytes} bytes · {seconds} s elapsed',{
         status:t(task.status==='complete'?'Collection complete':task.status==='paused'?'Paused':task.status==='running'?'Working':task.status==='prepared'?'Prepared':'Interrupted'),
         nodes:formatNumber(task.nodeCount),chunks:formatNumber(task.chunkCount),bytes:formatNumber(task.byteCount),seconds:(task.elapsedMs/1000).toFixed(1)})}</p>
       {task.recovery&&<p className="small muted">{t('Checked {nodes} source nodes again; reused {parts} unchanged saved parts without transferring them again.',{
         nodes:formatNumber(task.recovery.revalidatedNodes),parts:formatNumber(task.recovery.reusedPackets)})}</p>}
+      </details>
+      {running&&<><progress aria-label={t('Collection progress')}/>
+        <p className="small muted" aria-live="polite">{t('{nodes} nodes saved · {seconds} seconds',{nodes:formatNumber(task.nodeCount),seconds:(task.elapsedMs/1000).toFixed(1)})}</p>
+        {validOverview?.preview.status==='running'&&<p className="small muted">{t('Preparing the image. Figma rendering may take time and cannot stop immediately.')}</p>}
+        <button className="wide" disabled={acting||task.pauseRequested} onClick={()=>operate('stop')}>{t('Pause collection')}</button></>}
       {budgetPaused&&<p className="small acquisition-warning">{t('Reading pauses at your configured limit. Increase it in Settings, then continue with the same Figma connection.')}</p>}
       {task.nodeCount>0&&task.status!=='complete'&&<p className="small acquisition-warning">{t('You can work with the saved material. Some source content is still missing.')}</p>}
       {!sameSession&&task.status!=='complete'&&<p className="small acquisition-warning">{t('The connection changed. Continue to check the source and read what is needed.')}</p>}
       {task.error&&<p className="small acquisition-warning">{errorText(task.error)}</p>}
-      {task.warnings.map((warning,index)=><p key={index} className="small muted">{systemText(warning)}</p>)}
+      {task.warnings.length>0&&<details className="import-notes"><summary>{t('Source notes')}</summary>{task.warnings.map((warning,index)=><p key={index} className="small muted">{systemText(warning)}</p>)}</details>}
       {partTask&&<section className="source-part-progress" aria-label={t('Selected part')}>
         <strong>{t('Selected part: {name}',{name:partTask.source.name})}</strong>
         <p className="small muted">{t('Only this part is being prepared. The full import keeps its own progress.')}</p>

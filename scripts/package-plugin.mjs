@@ -1,4 +1,4 @@
-import { guideImageNames, loadGuideImages } from './guide-assets.mjs';
+import { guideDocumentNames, guideImageNames, loadGuideImages } from './guide-assets.mjs';
 import { readFile, lstat, mkdir, writeFile, rename, open } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -114,7 +114,7 @@ installed plugin; it is not listed in Figma Community.
 4. In the app, choose Bridge → Copy Pairing Token. Paste it into the plugin and
    choose Connect. Then use Clear Copied Token in the app.
 5. Keep the plugin open, select one frame in Figma and return to the app. Start
-   with a preview, then load the source structure needed for your task. The
+   with **Add source**, check the selected frame, then choose **Start import**. The
    [user guide](docs/user-guide.en.md) walks through review, approval and export.
 
 Choose English or 한국어 in the plugin's Language menu. This setting is saved
@@ -166,7 +166,7 @@ Figma Community에 등록된 플러그인은 아닙니다.
 4. 앱의 브리지 → 연결 토큰 복사로 복사한 값을 플러그인에 붙여넣고 연결합니다.
    연결 후 앱에서 복사한 토큰 지우기를 선택합니다.
 5. 플러그인을 열어 둔 채 Figma에서 프레임 하나를 선택하고 앱으로 돌아옵니다.
-   미리보기를 먼저 확인한 뒤 작업에 필요한 원본 구조를 불러오세요.
+   **원본 추가**에서 선택한 프레임을 확인한 뒤 **가져오기 시작**을 누르세요.
    검토·승인·내보내기는 [사용 가이드](docs/user-guide.ko.md)를 따르세요.
 
 언어 메뉴에서 한국어 또는 English를 선택할 수 있습니다. 앱과 별도로 저장되며,
@@ -218,7 +218,7 @@ export async function packagePlugin({ projectDir = root, version, outputDir = jo
     ['README.en.md', Buffer.from(installationReadme(version, !!projectLicense.bytes))], ['README.ko.md', Buffer.from(installationReadmeKo(version, !!projectLicense.bytes))],
   ]);
   if (projectLicense.bytes) files.set('LICENSE', projectLicense.bytes);
-  for (const file of ['user-guide.ko.md', 'user-guide.en.md', 'alpha-installation.md', 'alpha-installation.en.md', 'acquisition-workflow.ko.md', 'acquisition-workflow.en.md', 'upgrade-guide.md']) {
+  for (const file of guideDocumentNames) {
     files.set(`docs/${file}`, await readRegular(join(projectDir, 'docs', file), 200_000));
   }
   await loadGuideImages(projectDir);

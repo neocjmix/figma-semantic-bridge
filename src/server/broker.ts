@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NodePreviewResultSchema, PluginCommandSchema, PluginProgressSchema, PluginResponseSchema, SelectionSchema, SnapshotSchema, type PluginCommand } from '../shared/contracts.js';
 import { validateNodePreview, validatePreview } from './preview.js';
 import { ServiceError } from './errors.js';
+import type { DiagnosticLog } from './diagnostics.js';
 import { StructureChunkSchema, STRUCTURE_CHUNK_BYTES } from '../shared/structure-collection.js';
 import { StructureReplayResultSchema } from '../shared/structure-replay.js';
 import { SelectiveNodesResultSchema, SelectiveChildrenResultSchema } from '../shared/selective-source-results.js';
@@ -13,7 +14,7 @@ import { BRIDGE_PROTOCOL, BridgeHelloSchema, BridgeAuthenticateSchema, bridgeEnd
 
 const HighlightSchema=z.object({highlightedNodeIds:z.array(z.string().min(1).max(160)).max(100)}).strict();
 type Progress=z.infer<typeof PluginProgressSchema>;
-type Pending={command:PluginCommand;resolve:(value:unknown)=>void;reject:(error:Error)=>void;cleanup:()=>void;onProgress?:((progress:Progress)=>void)|undefined};
+type Pending={trace:{requestId?:string;pluginRequestId:string;command:string};command:PluginCommand;resolve:(value:unknown)=>void;reject:(error:Error)=>void;cleanup:()=>void;onProgress?:((progress:Progress)=>void)|undefined};
 type Session={socket:WebSocket;clientId:string;sessionId:string;lastSeen:number;channel:BridgeChannel};
 
 export function tokensEqual(actual:string,expected:string):boolean {
@@ -27,7 +28,7 @@ export class PluginBroker {
   private pending=new Map<string,Pending>();
   private sockets=new Set<WebSocket>();
   private heartbeat:NodeJS.Timeout;
-  constructor(private readonly token:string, private readonly options:{authTimeoutMs?:number;staleAfterMs?:number;maxPending?:number}={}) {
+  constructor(private readonly token:string, private readonly options:{authTimeoutMs?:number;staleAfterMs?:number;maxPending?:number;diagnostics?:DiagnosticLog}={}) {
     this.heartbeat=setInterval(()=>{
       if(this.current&&Date.now()-this.current.lastSeen>(this.options.staleAfterMs??45000)) this.current.socket.close(1001,'Heartbeat expired');
     },Math.min(5000,this.options.staleAfterMs??45000));
@@ -50,7 +51,7 @@ export class PluginBroker {
     socket.on('close',()=>{
       closed=true;challenge=undefined;channel?.destroy();
       clearTimeout(timer);this.sockets.delete(socket);
-      if(this.current?.socket===socket){this.current=undefined;this.failPending(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected.',503));}
+      if(this.current?.socket===socket){this.options.diagnostics?.emit('plugin.disconnected','warn');this.current=undefined;this.failPending(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected.',503));}
     });
     socket.on('message',(data,isBinary)=>{
       if(closed||socket.readyState!==WebSocket.OPEN)return;
@@ -74,7 +75,7 @@ export class PluginBroker {
           !tokensEqual(parsed.data.proof,bridgeProof(this.token,'client-authentication',expected))){socket.close(1008,'Invalid authentication');return;}
         clearTimeout(timer);
         if(this.current){const old=this.current.socket;this.current=undefined;this.failPending(new ServiceError('PLUGIN_REPLACED','Figma plugin session replaced.',503));old.close(4001,'Session replaced');}
-        authenticated=true;
+        authenticated=true;this.options.diagnostics?.emit('plugin.connected');
         channel=new BridgeChannel(this.token,expected,'server');
         this.current={socket,clientId:expected.clientId,sessionId:expected.sessionId,lastSeen:Date.now(),channel};
         socket.send(JSON.stringify({type:'welcome',protocol:BRIDGE_PROTOCOL,sessionId:expected.sessionId,
@@ -85,7 +86,7 @@ export class PluginBroker {
       if(value&&typeof value==='object'&&'type' in value&&value.type==='ping'){this.sendRecord(this.current,{type:'pong'});return;}
       if(value&&typeof value==='object'&&'type' in value&&value.type==='progress') {
         const progress=PluginProgressSchema.safeParse(value);
-        if(!progress.success){this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin progress.',502));socket.close(1008,'Invalid progress');return;}
+        if(!progress.success){this.options.diagnostics?.error('plugin.error',progress.error,{phase:'progress_validation'});this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin progress.',502));socket.close(1008,'Invalid progress');return;}
         const pending=this.pending.get(progress.data.requestId);
         if(!pending)return;
         const type=pending.command.type;
@@ -94,7 +95,7 @@ export class PluginBroker {
         pending.onProgress?.(progress.data);return;
       }
       const parsed=PluginResponseSchema.safeParse(value);
-      if(!parsed.success){this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin response.',502));socket.close(1008,'Invalid response');return;}
+      if(!parsed.success){this.options.diagnostics?.error('plugin.error',parsed.error,{phase:'response_validation'});this.failPending(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid plugin response.',502));socket.close(1008,'Invalid response');return;}
       const response=parsed.data,pending=this.pending.get(response.requestId);
       if(!pending)return; // Cancelled or timed-out responses cannot complete another request.
       this.pending.delete(response.requestId);pending.cleanup();
@@ -131,7 +132,7 @@ export class PluginBroker {
         }
         else result=HighlightSchema.parse(response.result);
         pending.resolve(result);
-      } catch {pending.reject(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid result from Figma plugin.',502));}
+      } catch(error) {this.options.diagnostics?.error('plugin.error',error,{...pending.trace,phase:'result_validation'});pending.reject(new ServiceError('INVALID_PLUGIN_RESPONSE','Invalid result from Figma plugin.',502));}
     });
   }
   private sendRecord(session:Session,value:unknown,callback?:(error?:Error)=>void):void {
@@ -146,8 +147,10 @@ export class PluginBroker {
     if(this.pending.size>=(this.options.maxPending??16))return Promise.reject(new ServiceError('PLUGIN_BUSY','Too many pending plugin requests.',429));
     const timeoutMs=options.timeoutMs??20000;
     if(!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>305000)return Promise.reject(new ServiceError('INVALID_TIMEOUT','Timeout must be between 1 and 305000 ms.'));
-    const requestId=randomUUID();
-    return new Promise((resolve,reject)=>{
+    const requestId=randomUUID(),started=performance.now(),log=this.options.diagnostics;
+    const trace={...(log?.requestId?{requestId:log.requestId}:{}),pluginRequestId:requestId,command:parsed.type};
+    log?.emit('plugin.start','debug',{...trace,timeoutMs,pending:this.pending.size});
+    const result=new Promise<unknown>((resolve,reject)=>{
       const cancel=(error:Error)=>{
         const pending=this.pending.get(requestId);if(!pending)return;
         this.pending.delete(requestId);pending.cleanup();
@@ -158,9 +161,10 @@ export class PluginBroker {
       const timer=setTimeout(()=>cancel(new ServiceError('PLUGIN_TIMEOUT','Figma plugin request timed out.',504)),timeoutMs);
       const cleanup=()=>{clearTimeout(timer);options.signal?.removeEventListener('abort',onAbort);};
       options.signal?.addEventListener('abort',onAbort,{once:true});
-      this.pending.set(requestId,{command:parsed,resolve,reject,cleanup,onProgress:options.onProgress});
+      this.pending.set(requestId,{trace,command:parsed,resolve,reject,cleanup,onProgress:progress=>{log?.emit('plugin.progress','debug',{...trace,phase:progress.phase,nodeCount:progress.nodes,bytes:progress.bytes});options.onProgress?.(progress);}});
       this.sendRecord(session,{type:'request',requestId,command:parsed},error=>{if(error)cancel(new ServiceError('PLUGIN_DISCONNECTED','Figma plugin disconnected while sending.',503));});
     });
+    return result.then(value=>{log?.emit('plugin.complete','info',{...trace,durationMs:performance.now()-started});return value;},error=>{log?.error('plugin.error',error,{...trace,durationMs:performance.now()-started});throw error;});
   }
   private failPending(error:Error):void {
     for(const pending of this.pending.values()){pending.cleanup();pending.reject(error);}this.pending.clear();

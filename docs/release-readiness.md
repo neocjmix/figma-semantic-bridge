@@ -1,14 +1,29 @@
 # Release readiness
 
-Current version: **0.3.0 alpha**. The [recovery acceptance record](evaluation/release-0.3.0-acceptance.md)
-separates source/browser checks from native recovery and packaging. Publication and
-final downloaded assets require the clean-commit verifier report for this release;
-earlier results are insufficient.
+Current source: **0.4.0 alpha**. The guided workflow and private local
+diagnostics are implemented; [candidate QA](evaluation/guided-workflow-qa.md)
+records 495 source tests and 64 passing browser cases after the coordinate-entry
+fix. The native candidate completed owned synthetic Dev Mode import, region/source
+review, cross-source specifications, actual Save dialogs and local diagnostic checks.
+The second candidate package passed its verifier before the final release-note
+update. Native precision-input, horizontal/vertical split, Undo and restart checks
+passed without errors; the original approved region/specification was restored.
+Final ZIP, mounted DMG, plugin, licenses, signatures and hashes are identified by
+the verification JSON attached to the release. Earlier candidate checks do not
+identify changed final bytes.
+
+The offline app and plugin documentation now includes the Korean/English
+troubleshooting scenarios and local diagnostics. The offline user HTML contains
+the current language's acquisition, troubleshooting and diagnostic instructions;
+the release verifier compares their bytes and rendering with the packaged source.
+
 Current setup and workflow instructions are in
-[the installation guide](alpha-installation.en.md) and [user guide](user-guide.en.md).
-The [0.2.0 verification record](evaluation/release-0.2.0-acceptance.md) documents
-source/interface and installed-candidate checks. Exact release provenance comes
-from the verification JSON attached to the final clean-commit package.
+[the installation guide](alpha-installation.en.md), [user guide](user-guide.en.md)
+and [diagnostic guide](local-diagnostics.md). The
+[0.3.0 recovery acceptance record](evaluation/release-0.3.0-acceptance.md) and
+[0.2.0 verification record](evaluation/release-0.2.0-acceptance.md) retain their
+historical evidence. Final release provenance comes from the verification JSON
+attached to the clean-commit package.
 
 ## Historical 0.2.0 release boundary
 

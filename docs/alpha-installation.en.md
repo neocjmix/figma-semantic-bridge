@@ -1,4 +1,4 @@
-# Install Figma Semantic Bridge 0.3.0 Alpha
+# Install Figma Semantic Bridge 0.4.0 Alpha
 
 [한국어](alpha-installation.md) · [User guide](user-guide.en.md) · [Upgrade and backup](upgrade-guide.md)
 
@@ -19,13 +19,13 @@ before replacing files. Use the same release for the app and plugin.
   to make setup pass.
 
 Download matching files from [Releases](https://github.com/neocjmix/figma-semantic-bridge/releases).
-Check that the selected release and files say **0.3.0**.
+Check that the selected release and files say **0.4.0**.
 
 | File | Purpose |
 | --- | --- |
-| `figma-semantic-bridge-0.3.0-macos-arm64.dmg` | Install the app into Applications |
-| `figma-semantic-bridge-0.3.0-macos-arm64.zip` | Alternative app archive |
-| `figma-semantic-bridge-plugin-0.3.0.zip` | Optional separate prebuilt plugin; the app already includes it |
+| `figma-semantic-bridge-0.4.0-macos-arm64.dmg` | Install the app into Applications |
+| `figma-semantic-bridge-0.4.0-macos-arm64.zip` | Alternative app archive |
+| `figma-semantic-bridge-plugin-0.4.0.zip` | Optional separate prebuilt plugin; the app already includes it |
 | `SHA256SUMS` and adjacent `.sha256` files | Compare downloaded bytes with the release's checksums |
 | Installation and user guides | Offline copies of these instructions |
 
@@ -161,7 +161,7 @@ also requires per-request consent for the selected content.
 | Symptom | Next step |
 | --- | --- |
 | macOS blocks launch | Verify release and integrity, then follow the per-app system procedure; respect organizational restrictions |
-| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.3.0 transports must not be mixed |
+| Port conflict or incompatible service | Close the known older app/service normally and retry; 0.1.1 and 0.4.0 transports must not be mixed |
 | Local certificate or permissions error | Check ownership and private permissions of the actual data directory; preserve it and do not accept a network-supplied pin |
 | App editor asks for a token | Use the installed app's embedded editor and check startup status; a separately opened browser does not auto-pair |
 | Plugin will not connect | Confirm matching app/plugin versions, the current token and the running app; close and rerun the updated plugin |

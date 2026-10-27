@@ -24,6 +24,7 @@ enum DesktopLocale: String, CaseIterable {
         "Edit": "편집", "Undo": "실행 취소", "Cut": "잘라내기", "Copy": "복사", "Paste": "붙여넣기", "Select All": "모두 선택",
         "Bridge": "브리지", "Language": "언어", "Retry": "다시 시도", "OK": "확인", "Import": "가져오기", "Save": "저장",
         "Copy Pairing Token": "연결 토큰 복사", "Clear Copied Token": "복사한 토큰 지우기",
+        "Reveal Diagnostic Logs": "진단 로그 폴더 보기", "Enable Web Inspector": "웹 검사 활성화",
         "Reveal Figma Plugin": "Figma 플러그인 폴더 보기", "Reveal Local Data": "로컬 데이터 폴더 보기",
         "Copy MCP Configuration": "MCP 설정 복사", "Setup Guide": "설치 가이드", "User Guide": "사용 가이드", "Reload Workspace": "작업 공간 새로고침",
         "Figma Semantic Bridge Setup Guide": "Figma Semantic Bridge 설치 가이드",

@@ -231,6 +231,9 @@ test('static app is constrained to its build directory and never exposes source 
   const server=await startServer({port:0,token,dataDir:join(root,'data'),webDir});
   t.after(async()=>{await server.close();await rm(root,{recursive:true,force:true});});
   const index=await fetch(server.url+'/');assert.equal(index.status,200);assert.match(index.headers.get('content-security-policy')??'',/frame-ancestors 'none'/);
+  assert.equal((await fetch(server.url+'/favicon.ico')).status,204);
+  const missing=await fetch(server.url+'/assets/missing.js');assert.equal(missing.status,404);
+  assert.equal((await missing.json() as {error:{code:string}}).error.code,'NOT_FOUND');
   assert.equal((await fetch(server.url+'/leak.js')).status,404);
   assert.equal((await fetch(server.url+'/src/server/index.ts')).status,404);
   assert.equal((await fetch(server.url+'/api/projects',{method:'POST'})).status,401);

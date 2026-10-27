@@ -1,6 +1,6 @@
 # Data model and source-evidence invariants
 
-This documents the 0.3.0 candidate implementation, not a frozen third-party SDK.
+This documents the 0.4.0 candidate implementation, not a frozen third-party SDK.
 `src/shared/contracts.ts`, `structure-collection.ts`, `collection-evidence.ts`, `selective-source*.ts`,
 `source-transfer.ts` and `capture-bundle.ts` define the exact Zod contracts;
 `src/core/project.ts` and server storage add cross-record validation. The project
@@ -8,6 +8,15 @@ data schema is still `1.0.0`, independent of the application version. Optional
 new fields let existing projects load without silently changing their approvals.
 
 ## Persisted project and source kinds
+
+An optional `matchSources` flag on the human `upsert_annotation` operation saves
+the region and deterministic source suggestions atomically. Its default is false
+for API compatibility. It requires complete in-scope evidence, produces a proposed
+region and unconfirmed source review, and never supplies approval. The editor uses
+it for new regions with no manually selected references. Geometric ratios are
+normalized to `[0, 1]` after floating-point calculations; source coordinates remain
+unchanged. Diagnostics use separate bounded local files, outside the project and
+source interchange contracts.
 
 `Project` has ID, name, schema version, monotonic revision and update time;
 arrays of `snapshots` (at most 30), `annotations` and `specifications` (at most

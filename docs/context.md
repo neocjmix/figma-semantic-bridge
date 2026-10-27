@@ -1,6 +1,6 @@
 # Project context and design rationale
 
-This describes the 0.3.0 candidate source. Normal imports use a 2× overview and
+This describes the 0.4.0 candidate source. Normal imports use a 2× overview and
 chunked structure with adjustable budgets. Saved partial evidence remains usable
 for inspection; complete saved branches support scoped review. Continue resumes a
 valid cursor or, after consent, creates a new generation that rechecks the original
@@ -8,6 +8,29 @@ scope. See [ADR 0012](adr/0012-recoverable-source-evidence.md) and
 [ADR 0013](adr/0013-configurable-import-budgets.md). The
 [validation log](product-validation.md) records executed checks and distinguishes
 source, synthetic, native and released-package evidence.
+
+## Guided review and local diagnostics
+
+The 0.4.0 editor follows source import, region save, source confirmation, semantic
+approval, specification linking and Share. A saved new region with no chosen
+references prepares deterministic candidates when its source is complete. Later
+edits preserve existing source choices; rematching is an explicit secondary action.
+Source confirmation and meaning approval remain separate human decisions.
+
+Pending region, specification and proposal input is saved or discarded before a
+conflicting operation. Specification source selection is independent from the
+canvas source, and Share reports the approved result returned by the export API.
+Coordinates, role, hierarchy, manual matching and recovery remain available behind
+secondary controls. In-app model generation still accepts only older bounded
+captures; collection-backed imports support manual work and agent proposals.
+
+Private local diagnostics record normalized request/operation timing, fixed error
+reasons, validation paths and application call locations. Arbitrary console/error
+text, design content and credentials are excluded. Native logs remain available
+when the API is down; logs are bounded and best effort, not a complete audit trail.
+See [ADR 0014](adr/0014-guided-workflow-and-local-diagnostics.md),
+[local diagnostics](local-diagnostics.md) and the
+[guided-workflow QA record](evaluation/guided-workflow-qa.md).
 
 ## Why the bridge exists
 

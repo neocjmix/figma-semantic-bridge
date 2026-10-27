@@ -326,3 +326,30 @@ summary { cursor: pointer; font-size: 11px; font-weight: 600; color: #526a86; pa
 .settings-grid label { display: grid; gap: 6px; }
 .settings-grid input { width: 100%; box-sizing: border-box; }
 @media (max-width: 600px) { .settings-grid { grid-template-columns: 1fr; } }
+
+/* The default route stays compact; detailed controls remain one disclosure away. */
+.workflow-guide { flex-shrink: 0; height: 132px; overflow: auto; padding: 12px 15px; margin-bottom: 12px; background: #fff; border: 1px solid var(--line); border-radius: 9px; }
+.workflow-guide strong { font-size: 12px; line-height: 1.6; display: block; }
+.workflow-guide p { margin: 5px 0 0; }
+.workflow-track { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; padding: 0; color: #8190a1; font-size: 10px; line-height: 1.6; }
+.workflow-track li.current { color: #00796f; font-weight: 750; }
+.workflow-dialog { width: min(560px, calc(100vw - 40px)); max-height: 85vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 25px; color: var(--ink); }
+.workflow-dialog::backdrop { background: #14263980; }
+.workflow-dialog h2 { font-size: 18px; }
+.workflow-dialog h3 { font-size: 13px; margin-top: 25px; }
+.workflow-dialog .share-count { padding: 14px; background: var(--teal-light); border-radius: 7px; color: #16675f; font-weight: 650; }
+.create-project { flex-wrap: wrap; }
+.create-project button { font-size: 11px; padding: 8px; width: 100%; }
+.workspace-tools .text-button { display: block; width: 100%; text-align: left; }
+.region-settings { margin: 4px 0 10px; border-bottom: 1px solid var(--line); }
+.approved-next { padding: 12px 0; }
+.linked-targets { padding: 10px; border-radius: 6px; background: var(--teal-light); font-size: 12px; }
+.relation-options summary { padding: 5px 0; }
+.setup-help { background: #edf6fa; border-bottom: 1px solid #bed6e2; padding: 16px 24px; }
+.setup-help ol { margin: 8px 0; padding-left: 20px; font-size: 12px; line-height: 1.8; }
+.setup-help + .workspace { height: calc(100vh - 310px); }
+.global-error { flex-shrink: 0; align-items: flex-start; }
+.global-error details code { user-select: text; }
+.global-error p { margin-bottom: 0; }
+.component-row input[hidden] { display: none; }
+.inspector-tabs button:disabled { opacity: .55; }

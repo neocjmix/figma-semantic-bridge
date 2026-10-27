@@ -1,6 +1,7 @@
 import { koreanMessages } from './messages.js';
 import { diagnosticKeys, errorKeys } from './diagnostics.js';
 import { ApiError } from './api.js';
+import { reportUiFailure } from './observability.js';
 
 export type Locale = 'ko' | 'en';
 export type MessageKey = keyof typeof koreanMessages;
@@ -36,10 +37,15 @@ export function systemMessage(value: string): UIMessage {
   return key ? message(key) : { raw: value };
 }
 export function apiErrorMessage(code: string, detail: string): UIMessage {
+  if (code === 'INVALID_PROJECT' && detail === 'Annotation lies outside its captured image bounds.')
+    return message('Keep the whole region inside the design image. Move it or adjust its size, then save again.');
+  if (code === 'INVALID_PROJECT' && detail === 'Parent graph contains a cycle.')
+    return message('Choose a parent outside this region’s own children, then save again.');
   const key = errorKeys[code];
   return key ? { parts: [message(key), { raw: `(${code})` }] } : systemMessage(detail);
 }
 export function errorMessage(cause: unknown, fallback: MessageKey = 'The request could not be completed.'): UIMessage {
+  reportUiFailure(cause);
   if (cause instanceof UIError) return cause.uiMessage;
   if (cause instanceof ApiError) return apiErrorMessage(cause.code, cause.message);
   if (cause instanceof SyntaxError) return message('The draft is not valid JSON. Check its format before submitting.');

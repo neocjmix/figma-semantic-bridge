@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { defaultImportSettings, SettingsViewSchema, ImportSettingsSchema, type ImportSettings, type SettingsView } from '../src/shared/import-settings.js';
 import { request } from './api.js';
+import { reportUiFailure } from './observability.js';
 import { useLocale } from './i18n.js';
 import { errorMessage, type UIMessage } from './locale.js';
 
@@ -12,7 +13,7 @@ export function useImportSettings(token:string) {
     const load=()=>{
       controller?.abort();const current=new AbortController();controller=current;
       void request<unknown>(token,'/api/import-settings',undefined,current.signal)
-        .then(value=>{if(active&&!current.signal.aborted)setSettings(SettingsViewSchema.parse(value).settings);}).catch(()=>{});
+        .then(value=>{if(active&&!current.signal.aborted)setSettings(SettingsViewSchema.parse(value).settings);}).catch(cause=>{if(active&&!current.signal.aborted)reportUiFailure(cause);});
     };
     load();window.addEventListener('fsb-import-settings-changed',load);
     return()=>{active=false;controller?.abort();window.removeEventListener('fsb-import-settings-changed',load);};
@@ -53,22 +54,31 @@ export function ImportSettingsButton({token,disabled}:{token:string;disabled:boo
     <dialog ref={dialog} aria-labelledby={id} className="import-settings-dialog" onCancel={()=>{pending.current?.abort();setBusy(false);}}
       onClose={()=>{pending.current?.abort();button.current?.focus();}}>
       <h2 id={id}>{t('Import settings')}</h2>
-      <p>{t('Changes apply to the next import or resume. Existing images and saved sources are kept.')}</p>
-      <p>{t('Higher limits can use more time, disk space and Figma memory. Packet and integrity protections remain in place.')}</p>
+      <p>{t('Use the defaults for most designs. Raise a limit when an import pauses at that limit.')}</p>
+      <p className="small muted">{t('Changes apply to the next import or resume. Existing images and saved sources are kept.')}</p>
       {error&&<p role="alert" className="error">{renderMessage(error)}</p>}
       <form onSubmit={event=>{event.preventDefault();void save();}}>
+        <h3>{t('Image quality')}</h3>
         <div className="settings-grid">
           {field('Image scale',draft.overview.scale,0.25,4,scale=>setDraft({...draft,overview:{...draft.overview,scale}}),0.25)}
           {field('Image long edge (px)',draft.overview.maxDimension,256,8192,maxDimension=>setDraft({...draft,overview:{...draft.overview,maxDimension}}))}
           {field('Image budget (MB)',draft.overview.maxBytes/1_000_000,0.1,9,maxBytes=>setDraft({...draft,overview:{...draft.overview,maxBytes:Math.round(maxBytes*1_000_000)}}),0.1)}
-          {field('Image wait (seconds)',draft.overview.maxDurationMs/1000,1,300,maxDurationMs=>setDraft({...draft,overview:{...draft.overview,maxDurationMs:maxDurationMs*1000}}))}
+        </div>
+        <h3>{t('Source reading limits')}</h3>
+        <p className="small muted">{t('Higher limits can use more time, disk space and Figma memory. Packet and integrity protections remain in place.')}</p>
+        <div className="settings-grid">
           {field('Source node budget',draft.maxNodes,1,1_000_000,maxNodes=>setDraft({...draft,maxNodes}))}
           {field('Source budget (MB)',draft.maxBytes/1_000_000,1,128,maxBytes=>setDraft({...draft,maxBytes:maxBytes*1_000_000}))}
           {field('Reading time before pause (seconds)',draft.runDurationMs/1000,1,1800,runDurationMs=>setDraft({...draft,runDurationMs:runDurationMs*1000}))}
-          {field('Response wait (seconds)',draft.requestTimeoutMs/1000,1,120,requestTimeoutMs=>setDraft({...draft,requestTimeoutMs:requestTimeoutMs*1000}))}
-          {field('Paused connection retention (minutes)',draft.cursorIdleMs/60000,1,30,cursorIdleMs=>setDraft({...draft,cursorIdleMs:cursorIdleMs*60000}))}
         </div>
-        <p className="small muted">{t('A paused read can continue only while its original Figma connection and source remain valid. Increasing limits cannot restore a lost connection.')}</p>
+        <details className="settings-connection"><summary>{t('Connection timing')}</summary>
+          <div className="settings-grid">
+            {field('Image wait (seconds)',draft.overview.maxDurationMs/1000,1,300,maxDurationMs=>setDraft({...draft,overview:{...draft.overview,maxDurationMs:maxDurationMs*1000}}))}
+            {field('Response wait (seconds)',draft.requestTimeoutMs/1000,1,120,requestTimeoutMs=>setDraft({...draft,requestTimeoutMs:requestTimeoutMs*1000}))}
+            {field('Paused connection retention (minutes)',draft.cursorIdleMs/60000,1,30,cursorIdleMs=>setDraft({...draft,cursorIdleMs:cursorIdleMs*60000}))}
+          </div>
+          <p className="small muted">{t('A paused read can continue only while its original Figma connection and source remain valid. Increasing limits cannot restore a lost connection.')}</p>
+        </details>
         <div className="actions"><button type="button" disabled={busy} onClick={()=>setDraft(defaultImportSettings())}>{t('Restore defaults')}</button>
           <button type="button" onClick={()=>dialog.current?.close()}>{t('Close')}</button>
           <button type="submit" disabled={!view||busy}>{t('Save settings')}</button></div>

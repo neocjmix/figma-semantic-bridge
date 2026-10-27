@@ -22,6 +22,7 @@ interface Gesture {
   annotation: Annotation | null;
   initialPan: { x: number; y: number };
   documentPerPixel: number;
+  documentFromScreen: DOMMatrix;
 }
 
 export function Canvas({ scope, fetchedNodes = [], annotations, selectedId, draft, onSelect, onDraft, onCreate }: Props) {
@@ -61,15 +62,19 @@ export function Canvas({ scope, fetchedNodes = [], annotations, selectedId, draf
     if (actualMode === 'select' && !active) return;
     const ctm = svgRef.current!.getScreenCTM()!;
     gesture.current = { kind: isResize && actualMode === 'select' ? 'resize' : actualMode, start: p, client: { x: event.clientX, y: event.clientY },
-      original: active?.bbox ?? null, annotation: active, initialPan: pan, documentPerPixel: 1 / ctm.a };
+      original: active?.bbox ?? null, annotation: active, initialPan: pan, documentPerPixel: 1 / ctm.a,
+      documentFromScreen: ctm.inverse() };
     if (actualMode === 'draw') setDrawing({ x: p.x, y: p.y, width: 0.01, height: 0.01 });
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
   }
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
     const g = gesture.current;
-    const p = point(event);
-    if (!g || !p) return;
+    if (!g) return;
+    // Status/validation text may reflow while a draft changes. One gesture
+    // retains its initial screen-to-document mapping instead of accumulating
+    // layout shifts as source-coordinate changes.
+    const p = new DOMPoint(event.clientX, event.clientY).matrixTransform(g.documentFromScreen);
     if (g.kind === 'pan') {
       setPan({ x: g.initialPan.x - (event.clientX - g.client.x) * g.documentPerPixel,
         y: g.initialPan.y - (event.clientY - g.client.y) * g.documentPerPixel });

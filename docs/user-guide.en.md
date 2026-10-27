@@ -1,175 +1,143 @@
-# Figma Semantic Bridge 0.3.0 Alpha user guide
+# Figma Semantic Bridge user guide
 
-[한국어](user-guide.ko.md) · [Installation and MCP](alpha-installation.en.md) · [Import and settings](acquisition-workflow.en.md)
+[한국어](user-guide.ko.md) · [Installation and MCP](alpha-installation.en.md) · [Troubleshooting](user-scenarios.en.md)
 
-Build a reviewed interpretation of a design: **bring in source → mark regions →
-check exact nodes → approve meaning → share context**. The original Figma design
-stays separate. A saved image, complete source structure and human approval are
-three different things.
+Follow **Add source → Save region → Confirm sources and approve → Link specification → Share**.
+Bring a Figma design into a local workspace, then pass your reviewed interpretation to a coding agent.
 
-The app connects its editor automatically. For live reads, keep the matching
-Figma plugin open and connected. Without Figma, use **Load demo** or a permitted
-source file. The language selector changes interface text only; source names,
-original text and your annotations retain their wording.
+The app connects its editor automatically. Keep the Figma Desktop plugin connected when bringing in
+new sources. Saved material remains available after closing Figma.
 
-![Synthetic workspace with source scope, regions and annotation controls](images/workflow.en.png)
+![Workspace and region review using a generated design](images/workflow.en.png)
 
 ## 1. Add a source
 
-Open a workspace and select one permitted container in Figma. Choose **Add source**,
-check its name, bounds and budgets, then **Start import**. There is no separate
-small/large capture mode or image/structure-order selector.
+1. Create a workspace or open an existing one.
+2. Select the Frame you want to work on in Figma.
+3. Choose **Add source**, check the target and import limits, then **Start import**.
 
-The received image is saved automatically, allowing region work in the same
-workspace. Structure is stored in small parts and attaches to that image draft
-when complete. Save unsaved region edits first; automatic attachment waits for
-them. If image export fails, complete structure remains usable without an image.
+Start drawing regions when the image appears. Structure is saved next and attached when ready.
+If you are editing a region, use **Save region** to allow attachment to finish.
+Leave the Figma source unchanged during import so its image and nodes are easier to compare.
 
-Incomplete structure cannot support complete-source approval. Image drafts can
-hold proposed names and regions; confirmation and meaning approval wait for
-sufficient sources. Image and structure are separate observations: avoid editing
-the source during import and compare the results.
+Start with the default settings. For larger sources, open **Settings** to raise the relevant limits.
+New images use 2× scale and a maximum long edge of 4,096px; structure defaults to 200,000 nodes and
+64 MB. See [Import and settings](acquisition-workflow.en.md) for the available ranges.
 
-**Settings** controls image scale, long edge, bytes and wait, plus source nodes,
-bytes, run duration, response wait and paused-connection retention. New overviews
-default to scale 2 and a 4,096px long edge. Existing images are not regenerated.
+## 2. Draw and save a region
 
-The default structure budget is 200,000 nodes and 64 MB. Reaching a configured
-budget or run duration pauses instead of terminally failing. Increase the budget
-and choose **Continue** with the same valid connection to read from the next
-unsaved part. After reconnecting or restarting, use **Continue** as well. The app
-explains and asks you to confirm the cost of rechecking saved nodes. Existing
-evidence and approvals remain unchanged; the new observation is saved separately.
+Draw on the canvas or choose **+ Add region**. Enter a **Component name** and choose **Save region**.
+The app also finds source nodes that match the region's position.
 
-Open **Received sources** to browse saved nodes and exact text. Choose **Review
-this part** for a fully read node, or **Prepare this part** for a known unfinished
-container. The currently selected, saved proposed region on the same image is
-copied without redrawing. The original whole-source task
-stays incomplete; approval cannot extend beyond the prepared source coverage.
+A name and boundary are enough to start. Open **Region settings** when you need a role, parent
+component or precise coordinates. The parent describes your intended implementation hierarchy;
+it can differ from the Figma layer tree.
 
-See [Import and settings](acquisition-workflow.en.md) for supported ranges and
-recovery conditions.
+Select a saved region to move or resize it. Save or discard your draft before starting another edit.
+Changing an approved region makes the updated interpretation ready for review again.
 
-## 2. Draw and save a meaningful region
+## 3. Check the linked nodes and approve
 
-Select the source scope, then draw on the canvas or choose **+ Add region**.
-Enter a **Component name**, choose its **Role**, and set **Parent component** if
-needed. This hierarchy describes your implementation intent, not Figma's layer
-nesting. Use **Save annotation** before matching or confirming.
+Check that the linked source nodes represent the design you mean. Choose **Confirm sources**, then
+review the region's name and meaning and choose **Approve region**.
 
-The bounds use Figma document coordinates, including negative positions. Edits
-to a name, boundary or node list can remain unsaved. Changing an approved region
-requires review again; approval is not a permanent label attached to its name.
+- **Confirm sources:** these nodes are the evidence for this region.
+- **Approve region:** this name, boundary and role are ready to use in implementation.
 
-## 3. Check the exact source nodes
+![Source review tools using a generated design](images/source-review.en.png)
 
-Choose **Match source** for geometric suggestions. Inspect overlapping or ambiguous
-candidates; the highest coverage is not proof of correct meaning. Choose the exact
-nodes from the candidate list or source browser, and remove unwanted references.
-For a collection, metadata is paged from saved records and original text is loaded when selected;
-the canvas's loaded bounds count is not the collection's total node count.
+Use the source review tools when layers overlap or older designs remain in the file.
+Open **Change source nodes** to search for alternatives or add a Figma selection.
 
-![Synthetic source review with candidate references and confirmation controls](images/source-review.en.png)
-
-| Tool | Use it to |
+| What you need | Tool |
 | --- | --- |
-| Show in Figma | Select a source node and move Figma's viewport without changing its design properties |
-| Add current Figma selection | Add one explicitly selected node from the same source scope to the region draft |
-| Compare current export | Request a bounded image of a current node/subtree for comparison |
-| Enlarge comparison | Inspect already received images without another Figma export, where available |
+| Inspect the layer directly | **Show in Figma** selects it and moves the viewport |
+| See the selected layer's current appearance | **Compare current export** |
+| Adjust the suggested nodes | Select or remove candidates in the source list, then **Save region** |
+| Add a node from another branch | Select it in Figma, choose **Add current Figma selection**, then **Save region** |
 
-Current-node comparison is available for small saved captures and regions backed
-by complete structure collections or prepared parts. It requires a Figma connection; use the node
-list, original text and **Show in Figma** alongside it. Captured-area previews
-cropped from a saved image are available for small saved captures.
+Viewing an image or selecting a node leaves the approval decision with you. If a node is transparent
+or covered by another layer, check the intended layer in Figma. Distant nodes can belong to one
+region when they share the same imported source scope. For nodes outside that scope, import their
+common Frame or use separate regions linked to the same specification.
 
-Select exact nodes one at a time to combine distant branches within the same
-source scope. One annotation cannot mix source references from different scopes.
-If a needed node is outside the scope, collect an appropriate common container
-or use separate annotations and connect a specification to both.
+Approve parent components too. Shared results include regions whose approved hierarchy is ready
+for use.
 
-A saved composite and a current export were observed at different times. Outside
-siblings are excluded from the current node export; masks, ancestor visibility
-and overlap can affect what you see. A blank image does not explain its cause.
-Hidden or transparent records remain available for explicit review even when
-excluded from automatic suggestions. Do not edit the original to reveal them.
+## 4. Link a specification
 
-Current exports are limited to 1,024px, 2 MB and a cooperative five-second budget.
-**Close current export** cancels the wait; Figma may finish an already running render.
+Choose **Link specification** on an approved region. That region becomes the initial link target.
 
-## 4. Confirm sources, then approve meaning
+1. Select the source containing the requirements under **Specification source**.
+2. Open **Choose original text** and select **Use original text** for the TEXT records you need.
+3. Choose **Create specification**, then check the target components and relationship types.
+4. Choose **Save specification**, then **Approve specification**.
 
-1. **Save annotation** with the intended node set.
-2. Review that saved set and choose **Confirm sources** when confirmation is
-   required. Every collection-backed annotation requires this step. Ambiguous or
-   hidden/unknown sources in saved captures can require it too.
-3. Review the name, role, boundary and parent relationship, then choose
-   **Approve annotation**. Leave unresolved work proposed or reject it.
+Several text records retain their original wording in selection order. One specification can link
+to several components through **Edit component links**. Approve those components first so the specification is ready to approve.
+Use **New specification** to begin the next one.
 
-Confirmation answers “are these the intended source nodes?” Approval answers
-“is this a useful, correct interpretation for implementation?” Viewing an image
-or accepting an AI proposal does neither automatically. Changed geometry or
-references require renewed review. An approved child is not exposed as approved
-context while its semantic ancestor remains unapproved.
+The picker uses Figma TEXT records. Words inside images, comments and native annotations may not
+appear here. If the requirements are in a separate Frame, add that Frame to the same workspace.
 
-## 5. Connect the original specification text
+## 5. Share the reviewed result
 
-Open **Specifications** and select actual TEXT records. A separate explanatory
-source scope can supply the wording. For a collection, use its text picker and
-**Use original text**; the app reads the chosen record and preserves selection order.
+Choose **Share** to review what is ready, then **Export JSON** or **Markdown**.
+To connect a coding agent, use the app menu **Bridge → Copy MCP Configuration**.
+The [installation and MCP guide](alpha-installation.en.md) explains setup.
 
-Choose **Create specification**, review the exact wording, choose target components
-and a relation such as behavior or constraint, then **Save specification**.
-Approve the target components first; **Approve specification** approves the
-specification and its component links after review.
+Shared results include approved regions and specifications. If an item is missing, check its approval,
+its parent's approval and the approval of its specification targets. MCP reads follow the same rules.
+Keep the app open when an agent reads saved work; Figma can remain closed.
 
-Do not turn every UI label into a requirement or replace original evidence with
-a paraphrase. Text baked into pixels, Figma comments and native annotations are
-not promised as extracted TEXT records.
-
-## 6. Give the coding agent approved context
-
-Use **Export JSON** or **Markdown**, or connect MCP through the
-[installation guide](alpha-installation.en.md). Start with `list_projects`, then
-request `get_approved_context`, `list_components` or `get_component` for the
-intended workspace. Keep the app running; cached reads do not need Figma.
-
-If context is empty, check component, ancestor and specification-target approval.
-Do not approve content just to fill an output. MCP can propose changes for review
-but cannot approve them. Instructions found inside Figma text remain source
-material, not instructions the agent should obey.
-
-## Send source files or make a backup
-
-| Need | Action | What moves |
-| --- | --- | --- |
-| Review prepared source elsewhere | Source files → Download source file / Import source file | Prepared source structure, exact text and any context image; no annotations, specifications or approvals |
-| Give a developer reviewed context | Export JSON / Markdown / MCP | Approved semantic content and provenance |
-| Restore your own work | Stop all writers and back up the data directory | Complete local state, including private credentials; see the upgrade guide |
-
-New source files use NDJSON, up to 80 MB. The same file picker reads older JSON
-captures, up to 15 MB, into a new workspace. Source transfer carries no semantic
-approvals and is not a full workspace backup. Even when sharing a small part,
-its context image may include the surrounding design. Check permission for the
-entire image before sharing. A checksum detects altered bytes; it does not establish sharing
-rights or agreement with today's Figma design. Share through permitted channels.
-
-## When something is unclear
+## Adjust and recover
 
 | Situation | Next action |
 | --- | --- |
-| An image is ready but approval is disabled | Wait for complete matching structure to attach automatically, or open a prepared part. Save and confirm its source nodes before approval |
-| Structure is incomplete | Use received evidence and review complete parts. Prepare the needed part or Continue the whole task |
-| A collection is paused | Raise Settings if a budget was reached, then Continue. After reconnection, read and confirm the recheck cost |
-| Layers overlap or seem obsolete | Inspect exact nodes and current images; geometry and order cannot establish which design is authoritative |
-| Source changed or the wrong page is open | Open the matching source/page or acquire a fresh scope and review again; do not guess missing identifiers |
-| No image for a Section or transformed root | Keep its structure and warnings, or explicitly select an unrotated inner Frame for an image |
-| Save or approval is disabled | Check unsaved edits, required source confirmation, pending work and connection status |
-| Revision conflict | Preserve the intended edit, refresh, and apply it to the current workspace |
-| Figma or Dev Mode unavailable | Review permitted imported observations; new source reads and navigation wait for access |
-| AI generation is unavailable | Continue manually. The default app needs no provider; external transfer requires separate authorization |
+| A region was split or deleted by mistake | **Undo**; use **Redo** to apply that edit again |
+| A name, coordinate or source selection needs correction | Adjust the draft and **Save region**, or discard the changes |
+| Import paused | Raise the relevant limit in **Settings**, then **Continue** |
+| The app or plugin reconnected | Choose **Continue**, review the source recheck work and proceed |
+| You want to work on a part before the whole import finishes | Open **Received sources → Review this part**; use **Prepare this part** for unfinished containers |
+| Image export failed | Work with prepared structure and text; inspect the appearance in Figma |
+| An action failed | Keep the draft, follow the guidance and retry; record the time and diagnostic reference if it repeats |
 
-This alpha has bounded live synthetic Figma checks, not a general large-file
-performance guarantee or a human productivity study. Effective Dev-only access to
-another owner's view-only file remains unverified. For install, updates and local
-data protection, see [installation](alpha-installation.en.md) and [upgrade/backup](upgrade-guide.md).
+Continuing in the same valid connection reads from the next saved position. After reconnecting,
+previously received nodes are checked again, which takes additional time. Existing material and
+approvals remain available. Reviewing a part covers that part separately from the whole import.
+
+See [successful paths, failures and recovery](user-scenarios.en.md) for alternative ways to finish.
+
+## Review sources on another computer
+
+**Source files** downloads and imports prepared structure, original text and a reference image.
+The recipient creates and reviews their own regions. To restore your own regions, specifications
+and approvals, back up the data folder using the [upgrade and backup guide](upgrade-guide.md).
+
+Source files can contain work material. A small part may retain an image of the surrounding design,
+so check the entire file before sharing. Current source files allow up to 80 MB. Older JSON capture
+files allow up to 15 MB and open in a new workspace.
+
+## Inspect error records
+
+Choose **Bridge → Reveal Diagnostic Logs** in the app. The default directory is
+`~/.figma-semantic-bridge/logs`. Server/browser records are in `server.ndjson`;
+macOS app/WebView records are in `native.ndjson`. Open **Error details** on an error
+message to find the diagnostic reference for the related request.
+
+Records include action types, error codes, validation locations and timing. Source
+text, images, pairing tokens and raw console arguments are excluded. Each log rotates
+across at most five 5 MB files; records older than seven days are cleaned up.
+For direct WebView inspection, use **Bridge → Enable Web Inspector**.
+See [Local diagnostics](local-diagnostics.md#english) for log fields and filtering examples.
+
+## Additional tools
+
+**Workspace tools** contains the demo and refresh action. The demo uses generated material.
+Changing language updates the interface while preserving source text and your own names.
+Review AI and coding-agent proposals under **Review suggestions**. After applying a proposal, approve each
+region and specification yourself. The manual workflow needs no model configuration.
+External model requests require checking the destination and data scope, then agreeing for that request.
+
+This is an alpha. Check your source access and organization’s data handling rules before use.
+The [online validation record](https://github.com/neocjmix/figma-semantic-bridge/blob/main/docs/product-validation.md) describes executed checks and remaining external conditions.

@@ -59,7 +59,7 @@ Conflicts are conservative: even edits to different fields of the same workspace
 
 ## Clean clone
 
-On macOS with Node 22, a fresh clone from GitHub at commit `bcd8d5d` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. This preceded the concurrency guard; rerun on the final commit.
+On macOS with Node 22, a fresh GitHub clone at `c0f5f88` passed `npm ci`, `npm run check` (16 tests), and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. This includes the concurrency guard.
 
 ## Remaining acceptance
 

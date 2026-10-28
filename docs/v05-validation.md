@@ -28,7 +28,7 @@ The real test workspace's exported JSON and stdio MCP output matched and exclude
 
 ## Clean clone
 
-On macOS with Node 22, a fresh local clone of commit `e0c4c6e` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
+On macOS with Node 22, a fresh clone from GitHub at commit `724ae3a` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
 
 ## Remaining acceptance
 

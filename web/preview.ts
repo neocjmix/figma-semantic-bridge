@@ -10,7 +10,7 @@ export async function observePreview(
   publish: (preview: string) => void,
   wait: () => Promise<void> = () => new Promise((resolve) => setTimeout(resolve, 1200)),
 ) {
-  // Figma metadata and up to four image fetch hops each have a 30s timeout.
+  // The image API and up to four download hops each have a 30s timeout.
   for (let attempt = 0; attempt < 132; attempt++) {
     await wait();
     let regions: Preview[];

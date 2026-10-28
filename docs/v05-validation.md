@@ -39,9 +39,9 @@ A second existing Figma file was opened read-only; its selected node URL matched
 In an isolated mocked-Figma browser server, stopping the server during a name edit produced an actionable server-unavailable message. After restarting and reloading, the previously saved name remained intact; the unsaved edit was not queued.
 
 An isolated browser fixture with 18 UI and 18 Spec regions exposed an overflow bug: both columns expanded the page instead of scrolling independently. After fixing the grid and flex height constraints, scrolling UI changed only its scroll position, scrolling Specs left UI unchanged, and both positions survived a Canvas/Regions tab switch.
-Cancelling a simulated kind-choice dialog closed it without creating a region.
+Cancelling a simulated kind-choice dialog closed it without creating a region. A later actual Figma bookmarklet delivery was also cancelled in Chrome without choosing a kind.
 
-A mocked 11.5-second image response exposed a browser defect: the server saved the image, but the editor stopped checking after eight polls and kept the placeholder. The editor now observes the same in-flight image request in the background for the bounded upstream timeout; it does not re-request the image from Figma. With a valid 100×50 PNG, browser retesting showed the preview after the delay, preserved a name edited during loading, and displayed it after switching to another workspace and back. Version checks prevent an old observer publishing a replaced or deleted region. The delay and image were simulated, not real Figma failure evidence.
+A mocked 11.5-second image response exposed a browser defect: the server saved the image, but the editor stopped checking after eight polls and kept the placeholder. The editor now observes the same in-flight image request in the background for the bounded upstream timeout; it does not re-request the image from Figma. With a valid 100×50 PNG, browser retesting showed the preview after the delay, preserved a name edited during loading, and displayed it after switching to another workspace and back. Version checks prevent an old observer publishing a replaced or deleted region. The delay and image were simulated, not real Figma failure evidence. On the same synthetic dataset, a browser drag resized a region with negative fractional source coordinates from 100×50 to 120×60; the source coordinates and the adjusted bounds survived reload. Zoom controls also changed the visible scale.
 
 ## Product bookmarklet and downstream handoff
 
@@ -51,12 +51,12 @@ The real two-file test workspace's exported JSON and stdio MCP output matched, c
 
 ## Clean clone
 
-On macOS with Node 22, a fresh clone from GitHub at commit `feb096c` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
+On macOS with Node 22, a fresh clone from GitHub at commit `bcd8d5d` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
 
 ## Remaining acceptance
 
 - T01: valid token, invalid and revoked token, restart and restricted file mode tested; actual missing-scope rejection remains unverified.
-- T02: actual product bookmarklet, both kinds, repeated sends and changed selections exercised; cancellation passed with a simulated fragment. Manual-tab reuse remains open.
+- T02: actual product bookmarklet, both kinds, repeated sends and changed selections exercised; cancellation passed in actual Chrome and with a simulated fragment. Manual-tab reuse remains open.
 - T03: 21 sampled node URLs and a variant verified; GROUP remains open; a node from a second actual file was imported. Resend preservation is covered by controlled tests.
 - T04: actual successful REST import and invalid-token behavior observed; other response codes were simulated in integration tests and need real-environment evidence where available.
 - T05: actual previews and simulated delayed-response isolation tested; real failure/retry behavior remains open.

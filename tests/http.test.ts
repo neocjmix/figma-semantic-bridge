@@ -187,6 +187,33 @@ test("lookup failures leave persisted regions unchanged and report the cause", a
     await rm(dir, { recursive: true, force: true });
   }
 });
+test("failed token replacement and denied files preserve the valid session and stored data", async () => {
+  dir = await mkdtemp(join(tmpdir(), "fsb-v05-auth-"));
+  try {
+    await start();
+    assert.equal((await req("/api/workspaces")).status, 401);
+    assert.equal((await req("/api/token", "POST", { token: "valid-test-token" })).status, 200);
+    const w = (await req("/api/workspaces", "POST", { name: "Auth" })).data;
+    const prefix = `/api/workspaces/${w.id}`;
+    const before = await readFile(join(dir, "workspaces.json"), "utf8");
+    assert.equal((await req("/api/token", "POST", { token: "invalid-replacement" })).status, 401);
+    assert.equal((await req("/api/status")).data.authenticated, true);
+    assert.equal(await readFile(join(dir, "token"), "utf8"), "valid-test-token");
+    const denied = await req(prefix + "/import", "POST", {
+      kind: "ui",
+      url: "https://www.figma.com/design/denied/Test?node-id=1-1",
+    });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.data.code, "FILE_ACCESS");
+    assert.equal((await req("/api/status")).data.authenticated, true);
+    assert.equal(await readFile(join(dir, "workspaces.json"), "utf8"), before);
+    const exported = JSON.stringify((await req(prefix + "/export")).data);
+    assert.equal(exported.includes("valid-test-token"), false);
+  } finally {
+    await stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 test("delayed preview cannot overwrite a resend or a different workspace", async () => {
   dir = await mkdtemp(join(tmpdir(), "fsb-v05-images-"));
   try {

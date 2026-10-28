@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lookup, image, FigmaError } from "../src/figma.js";
+import { lookup, image, validateToken, FigmaError } from "../src/figma.js";
 const token = "test-only";
 const ref = {
     fileKey: "file1",
@@ -8,6 +8,33 @@ const ref = {
     url: "https://www.figma.com/design/file1/Node?node-id=2%3A7",
   },
   bbox = { x: -2.5, y: 1.25, width: 100, height: 50 };
+test("token probe handles authentication and upstream errors without unrelated scopes", async () => {
+  const old = globalThis.fetch;
+  let status = 404, calls = 0;
+  globalThis.fetch = async (input, options) => {
+    calls++;
+    const url = new URL(String(input));
+    assert.equal(url.hostname, "api.figma.com");
+    assert.match(url.pathname, /\/nodes$/);
+    assert.equal(new Headers(options?.headers).get("x-figma-token"), token);
+    return new Response(null, { status });
+  };
+  try {
+    assert.equal(await validateToken(""), false);
+    assert.equal(calls, 0);
+    assert.equal(await validateToken(token), true);
+    for (const denied of [401, 403]) {
+      status = denied;
+      assert.equal(await validateToken(token), false);
+    }
+    status = 429;
+    await assert.rejects(validateToken(token), (e) => e instanceof FigmaError && e.code === "RATE_LIMIT");
+    status = 500;
+    await assert.rejects(validateToken(token), (e) => e instanceof FigmaError && e.code === "UPSTREAM");
+  } finally {
+    globalThis.fetch = old;
+  }
+});
 test("bounded node lookup finds page without trusting URL or scanning the selected subtree", async () => {
   let old = globalThis.fetch,
     requests: string[] = [];

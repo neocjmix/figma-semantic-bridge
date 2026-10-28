@@ -12,7 +12,15 @@ These observations cover one file, not every document or permission configuratio
 
 ## Automated checks
 
-`npm run check` executes TypeScript, ten unit and integration tests and a production build. Mocked-Figma HTTP + MCP integration exercises two synthetic files, tree cycles, many-to-many relations, disk restart and semantic export equality. Simulated 401, 403, 404 and 429 responses leave regions unchanged and report the cause. Delayed image responses are tested against a resend and two separate workspaces. These tests are not proof of actual bookmarklet delivery.
+`npm run check` executes TypeScript, twelve unit and integration tests and a production build. Mocked-Figma HTTP + MCP integration exercises two synthetic files, tree cycles, many-to-many relations, disk restart and semantic export equality. Simulated 401, 403, 404 and 429 responses leave regions unchanged and report the cause. Delayed image responses are tested against a resend and two separate workspaces. These tests are not proof of actual bookmarklet delivery.
+
+## Consolidated PAT checks (2026-10-28)
+
+Without creating another token, the existing content-only PAT received HTTP 200 for an accessible selected node and for the image API, while the unrelated file-metadata endpoint returned 403. The nonexistent-file validation probe returned 404 for that PAT; a deliberately invalid token returned 403 for both the probe and the actual node. The current token file mode was 0600. These checks do not establish how a valid PAT lacking `file_content:read` responds to the nonexistent-file probe. Figma's scope documentation does not establish the response ordering needed to infer that from 404.
+
+Automated tests cover absent and invalid tokens, validation responses 401/403/429/500, restricted token file mode, token-free semantic export and workspace storage, failed token replacement preserving the prior token and session, and a simulated file-specific 403 preserving the session and workspace. Authentication failures and Figma responses in these tests are simulated. No new token was generated or requested for these checks.
+
+The current gate assumes that a 404 from a nonexistent file demonstrates the required scope. That assumption is unverified: it must not be presented as a proven missing-scope check. Proving or changing the initial-gate contract remains open; do not depend on access to an arbitrary third-party Figma file or add unrelated scopes silently.
 
 ## Browser and real REST, with synthetic delivery
 

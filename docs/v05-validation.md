@@ -18,6 +18,8 @@ These observations cover one file, not every document or permission configuratio
 
 In the in-app browser, navigating directly to a locally constructed receiver fragment (not executing the product bookmarklet) and choosing a kind imported actual Figma nodes with the user's scoped token. Two UI regions were renamed and nested using the parent selector; an attempted cycle was rejected. One actual Spec was linked to both UI regions and unlinking one edge retained the Spec and the other edge. An actual node from a second page appeared in a separate Canvas partition. Previews appeared for the sampled nodes. Screenshots were saved outside the repository. A page switch initially left an off-page region selected; the correction was retested after build and restart. The cycle error now identifies the cause.
 
+With four actual nodes across those two pages, the keyboard-accessible parent selectors built a four-level tree, rejected a cycle, moved a subtree back to root without losing its child, and reordered roots. A Spec from the first page was linked to UI nodes on both pages. Browser reload retained the resulting order and two relationships. Selecting a Canvas region focused the name input immediately; typing and reloading retained the new name. Pointer drag and a second real file have not yet been verified.
+
 ## Product bookmarklet and downstream handoff
 
 In Chrome, the installed product bookmarklet opened the Bridge from an actual Figma selection. Selecting UI or Spec initiated the corresponding import, and a changed selection reused the bookmarklet-opened window. The same source was imported as both kinds. Chrome initially created a new tab rather than reuse a manually opened Bridge tab in a different browsing context; the new tab had no active workspace and rejected the selection. Storing only the active workspace ID in local browser storage addressed that first-use failure: after selecting the workspace in the manually opened tab, the next newly opened bookmarklet tab restored it and immediately offered the kind choice. A duplicate tab can still exist; this is a browser-context limitation and the literal already-open-window acceptance remains open.
@@ -26,13 +28,16 @@ The real test workspace's exported JSON and stdio MCP output matched and exclude
 
 ## Clean clone
 
-On macOS with Node 22, a fresh local clone of commit `138051e` passed `npm ci`, `npm run build` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
+On macOS with Node 22, a fresh local clone of commit `e0c4c6e` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
 
 ## Remaining acceptance
 
-- T01: actual missing-scope rejection and full security/redaction checks.
-- T02–T05: actual product bookmarklet import, repeats, failed image and error paths.
-- T06–T09: browser task journey, coordinate separation, pointer and keyboard tree operations, ghost unlink and restart.
-- T10: actual product export to external Figma MCP and output exclusions across all scenarios.
-- T11: clean-clone installation and collision recovery.
+- T01: valid token, invalid token, restart and restricted file mode tested; actual missing-scope rejection remains unverified.
+- T02: actual product bookmarklet, both kinds, repeated sends and changed selections exercised; manual-tab reuse and cancellation remain open.
+- T03: 21 sampled node URLs and a variant verified; GROUP and a second actual file remain open. Resend preservation is covered by controlled tests.
+- T04: actual successful REST import and invalid-token behavior observed; other response codes were simulated in integration tests and need real-environment evidence where available.
+- T05: actual previews and simulated delayed-response isolation tested; real failure/retry behavior remains open.
+- T06–T09: actual two-page Canvas partition, focused name editing, keyboard tree nesting/reorder, cross-page Spec links, unlink and reload exercised; second file, pointer drag/drop, independent scrolling and delete behavior remain open.
+- T10: real workspace JSON/MCP comparison and external Figma MCP UI/Spec dereferences passed for the sampled nodes; broader exclusions remain covered by tests.
+- T11: clean clone/build/start and duplicate port tested; stopped-server and expired-token recovery remain open.
 - T12: observed independent human task and qualitative findings.

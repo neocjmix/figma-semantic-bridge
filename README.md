@@ -9,7 +9,7 @@ This branch is the v0.5 replacement. It does not migrate v0.4 data; v0.4 remains
 Requires Node.js 22 or later and a Figma personal access token with **file_content:read**. A token can read content from files accessible to its account.
 
 ```sh
-git clone https://github.com/neocjmix/figma-semantic-bridge.git
+git clone --branch feat/v0.5-core https://github.com/neocjmix/figma-semantic-bridge.git
 cd figma-semantic-bridge
 npm ci
 npm run build
@@ -25,6 +25,19 @@ The server saves v0.5 workspaces separately in `~/.figma-semantic-bridge-v05`. T
 ## MCP
 
 Build first, then configure a stdio MCP client with Node and the absolute path to `dist/mcp.mjs`. The `list_workspaces` and `get_workspace` tools expose the same semantic data as JSON. Set `FSB_V05_DATA_DIR` for MCP if the server uses a non-default data directory. Use a separate Figma MCP to retrieve the source nodes using their exported file and node IDs.
+
+For example, in a client that accepts `mcpServers` configuration:
+
+```json
+{
+  "mcpServers": {
+    "figma-semantic-bridge": {
+      "command": "node",
+      "args": ["/absolute/path/to/figma-semantic-bridge/dist/mcp.mjs"]
+    }
+  }
+}
+```
 
 ## Checks
 

@@ -255,7 +255,7 @@ function App() {
   const bookmark = `javascript:(()=>{const u=location.href,n=Date.now().toString(36)+Math.random().toString(36).slice(2);window.open('${location.origin}/#'+new URLSearchParams({url:u,nonce:n}),'figma-semantic-bridge');})();`;
   useEffect(() => {
     if (bookmarkRef.current) bookmarkRef.current.setAttribute("href", bookmark);
-  }, [gate, workspace?.id, bookmark]);
+  }, [gate, workspace?.id, bookmark, reenter]);
   return (
     <>
       <header>

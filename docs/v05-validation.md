@@ -20,7 +20,13 @@ In the in-app browser, navigating directly to a locally constructed receiver fra
 
 With four actual nodes across those two pages, the keyboard-accessible parent selectors built a four-level tree, rejected a cycle, moved a subtree back to root without losing its child, and reordered roots. A Spec from the first page was linked to UI nodes on both pages. Browser reload retained the resulting order and two relationships. Selecting a Canvas region focused the name input immediately; typing and reloading retained the new name. Pointer drag and a second real file have not yet been verified.
 
-A 486-pixel-wide in-app browser screenshot exposed clipped tree names and editing controls. Responsive CSS was adjusted, but a test-browser confirmation dialog prevented the post-fix screenshot; visual verification is still required.
+A 486-pixel-wide in-app browser screenshot exposed clipped tree names and editing controls. After adjusting responsive CSS, a fresh browser screenshot confirmed that names, selectors and the edit bar fit the viewport; long names are ellipsized.
+
+In Chrome, pointer dragging a Spec onto a UI produced a ghost; repeating the drop did not duplicate the edge. Dragging a UI row onto another UI nested it, and attempting a cyclic drag reported the cycle and retained the tree. After the original PAT was revoked, a real bookmarklet import was rejected with the token re-entry prompt and the workspace file remained byte-for-byte unchanged. Cancelling initially exposed a missing bookmarklet href; the fix was checked with a simulated 401 in an isolated browser server.
+
+A separate token supplied for the missing-scope test returned 404 for the nonexistent-file probe and 200 for an accessible file. Because the token's actual scope was not independently established before revocation, these results cannot establish missing-scope rejection; that gate remains open.
+
+A second existing Figma file was opened read-only; its selected node URL matched an independently retrieved Figma MCP node ID. Its REST import and cross-file relationship remain unverified because the live PAT was revoked.
 
 ## Product bookmarklet and downstream handoff
 
@@ -34,12 +40,12 @@ On macOS with Node 22, a fresh clone from GitHub at commit `1d884be` passed `npm
 
 ## Remaining acceptance
 
-- T01: valid token, invalid token, restart and restricted file mode tested; actual missing-scope rejection remains unverified.
+- T01: valid token, invalid and revoked token, restart and restricted file mode tested; actual missing-scope rejection remains unverified.
 - T02: actual product bookmarklet, both kinds, repeated sends and changed selections exercised; manual-tab reuse and cancellation remain open.
 - T03: 21 sampled node URLs and a variant verified; GROUP and a second actual file remain open. Resend preservation is covered by controlled tests.
 - T04: actual successful REST import and invalid-token behavior observed; other response codes were simulated in integration tests and need real-environment evidence where available.
 - T05: actual previews and simulated delayed-response isolation tested; real failure/retry behavior remains open.
-- T06–T09: actual two-page Canvas partition, focused name editing, keyboard tree nesting/reorder, cross-page Spec links, unlink and reload exercised; second file, pointer drag/drop, independent scrolling and delete behavior remain open.
+- T06–T09: actual two-page Canvas partition, focused name editing, pointer and keyboard nesting, cycle rejection, cross-page Spec drag/link, unlink and reload exercised; second file, independent scrolling and deliberate delete confirmation remain open.
 - T10: real workspace JSON/MCP comparison and external Figma MCP UI/Spec dereferences passed for the sampled nodes; broader exclusions remain covered by tests.
 - T11: clean clone/build/start and duplicate port tested; stopped-server and expired-token recovery remain open.
 - T12: observed independent human task and qualitative findings.

@@ -155,6 +155,9 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
           data = await lookup(token, ref);
         } catch (e) {
+          if (e instanceof FigmaError && e.code === "TOKEN") {
+            authenticated = false;
+          }
           if (e instanceof FigmaError && e.code === "ACCESS") {
             if (!(await validateToken(token))) {
               authenticated = false;

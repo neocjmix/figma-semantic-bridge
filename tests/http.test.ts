@@ -171,7 +171,16 @@ test("lookup failures leave persisted regions unchanged and report the cause", a
       });
       assert.equal(result.status, status);
       assert.equal(result.data.code, code);
-      assert.equal((await req(prefix)).data.regions.length, 0);
+      if (code === "TOKEN") {
+        assert.equal((await req("/api/status")).data.authenticated, false);
+        assert.equal((await req(prefix)).status, 401);
+        const store = JSON.parse(
+          await readFile(join(dir, "workspaces.json"), "utf8"),
+        );
+        assert.equal(store.workspaces[0].regions.length, 0);
+      } else {
+        assert.equal((await req(prefix)).data.regions.length, 0);
+      }
     }
   } finally {
     await stop();

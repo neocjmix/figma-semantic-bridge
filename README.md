@@ -2,14 +2,14 @@
 
 Local-first semantic notes for Figma selections. Give UI regions names and an ordered hierarchy, link Spec regions to one or more UI regions, and give that structure and its Figma references to a coding agent. Bridge does not generate code or reconstruct the Figma document.
 
-This branch is the v0.5 replacement. It does not migrate v0.4 data; v0.4 remains available in the release history. The implementation and live acceptance are still being verified; consult [validation status](docs/v05-validation.md) before relying on it.
+v0.5 is a replacement for v0.4 and does not migrate its data; v0.4 remains available in the release history. Some live acceptance checks remain open; see the [verification status](docs/v05-validation.md) and [backlog](docs/v05-backlog.md).
 
 ## Start
 
 Requires Node.js 22 or later and a Figma personal access token with **file_content:read**. A token can read content from files accessible to its account.
 
 ```sh
-git clone --branch feat/v0.5-core https://github.com/neocjmix/figma-semantic-bridge.git
+git clone --branch v0.5.0 https://github.com/neocjmix/figma-semantic-bridge.git
 cd figma-semantic-bridge
 npm ci
 npm run build

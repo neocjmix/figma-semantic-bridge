@@ -1,6 +1,6 @@
 # v0.5 verification status
 
-This is an in-progress implementation, not a release sign-off. T01–T12 remain open until the full user-task acceptance is executed. Never treat fixture or API tests as evidence of actual Figma browser acceptance.
+The user chose to release v0.5.0 for personal testing with the outstanding checks recorded in the [backlog](v05-backlog.md). This record does not claim that every T01–T12 condition has passed. Never treat fixture or API tests as evidence of actual Figma browser acceptance.
 
 ## Real Figma P0 (2026-10-28)
 

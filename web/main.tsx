@@ -6,11 +6,16 @@ const base = "/api";
 type Brief = { id: string; name: string };
 type Notice = { url: string; nonce: string };
 async function api(path: string, method = "GET", data?: unknown) {
-  const r = await fetch(base + path, {
-    method,
-    headers: data === undefined ? {} : { "content-type": "application/json" },
-    body: data === undefined ? undefined : JSON.stringify(data),
-  });
+  let r: Response;
+  try {
+    r = await fetch(base + path, {
+      method,
+      headers: data === undefined ? {} : { "content-type": "application/json" },
+      body: data === undefined ? undefined : JSON.stringify(data),
+    });
+  } catch {
+    throw new Error("Bridge server is unavailable. Start it and try again.");
+  }
   const v = await r.json();
   if (!r.ok) {
     const e = new Error(v.error ?? "Request failed") as Error & {

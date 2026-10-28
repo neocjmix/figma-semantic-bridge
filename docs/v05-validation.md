@@ -28,6 +28,8 @@ A separate token supplied for the missing-scope test returned 404 for the nonexi
 
 A second existing Figma file was opened read-only; its selected node URL matched an independently retrieved Figma MCP node ID. Its REST import and cross-file relationship remain unverified because the live PAT was revoked.
 
+In an isolated mocked-Figma browser server, stopping the server during a name edit produced an actionable server-unavailable message. After restarting and reloading, the previously saved name remained intact; the unsaved edit was not queued.
+
 ## Product bookmarklet and downstream handoff
 
 In Chrome, the installed product bookmarklet opened the Bridge from an actual Figma selection. Selecting UI or Spec initiated the corresponding import, and a changed selection reused the bookmarklet-opened window. The same source was imported as both kinds. Chrome initially created a new tab rather than reuse a manually opened Bridge tab in a different browsing context; the new tab had no active workspace and rejected the selection. Storing only the active workspace ID in local browser storage addressed that first-use failure: after selecting the workspace in the manually opened tab, the next newly opened bookmarklet tab restored it and immediately offered the kind choice. A duplicate tab can still exist; this is a browser-context limitation and the literal already-open-window acceptance remains open.
@@ -47,5 +49,5 @@ On macOS with Node 22, a fresh clone from GitHub at commit `48f12ff` passed `npm
 - T05: actual previews and simulated delayed-response isolation tested; real failure/retry behavior remains open.
 - T06–T09: actual two-page Canvas partition, focused name editing, pointer and keyboard nesting, cycle rejection, cross-page Spec drag/link, unlink and reload exercised; second file, independent scrolling and deliberate delete confirmation remain open.
 - T10: real workspace JSON/MCP comparison and external Figma MCP UI/Spec dereferences passed for the sampled nodes; broader exclusions remain covered by tests.
-- T11: clean clone/build/start and duplicate port tested; stopped-server and expired-token recovery remain open.
+- T11: clean clone/build/start, duplicate port, stopped-server preservation and a real revoked-token rejection tested; replacement-token retry remains open.
 - T12: observed independent human task and qualitative findings.

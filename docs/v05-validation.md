@@ -30,6 +30,8 @@ A second existing Figma file was opened read-only; its selected node URL matched
 
 In an isolated mocked-Figma browser server, stopping the server during a name edit produced an actionable server-unavailable message. After restarting and reloading, the previously saved name remained intact; the unsaved edit was not queued.
 
+An isolated browser fixture with 18 UI and 18 Spec regions exposed an overflow bug: both columns expanded the page instead of scrolling independently. After fixing the grid and flex height constraints, scrolling UI changed only its scroll position, scrolling Specs left UI unchanged, and both positions survived a Canvas/Regions tab switch.
+
 ## Product bookmarklet and downstream handoff
 
 In Chrome, the installed product bookmarklet opened the Bridge from an actual Figma selection. Selecting UI or Spec initiated the corresponding import, and a changed selection reused the bookmarklet-opened window. The same source was imported as both kinds. Chrome initially created a new tab rather than reuse a manually opened Bridge tab in a different browsing context; the new tab had no active workspace and rejected the selection. Storing only the active workspace ID in local browser storage addressed that first-use failure: after selecting the workspace in the manually opened tab, the next newly opened bookmarklet tab restored it and immediately offered the kind choice. A duplicate tab can still exist; this is a browser-context limitation and the literal already-open-window acceptance remains open.
@@ -47,7 +49,7 @@ On macOS with Node 22, a fresh clone from GitHub at commit `48f12ff` passed `npm
 - T03: 21 sampled node URLs and a variant verified; GROUP and a second actual file remain open. Resend preservation is covered by controlled tests.
 - T04: actual successful REST import and invalid-token behavior observed; other response codes were simulated in integration tests and need real-environment evidence where available.
 - T05: actual previews and simulated delayed-response isolation tested; real failure/retry behavior remains open.
-- T06–T09: actual two-page Canvas partition, focused name editing, pointer and keyboard nesting, cycle rejection, cross-page Spec drag/link, unlink and reload exercised; second file, independent scrolling and deliberate delete confirmation remain open.
+- T06–T09: actual two-page Canvas partition, focused name editing, pointer and keyboard nesting, cycle rejection, cross-page Spec drag/link, unlink and reload exercised. Independent scrolling and tab retention passed with simulated nodes; second real file and deliberate delete confirmation remain open.
 - T10: real workspace JSON/MCP comparison and external Figma MCP UI/Spec dereferences passed for the sampled nodes; broader exclusions remain covered by tests.
 - T11: clean clone/build/start, duplicate port, stopped-server preservation and a real revoked-token rejection tested; replacement-token retry remains open.
 - T12: observed independent human task and qualitative findings.

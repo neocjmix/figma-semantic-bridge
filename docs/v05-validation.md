@@ -20,6 +20,8 @@ In the in-app browser, navigating directly to a locally constructed receiver fra
 
 With four actual nodes across those two pages, the keyboard-accessible parent selectors built a four-level tree, rejected a cycle, moved a subtree back to root without losing its child, and reordered roots. A Spec from the first page was linked to UI nodes on both pages. Browser reload retained the resulting order and two relationships. Selecting a Canvas region focused the name input immediately; typing and reloading retained the new name. Pointer drag and a second real file have not yet been verified.
 
+A 486-pixel-wide in-app browser screenshot exposed clipped tree names and editing controls. Responsive CSS was adjusted, but a test-browser confirmation dialog prevented the post-fix screenshot; visual verification is still required.
+
 ## Product bookmarklet and downstream handoff
 
 In Chrome, the installed product bookmarklet opened the Bridge from an actual Figma selection. Selecting UI or Spec initiated the corresponding import, and a changed selection reused the bookmarklet-opened window. The same source was imported as both kinds. Chrome initially created a new tab rather than reuse a manually opened Bridge tab in a different browsing context; the new tab had no active workspace and rejected the selection. Storing only the active workspace ID in local browser storage addressed that first-use failure: after selecting the workspace in the manually opened tab, the next newly opened bookmarklet tab restored it and immediately offered the kind choice. A duplicate tab can still exist; this is a browser-context limitation and the literal already-open-window acceptance remains open.

@@ -540,3 +540,34 @@ label {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
 }
+
+@media (max-width: 800px) {
+  .list-scroll {
+    padding: 12px 8px 150px;
+  }
+  .tree ul {
+    padding-left: 12px;
+  }
+  .tree-row {
+    flex-wrap: wrap;
+  }
+  .tree-row .region-name {
+    flex-basis: 100%;
+  }
+  .row-actions {
+    flex-wrap: wrap;
+    padding: 0 7px 7px;
+  }
+  .editbar {
+    width: calc(100% - 24px);
+    box-sizing: border-box;
+  }
+  .editbar label {
+    min-width: 0;
+    flex: 1;
+  }
+  .editbar input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

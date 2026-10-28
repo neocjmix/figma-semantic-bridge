@@ -12,7 +12,7 @@ These observations cover one file, not every document or permission configuratio
 
 ## Automated checks
 
-`npm run check` executes TypeScript, fourteen unit and integration tests and a production build. Mocked-Figma HTTP + MCP integration exercises two synthetic files, tree cycles, many-to-many relations, disk restart and semantic export equality. Simulated 401, 403, 404 and 429 responses leave regions unchanged and report the cause. Delayed image responses are tested against a resend and two separate workspaces. These tests are not proof of actual bookmarklet delivery.
+`npm run check` executes TypeScript, sixteen unit and integration tests and a production build. Mocked-Figma HTTP + MCP integration exercises two synthetic files, tree cycles, many-to-many relations, disk restart and semantic export equality. Simulated 401, 403, 404 and 429 responses leave regions unchanged and report the cause. Delayed image responses are tested against a resend and two separate workspaces. These tests are not proof of actual bookmarklet delivery.
 
 ## Consolidated PAT checks (2026-10-28)
 
@@ -51,13 +51,15 @@ The real two-file test workspace's exported JSON and stdio MCP output matched, c
 
 ## Multiple window and server concurrency (2026-10-28)
 
-Using two in-app browser tabs against one isolated server and a synthetic workspace, changing a region name in tab A left the old value visible in tab B. Editing the same field in B replaced the stored A value, while A continued displaying its own stale value. Editing the description in A afterward preserved B's saved name because the server patches fields individually. No cross-window synchronization or conflict warning was observed.
+The original two-tab test reproduced a stale name silently overwriting a newer name. Two processes on different ports sharing one data directory also overwrote one another's independent edits. The server now checks a workspace revision for each edit and rejects stale or revisionless writes; a per-directory loopback port reservation prevents two updated server processes from opening the same directory, including through a symlink. Automated tests exercised simultaneous conflicting writes, stale deletes, moves and imports, and the second-process rejection.
 
-In a separate disposable fixture, two server processes on different ports used the same data directory. After both loaded the same workspace, server A saved a new name and server B saved a description. Both returned 200, but the shared file contained the original name and B's description: B's stale in-memory store overwrote A's change. Atomic file replacement and the in-process mutation queue do not provide cross-process serialization. A single native window alone would not prevent a separately started server or browser client from accessing the same store.
+In two browser tabs with a synthetic workspace, a rejected name edit stayed visible in the second tab with a conflict notice while the first tab's name remained on the server. In Chrome, focusing the name field after another tab saved refreshed the visible value. Typing 27 characters in one tab retained the complete name; a synthetic import, immediate naming and Spec link also worked. These are controlled tests, not proof that all browser scheduling behaves identically. Refresh on focus or visibility is best effort; the server's revision check is the safety boundary.
+
+Conflicts are conservative: even edits to different fields of the same workspace may be rejected. Unsaved input remains only in the current browser tab; copy it before accepting the reload confirmation or closing the tab. There is no automatic merge or durable draft. The reservation uses an additional local port derived from the canonical data-directory path; a coincidental unrelated port collision prevents startup. Servers built before this guard cannot participate in it: stop all older server processes before running the updated version.
 
 ## Clean clone
 
-On macOS with Node 22, a fresh clone from GitHub at commit `bcd8d5d` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.
+On macOS with Node 22, a fresh clone from GitHub at commit `bcd8d5d` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. This preceded the concurrency guard; rerun on the final commit.
 
 ## Remaining acceptance
 

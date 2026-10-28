@@ -20,6 +20,7 @@ export type Relation = { id: string; specRegionId: string; uiRegionId: string };
 export type Workspace = {
   id: string;
   name: string;
+  revision?: number;
   regions: Region[];
   relations: Relation[];
 };
@@ -27,6 +28,7 @@ export type Store = { workspaces: Workspace[] };
 export const newWorkspace = (name: string): Workspace => ({
   id: randomUUID(),
   name: name.trim(),
+  revision: 0,
   regions: [],
   relations: [],
 });

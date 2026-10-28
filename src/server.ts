@@ -1,8 +1,10 @@
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import net from "node:net";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { init, getToken, saveToken, readStore, writeStore } from "./storage.js";
+import { directory, init, getToken, saveToken, readStore, writeStore } from "./storage.js";
 import { validateToken, lookup, image, FigmaError } from "./figma.js";
 import {
   newWorkspace,
@@ -20,6 +22,24 @@ const port = Number(process.env.PORT ?? 4180),
   origin = `http://127.0.0.1:${port}`,
   web = resolve(fileURLToPath(new URL("./web", import.meta.url)));
 await init();
+// A data directory has one writer, even if different server ports are used.
+// The OS releases this loopback reservation when the process exits.
+const canonicalDirectory = await realpath(directory);
+const lockPort = 49152 + (createHash("sha256").update(canonicalDirectory).digest().readUInt16BE(0) % 16384);
+if (lockPort === port) {
+  console.error(`Port ${port} is reserved for this data directory. Choose another port.`);
+  process.exit(1);
+}
+const dataLock = net.createServer((socket) => socket.destroy());
+try {
+  await new Promise<void>((resolve, reject) => {
+    dataLock.once("error", reject);
+    dataLock.listen(lockPort, "127.0.0.1", () => resolve());
+  });
+} catch {
+  console.error("Another server may be using this data directory. Stop it before starting another.");
+  process.exit(1);
+}
 let store = await readStore(),
   token = await getToken(),
   authenticated = false;
@@ -44,11 +64,26 @@ function workspace(s: Store, id: string) {
   if (!w) throw new FigmaError("Workspace not found", 404);
   return w;
 }
-function json(res: http.ServerResponse, status: number, data: unknown) {
+async function editWorkspace<T>(req: http.IncomingMessage, id: string, fn: (w: Workspace, s: Store) => T) {
+  const value = req.headers["if-match"];
+  if (typeof value !== "string" || !/^\d+$/.test(value))
+    throw new FigmaError("Reload the workspace before editing.", 428, "REVISION_REQUIRED");
+  const expected = Number(value);
+  return mutate((s) => {
+    const w = workspace(s, id);
+    if ((w.revision ?? 0) !== expected)
+      throw new FigmaError("This workspace changed in another window. Your unsaved input is still here; copy it before reloading.", 409, "CONFLICT");
+    const result = fn(w, s);
+    w.revision = expected + 1;
+    return { result, revision: w.revision };
+  });
+}
+function json(res: http.ServerResponse, status: number, data: unknown, revision?: number) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
+    ...(revision === undefined ? {} : { "x-workspace-revision": String(revision) }),
   });
   res.end(JSON.stringify(data));
 }
@@ -107,7 +142,7 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
         return json(
           res,
           200,
-          store.workspaces.map(({ id, name }) => ({ id, name })),
+          store.workspaces.map(({ id, name, revision }) => ({ id, name, revision: revision ?? 0 })),
         );
       if (path === "/api/workspaces" && method === "POST") {
         const name = safeText((await body(req)).name, 120).trim();
@@ -129,11 +164,10 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
       if (!rest && method === "GET")
         return json(res, 200, workspace(store, wid));
       if (!rest && method === "DELETE") {
-        await mutate((s) => {
-          workspace(s, wid);
+        const edit = await editWorkspace(req, wid, (_w, s) => {
           s.workspaces = s.workspaces.filter((w) => w.id !== wid);
         });
-        return json(res, 200, { ok: true });
+        return json(res, 200, { ok: true }, edit.revision);
       }
       if (rest === "export" && method === "GET")
         return json(res, 200, exportWorkspace(workspace(store, wid)));
@@ -175,9 +209,10 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
           }
           throw e;
         }
-        const r = await mutate((s) =>
-          upsertRegion(workspace(s, wid), { kind, ...data }),
+        const edit = await editWorkspace(req, wid, (w) =>
+          upsertRegion(w, { kind, ...data }),
         );
+        const r = edit.result;
         const ver = r.previewVersion,
           bbox = r.sourceBBox;
         void image(token, ref.fileKey, ref.nodeId, bbox)
@@ -191,13 +226,13 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
             });
           })
           .catch(() => {});
-        return json(res, 201, r);
+        return json(res, 201, r, edit.revision);
       }
       let region = rest.match(/^regions\/([\w-]+)$/);
       if (region && method === "PATCH") {
         let b = await body(req);
-        let r = await mutate((s) => {
-          let r = findRegion(workspace(s, wid), region![1]);
+        let edit = await editWorkspace(req, wid, (w) => {
+          let r = findRegion(w, region![1]);
           if (b.name !== undefined) r.name = safeText(b.name, 200);
           if (b.description !== undefined)
             r.description = safeText(b.description, 2000);
@@ -208,11 +243,11 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
           }
           return r;
         });
-        return json(res, 200, r);
+        return json(res, 200, edit.result, edit.revision);
       }
       if (region && method === "DELETE") {
-        await mutate((s) => deleteRegion(workspace(s, wid), region![1]));
-        return json(res, 200, { ok: true });
+        const edit = await editWorkspace(req, wid, (w) => deleteRegion(w, region![1]));
+        return json(res, 200, { ok: true }, edit.revision);
       }
       if (rest === "move" && method === "POST") {
         const b = await body(req);
@@ -223,8 +258,7 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
           b.index < 0
         )
           throw new FigmaError("Invalid move");
-        await mutate((s) => {
-          const w = workspace(s, wid);
+        const edit = await editWorkspace(req, wid, (w) => {
           try {
             moveUi(w, b.id, b.parentId, b.index);
           } catch (e) {
@@ -233,29 +267,21 @@ async function handler(req: http.IncomingMessage, res: http.ServerResponse) {
             );
           }
         });
-        return json(res, 200, { ok: true });
+        return json(res, 200, { ok: true }, edit.revision);
       }
       if (rest === "relations" && method === "POST") {
         const b = await body(req);
-        return json(
-          res,
-          200,
-          await mutate((s) =>
-            link(
-              workspace(s, wid),
-              safeText(b.specId, 100),
-              safeText(b.uiId, 100),
-            ),
-          ),
+        const edit = await editWorkspace(req, wid, (w) =>
+          link(w, safeText(b.specId, 100), safeText(b.uiId, 100)),
         );
+        return json(res, 200, edit.result, edit.revision);
       }
       let relation = rest.match(/^relations\/([\w-]+)$/);
       if (relation && method === "DELETE") {
-        await mutate((s) => {
-          const w = workspace(s, wid);
+        const edit = await editWorkspace(req, wid, (w) => {
           w.relations = w.relations.filter((r) => r.id !== relation![1]);
         });
-        return json(res, 200, { ok: true });
+        return json(res, 200, { ok: true }, edit.revision);
       }
       throw new FigmaError("Not found", 404);
     }
@@ -295,6 +321,7 @@ server.on("error", (e: NodeJS.ErrnoException) => {
   console.error(
     e.code === "EADDRINUSE" ? `Port ${port} is already in use` : e.message,
   );
+  dataLock.close();
   process.exitCode = 1;
 });
 server.listen(port, "127.0.0.1", () =>

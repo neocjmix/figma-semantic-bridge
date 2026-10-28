@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtemp, readFile, stat, rm } from "node:fs/promises";
+import { mkdtemp, readFile, stat, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -47,12 +47,18 @@ async function stop() {
   });
 }
 async function req(path: string, method = "GET", data?: unknown) {
+  const headers: Record<string, string> = method === "GET"
+    ? {}
+    : { origin: root, "content-type": "application/json" };
+  const workspace = path.match(/^\/api\/workspaces\/([\w-]+)/);
+  if (workspace && method !== "GET") {
+    const current = await fetch(`${root}/api/workspaces/${workspace[1]}`);
+    const state = await current.json();
+    headers["if-match"] = String(state.revision ?? 0);
+  }
   const r = await fetch(root + path, {
     method,
-    headers:
-      method === "GET"
-        ? {}
-        : { origin: root, "content-type": "application/json" },
+    headers,
     body: data === undefined ? undefined : JSON.stringify(data),
   });
   return { status: r.status, data: await r.json() };
@@ -122,6 +128,7 @@ test("HTTP and MCP preserve the semantic user workflow across restart", async ()
     assert.equal(exported.ui[0].children[0].name, "Header");
     assert.equal(exported.relations.length, 2);
     assert.equal(JSON.stringify(exported).includes("sourceBBox"), false);
+    assert.equal(JSON.stringify(exported).includes("revision"), false);
     await stop();
     await start();
     assert.equal((await req("/api/status")).data.authenticated, true);
@@ -211,6 +218,78 @@ test("failed token replacement and denied files preserve the valid session and s
     assert.equal(exported.includes("valid-test-token"), false);
   } finally {
     await stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+test("stale concurrent writes are rejected without losing the winning edit", async () => {
+  dir = await mkdtemp(join(tmpdir(), "fsb-v05-conflict-"));
+  try {
+    await start();
+    await req("/api/token", "POST", { token: "valid-test-token" });
+    const w = (await req("/api/workspaces", "POST", { name: "Conflict" })).data;
+    const prefix = `/api/workspaces/${w.id}`;
+    const region = (await req(prefix + "/import", "POST", {
+      kind: "ui", url: "https://www.figma.com/design/file1/Test?node-id=1-1",
+    })).data;
+    const before = (await req(prefix)).data;
+    const patch = (name: string) => fetch(root + prefix + "/regions/" + region.id, {
+      method: "PATCH",
+      headers: { origin: root, "content-type": "application/json", "if-match": String(before.revision) },
+      body: JSON.stringify({ name }),
+    });
+    const [a, b] = await Promise.all([patch("Window A"), patch("Window B")]);
+    assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+    const failed = a.status === 409 ? a : b;
+    assert.equal((await failed.json()).code, "CONFLICT");
+    const after = (await req(prefix)).data;
+    assert.equal(after.regions[0].name, a.status === 200 ? "Window A" : "Window B");
+    assert.equal(after.revision, before.revision + 1);
+    for (const [path, method, data] of [
+      [prefix + "/regions/" + region.id, "DELETE", undefined],
+      [prefix + "/move", "POST", { id: region.id, parentId: null, index: 0 }],
+      [prefix + "/import", "POST", { kind: "ui", url: "https://www.figma.com/design/file1/Test?node-id=1-2" }],
+      [prefix, "DELETE", undefined],
+    ] as const) {
+      const stale = await fetch(root + path, {
+        method, headers: { origin: root, "content-type": "application/json", "if-match": String(before.revision) },
+        body: data === undefined ? undefined : JSON.stringify(data),
+      });
+      assert.equal(stale.status, 409);
+    }
+    assert.equal((await req(prefix)).data.regions.length, 1);
+    const noRevision = await fetch(root + prefix + "/regions/" + region.id, {
+      method: "PATCH", headers: { origin: root, "content-type": "application/json" },
+      body: JSON.stringify({ name: "unguarded" }),
+    });
+    assert.equal(noRevision.status, 428);
+  } finally {
+    await stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+test("a second server cannot write the same data directory on a different port", async () => {
+  dir = await mkdtemp(join(tmpdir(), "fsb-v05-one-server-"));
+  const alias = dir + "-alias";
+  try {
+    await symlink(dir, alias, "dir");
+    await start();
+    const other = spawn(process.execPath, ["--import", "tsx", "--import", "./tests/mock-figma.mjs", "src/server.ts"], {
+      cwd: process.cwd(),
+      env: { ...process.env, PORT: String(port + 1200), FSB_V05_DATA_DIR: alias },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const result = await new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
+      let stderr = "";
+      const timeout = setTimeout(() => { other.kill("SIGTERM"); reject(new Error("second server did not stop")); }, 10000);
+      other.stderr!.on("data", (chunk) => { stderr += chunk; });
+      other.on("exit", (code) => { clearTimeout(timeout); resolve({ code, stderr }); });
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /data directory/);
+    assert.equal((await req("/api/status")).status, 200);
+  } finally {
+    await stop();
+    await rm(alias, { force: true });
     await rm(dir, { recursive: true, force: true });
   }
 });

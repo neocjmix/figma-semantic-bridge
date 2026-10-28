@@ -20,6 +20,8 @@ Open the printed loopback URL (`http://127.0.0.1:4180` by default). Enter your t
 
 Canvas groups regions by file and page; select a region to name it. Regions lets you organize the UI tree and drag a Spec onto a UI region; the Spec remains in its catalog. Use the parent and Spec selectors as keyboard alternatives. Changes save automatically. Export JSON from the header.
 
+If another window changes the workspace first, saving stops instead of overwriting it. Copy any unsaved text shown in the window before using Reload. Only one server can open a data directory at a time; stop an older server before starting the updated version.
+
 The server saves v0.5 workspaces separately in `~/.figma-semantic-bridge-v05`. The token is kept in a separate local file with mode `0600`; it is never part of export or MCP output. `FSB_V05_DATA_DIR` overrides the data directory, and `FIGMA_TOKEN` supplies a server-side token override. `PORT` changes the loopback port; regenerate the bookmark after changing it. Never place a token in a URL or commit one.
 
 ## MCP

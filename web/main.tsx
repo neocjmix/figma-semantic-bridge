@@ -4,14 +4,17 @@ import type { Box, Region, Workspace } from "../src/model.js";
 import { observePreview } from "./preview.js";
 import "./styles.css";
 const base = "/api";
-type Brief = { id: string; name: string };
+type Brief = { id: string; name: string; revision: number };
 type Notice = { url: string; nonce: string };
-async function api(path: string, method = "GET", data?: unknown) {
+async function api(path: string, method = "GET", data?: unknown, revision?: number) {
   let r: Response;
   try {
     r = await fetch(base + path, {
       method,
-      headers: data === undefined ? {} : { "content-type": "application/json" },
+      headers: {
+        ...(data === undefined ? {} : { "content-type": "application/json" }),
+        ...(revision === undefined ? {} : { "if-match": String(revision) }),
+      },
       body: data === undefined ? undefined : JSON.stringify(data),
     });
   } catch {
@@ -24,6 +27,11 @@ async function api(path: string, method = "GET", data?: unknown) {
     };
     e.code = v.code;
     throw e;
+  }
+  if (revision !== undefined) {
+    const next = r.headers.get("x-workspace-revision");
+    if (next === null || !/^\d+$/.test(next)) throw new Error("Invalid workspace revision");
+    v._revision = Number(next);
   }
   return v;
 }
@@ -41,18 +49,26 @@ function App() {
     [partition, setPartition] = useState(""),
     [notice, setNotice] = useState<Notice | null>(null),
     [busy, setBusy] = useState(false),
-    [reenter, setReenter] = useState(false);
+    [reenter, setReenter] = useState(false),
+    [conflict, setConflict] = useState(false);
   const stateRef = useRef({ gate, workspace });
   stateRef.current = { gate, workspace };
   const lastNonce = useRef("");
   const nameRef = useRef<HTMLInputElement>(null);
   const bookmarkRef = useRef<HTMLAnchorElement>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const versions = useRef(new Map<string, number>());
+  const blocked = useRef(false);
+  const editGeneration = useRef(0);
   const active = workspace?.regions.find((r) => r.id === selected);
   const prefix = workspace ? `/workspaces/${workspace.id}` : "";
   const showError = useCallback((e: unknown) => {
     const x = e as Error & { code?: string };
     setError(x.message || "Something went wrong");
+    if (x.code === "CONFLICT") {
+      blocked.current = true;
+      setConflict(true);
+    }
     if (x.code === "TOKEN" && stateRef.current.gate === "editor")
       setReenter(true);
   }, []);
@@ -67,7 +83,12 @@ function App() {
   const open = useCallback(
     async (id: string) => {
       try {
+        editGeneration.current++;
+        await saveQueue.current;
         const w: Workspace = await api(`/workspaces/${id}`);
+        versions.current.set(id, w.revision ?? 0);
+        blocked.current = false;
+        setConflict(false);
         setWorkspace(w);
         localStorage.setItem("fsb-workspace", id);
         setSelected(null);
@@ -160,14 +181,17 @@ function App() {
     setBusy(true);
     setError("");
     try {
-      let r: Region = await api(`/workspaces/${w}/import`, "POST", {
+      let r: Region = await edit(w, `/workspaces/${w}/import`, "POST", {
         url,
         kind,
       });
       if (stateRef.current.workspace?.id === w) {
-        const fresh: Workspace = await api(`/workspaces/${w}`);
+        // Keep any concurrent local edits; refresh below is generation-guarded.
+        setWorkspace((current) => current?.id === w && !current.regions.some((item) => item.id === r.id)
+          ? { ...current, regions: [...current.regions, r] }
+          : current);
+        await refresh();
         if (stateRef.current.workspace?.id === w) {
-          setWorkspace(fresh);
           setPartition(r.figma.fileKey + "|" + r.figma.pageId);
           setSelected(r.id);
           setTimeout(() => nameRef.current?.focus(), 0);
@@ -200,9 +224,38 @@ function App() {
   async function refresh() {
     if (!workspace) return;
     const id = workspace.id;
+    const generation = editGeneration.current;
     await saveQueue.current;
     const fresh: Workspace = await api(prefix);
+    if (generation !== editGeneration.current || blocked.current) return;
+    if ((fresh.revision ?? 0) < (versions.current.get(id) ?? 0)) return;
+    versions.current.set(id, fresh.revision ?? 0);
     setWorkspace((current) => (current?.id === id ? fresh : current));
+  }
+  useEffect(() => {
+    if (gate !== "editor" || !workspace || conflict) return;
+    const sync = () => {
+      if (document.visibilityState === "visible") void refresh().catch(showError);
+    };
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [gate, workspace?.id, conflict]);
+  function edit(id: string, path: string, method: string, data?: unknown) {
+    editGeneration.current++;
+    const task = saveQueue.current.then(async () => {
+      if (blocked.current) throw Object.assign(new Error("This workspace changed in another window. Your unsaved input is still here; copy it before reloading."), { code: "CONFLICT" });
+      const revision = versions.current.get(id);
+      if (revision === undefined) throw new Error("Reload the workspace before editing.");
+      const result = await api(path, method, data, revision);
+      versions.current.set(id, result._revision);
+      return result;
+    });
+    saveQueue.current = task.catch(() => {});
+    return task;
   }
   async function change(r: Region, patch: Partial<Region>) {
     if (!workspace) return;
@@ -216,18 +269,20 @@ function App() {
           }
         : w,
     );
-    const request = saveQueue.current.then(() =>
-      api(prefix + "/regions/" + r.id, "PATCH", patch),
-    );
-    saveQueue.current = request.catch((e) => {
+    try {
+      await edit(workspace.id, prefix + "/regions/" + r.id, "PATCH", patch);
+    } catch (e) {
       showError(e);
-    });
-    await saveQueue.current;
+      blocked.current = true;
+      setConflict(true);
+      if ((e as Error & { code?: string }).code !== "CONFLICT")
+        setError(`${(e as Error).message} Your unsaved input is still here; copy it before reloading.`);
+    }
   }
   async function remove(r: Region) {
     if (!confirm(`Delete “${r.name || "Untitled"}”?`)) return;
     try {
-      await api(prefix + "/regions/" + r.id, "DELETE");
+      await edit(workspace!.id, prefix + "/regions/" + r.id, "DELETE");
       setSelected(null);
       await refresh();
     } catch (e) {
@@ -236,7 +291,7 @@ function App() {
   }
   async function move(id: string, parentId: string | null, index: number) {
     try {
-      await api(prefix + "/move", "POST", { id, parentId, index });
+      await edit(workspace!.id, prefix + "/move", "POST", { id, parentId, index });
       await refresh();
     } catch (e) {
       showError(e);
@@ -244,7 +299,7 @@ function App() {
   }
   async function addLink(specId: string, uiId: string) {
     try {
-      await api(prefix + "/relations", "POST", { specId, uiId });
+      await edit(workspace!.id, prefix + "/relations", "POST", { specId, uiId });
       await refresh();
     } catch (e) {
       showError(e);
@@ -252,7 +307,7 @@ function App() {
   }
   async function unlink(id: string) {
     try {
-      await api(prefix + "/relations/" + id, "DELETE");
+      await edit(workspace!.id, prefix + "/relations/" + id, "DELETE");
       await refresh();
     } catch (e) {
       showError(e);
@@ -271,6 +326,10 @@ function App() {
             <button
               className="quiet"
               onClick={() => {
+                if (blocked.current && !confirm("Leave this workspace? Copy any unsaved input first.")) return;
+                editGeneration.current++;
+                blocked.current = false;
+                setConflict(false);
                 setWorkspace(null);
                 localStorage.removeItem("fsb-workspace");
                 void loadSpaces();
@@ -292,9 +351,9 @@ function App() {
       {error && (
         <div role="alert" className="alert">
           {error}
-          <button onClick={() => setError("")} aria-label="Dismiss">
-            ×
-          </button>
+          {conflict && workspace ? (
+            <button onClick={() => { if (confirm("Reload this workspace? Copy any unsaved input first.")) { setError(""); void open(workspace.id); } }}>Reload</button>
+          ) : <button onClick={() => setError("")} aria-label="Dismiss">×</button>}
         </div>
       )}
       {(gate === "token" || reenter) && (
@@ -353,7 +412,7 @@ function App() {
                   onClick={async () => {
                     if (confirm(`Delete workspace “${s.name}”?`)) {
                       try {
-                        await api(`/workspaces/${s.id}`, "DELETE");
+                        await api(`/workspaces/${s.id}`, "DELETE", undefined, s.revision);
                         await loadSpaces();
                       } catch (e) {
                         showError(e);
@@ -438,6 +497,7 @@ function App() {
                 <input
                   ref={nameRef}
                   value={active.name}
+                  onFocus={() => void refresh().catch(showError)}
                   onChange={(e) =>
                     void change(active, { name: e.target.value })
                   }
@@ -448,6 +508,7 @@ function App() {
                 Description
                 <input
                   value={active.description}
+                  onFocus={() => void refresh().catch(showError)}
                   onChange={(e) =>
                     void change(active, { description: e.target.value })
                   }
@@ -646,7 +707,10 @@ function Canvas({
                       width: Math.max(1, g.box.width + dx),
                       height: Math.max(1, g.box.height + dy),
                     };
-              onBounds(g.region, b);
+              if (
+                b.x !== g.box.x || b.y !== g.box.y ||
+                b.width !== g.box.width || b.height !== g.box.height
+              ) onBounds(g.region, b);
             }
           }}
         >

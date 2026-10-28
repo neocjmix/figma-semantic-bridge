@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Box, Region, Workspace } from "../src/model.js";
+import { observePreview } from "./preview.js";
 import "./styles.css";
 const base = "/api";
 type Brief = { id: string; name: string };
@@ -172,24 +173,24 @@ function App() {
           setTimeout(() => nameRef.current?.focus(), 0);
         }
       }
-      for (let attempt = 0; attempt < 8; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-        let fresh: Workspace = await api(`/workspaces/${w}`);
-        let p = fresh.regions.find((x) => x.id === r.id)?.preview;
-        if (p && stateRef.current.workspace?.id === w) {
+      void observePreview(
+        r.id,
+        r.previewVersion,
+        async () => ((await api(`/workspaces/${w}`)) as Workspace).regions,
+        (preview) =>
           setWorkspace((old) =>
             old?.id === w
               ? {
                   ...old,
                   regions: old.regions.map((x) =>
-                    x.id === r.id ? { ...x, preview: p } : x,
+                    x.id === r.id && x.previewVersion === r.previewVersion
+                      ? { ...x, preview }
+                      : x,
                   ),
                 }
               : old,
-          );
-          break;
-        }
-      }
+          ),
+      );
     } catch (e) {
       showError(e);
     } finally {

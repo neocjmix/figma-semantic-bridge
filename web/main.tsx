@@ -63,7 +63,7 @@ function App() {
       try {
         const w: Workspace = await api(`/workspaces/${id}`);
         setWorkspace(w);
-        sessionStorage.setItem("fsb-workspace", id);
+        localStorage.setItem("fsb-workspace", id);
         setSelected(null);
         setPartition("");
         setGate("editor");
@@ -83,7 +83,7 @@ function App() {
           setGate("token");
           return;
         }
-        let id = sessionStorage.getItem("fsb-workspace");
+        let id = localStorage.getItem("fsb-workspace");
         if (id) await open(id);
         else await loadSpaces();
       } catch (e) {
@@ -94,6 +94,7 @@ function App() {
   }, [open, loadSpaces, showError]);
   useEffect(() => {
     function receive() {
+      if (stateRef.current.gate === "loading") return;
       if (!location.hash) return;
       let p = new URLSearchParams(location.hash.slice(1)),
         url = p.get("url"),
@@ -261,7 +262,7 @@ function App() {
               className="quiet"
               onClick={() => {
                 setWorkspace(null);
-                sessionStorage.removeItem("fsb-workspace");
+                localStorage.removeItem("fsb-workspace");
                 void loadSpaces();
               }}
             >

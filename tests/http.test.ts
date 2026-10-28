@@ -152,6 +152,32 @@ test("HTTP and MCP preserve the semantic user workflow across restart", async ()
     await rm(dir, { recursive: true, force: true });
   }
 });
+test("lookup failures leave persisted regions unchanged and report the cause", async () => {
+  dir = await mkdtemp(join(tmpdir(), "fsb-v05-errors-"));
+  try {
+    await start();
+    await req("/api/token", "POST", { token: "valid-test-token" });
+    const w = (await req("/api/workspaces", "POST", { name: "Errors" })).data;
+    const prefix = `/api/workspaces/${w.id}`;
+    for (const [file, status, code] of [
+      ["denied", 403, "FILE_ACCESS"],
+      ["missing", 404, "NOT_FOUND"],
+      ["limited", 429, "RATE_LIMIT"],
+      ["expired", 401, "TOKEN"],
+    ] as const) {
+      const result = await req(prefix + "/import", "POST", {
+        kind: "ui",
+        url: `https://www.figma.com/design/${file}/Test?node-id=1-1`,
+      });
+      assert.equal(result.status, status);
+      assert.equal(result.data.code, code);
+      assert.equal((await req(prefix)).data.regions.length, 0);
+    }
+  } finally {
+    await stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 test("delayed preview cannot overwrite a resend or a different workspace", async () => {
   dir = await mkdtemp(join(tmpdir(), "fsb-v05-images-"));
   try {

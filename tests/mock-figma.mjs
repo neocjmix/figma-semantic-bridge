@@ -22,6 +22,12 @@ globalThis.fetch = async (input, options = {}) => {
   const file = u.pathname.split("/")[3];
   if (file === "missing")
     return Response.json({ err: "not found" }, { status: 404 });
+  if (file === "denied")
+    return Response.json({ err: "denied" }, { status: 403 });
+  if (file === "expired")
+    return Response.json({ err: "expired" }, { status: 401 });
+  if (file === "limited")
+    return Response.json({ err: "rate limited" }, { status: 429 });
   if (u.pathname.includes("/images/"))
     return Response.json({
       images: {

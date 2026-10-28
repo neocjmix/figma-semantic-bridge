@@ -49,6 +49,12 @@ In Chrome, the installed product bookmarklet opened the Bridge from an actual Fi
 
 The real two-file test workspace's exported JSON and stdio MCP output matched, contained four relations and references for all six surviving regions, and excluded the current token. The earlier export also excluded preview, bounds and text-hint fields. The official Figma MCP independently dereferenced one exported UI node and one exported Spec node while another node was selected in Figma.
 
+## Multiple window and server concurrency (2026-10-28)
+
+Using two in-app browser tabs against one isolated server and a synthetic workspace, changing a region name in tab A left the old value visible in tab B. Editing the same field in B replaced the stored A value, while A continued displaying its own stale value. Editing the description in A afterward preserved B's saved name because the server patches fields individually. No cross-window synchronization or conflict warning was observed.
+
+In a separate disposable fixture, two server processes on different ports used the same data directory. After both loaded the same workspace, server A saved a new name and server B saved a description. Both returned 200, but the shared file contained the original name and B's description: B's stale in-memory store overwrote A's change. Atomic file replacement and the in-process mutation queue do not provide cross-process serialization. A single native window alone would not prevent a separately started server or browser client from accessing the same store.
+
 ## Clean clone
 
 On macOS with Node 22, a fresh clone from GitHub at commit `bcd8d5d` passed `npm ci`, `npm run check` and `npm start` on an isolated data directory and loopback port. A request to the running server showed the unauthenticated gate. Rerun this check if runtime code changes.

@@ -1,58 +1,18 @@
 {
   "name": "figma-semantic-bridge",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "license": "MIT",
   "type": "module",
+  "engines": {"node": ">=22"},
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
-    "build:fixture-plugin": "node scripts/build-fixture-plugin.mjs",
-    "package:plugin": "node scripts/package-plugin.mjs",
-    "package:macos": "node scripts/package-macos.mjs",
-    "release:verify": "node scripts/verify-release.mjs",
-    "benchmark:fixtures": "tsx scripts/benchmark-fixtures.ts",
-    "benchmark:grounding": "tsx scripts/benchmark-grounding.ts",
-    "check": "npm run typecheck && npm test && npm run build",
-    "fixtures:validate": "tsx scripts/validate-manifests.ts",
-    "build:product-plugin": "node scripts/build-product-plugin.mjs",
-    "build:web": "vite build",
-    "dev:web": "vite --host 127.0.0.1",
-    "build": "npm run build:fixture-plugin && npm run build:product-plugin && npm run build:web && node scripts/build-runtime.mjs",
+    "build": "vite build && node scripts/build.mjs",
     "start": "node dist/server.mjs",
-    "dev": "tsx src/server/cli.ts",
     "mcp": "node dist/mcp.mjs",
-    "test:e2e": "npm run build:web && playwright test",
-    "demo:generate": "tsx scripts/generate-demo-previews.ts",
-    "benchmark:product": "tsx scripts/benchmark-product.ts",
-    "benchmark:local-pipeline": "tsx scripts/benchmark-local-pipeline.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && npm run build"
   },
-  "devDependencies": {
-    "@figma/plugin-typings": "^1.142.0",
-    "@playwright/test": "^1.64.1",
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@types/ws": "^8.18.2",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "esbuild": "^0.25.0",
-    "tsx": "^4.20.0",
-    "typescript": "^5.8.0",
-    "vite": "^7.3.7"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
-    "@noble/ciphers": "2.4.0",
-    "@noble/hashes": "^2.4.0",
-    "@peculiar/x509": "2.2.0",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "reflect-metadata": "0.2.2",
-    "ws": "^8.22.0",
-    "zod": "^4.6.7"
-  },
-  "engines": {
-    "node": ">=22"
-  }
+  "dependencies": {"@modelcontextprotocol/sdk": "^1.32.1", "react": "^19.3.1", "react-dom": "^19.3.1", "zod": "^4.6.7"},
+  "devDependencies": {"@types/node": "^22.0.0", "@types/react": "^19.3.0", "@types/react-dom": "^19.3.0", "esbuild": "^0.25.0", "tsx": "^4.20.0", "typescript": "^5.8.0", "vite": "^7.3.7"}
 }

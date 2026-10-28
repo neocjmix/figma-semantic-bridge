@@ -1,0 +1,5 @@
+# ADR 0015: v0.5 replacement
+
+The normative replacement and task acceptance are `docs/plans/v0.5.0-replacement.md` and `docs/plans/v0.5.0-task-acceptance.md`. The previous product's plugin, native application, transport, acquisition, review, and migration subsystems are retired in this branch. Historical v0.4 commits, releases and separate data are preserved. The new local service accepts Figma web selection URLs via a bookmarklet and stores an explicitly human-authored semantic overlay. No compatibility layer is provided.
+
+P0 on 2026-10-28: in Chrome Figma web Dev Mode, 21 scoped nodes and a variant had matching selection URLs; repeated bookmarklet invocations reused a named tab with new nonces. Actual scoped node requests, two page identities, images and Figma MCP references worked. Iteratively limiting document depth found the tested nodes without their children. These are scoped observations, not guarantees for all Figma files; GROUP, permission-denial and throttling cases remain unverified.

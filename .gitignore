@@ -1,12 +1,7 @@
 node_modules/
 dist/
-.fixture-local/
-plugins/fixture-analyzer/code.js
-*.fig
 .env
 .env.*
 !.env.example
-plugins/semantic-bridge/code.js
-.bridge-local/
 test-results/
 playwright-report/

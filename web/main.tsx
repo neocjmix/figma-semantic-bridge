@@ -160,10 +160,12 @@ function App() {
       });
       if (stateRef.current.workspace?.id === w) {
         const fresh: Workspace = await api(`/workspaces/${w}`);
-        setWorkspace(fresh);
-        setPartition(r.figma.fileKey + "|" + r.figma.pageId);
-        setSelected(r.id);
-        setTimeout(() => nameRef.current?.focus(), 0);
+        if (stateRef.current.workspace?.id === w) {
+          setWorkspace(fresh);
+          setPartition(r.figma.fileKey + "|" + r.figma.pageId);
+          setSelected(r.id);
+          setTimeout(() => nameRef.current?.focus(), 0);
+        }
       }
       for (let attempt = 0; attempt < 8; attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -171,7 +173,7 @@ function App() {
         let p = fresh.regions.find((x) => x.id === r.id)?.preview;
         if (p && stateRef.current.workspace?.id === w) {
           setWorkspace((old) =>
-            old
+            old?.id === w
               ? {
                   ...old,
                   regions: old.regions.map((x) =>
@@ -191,13 +193,15 @@ function App() {
   }
   async function refresh() {
     if (!workspace) return;
+    const id = workspace.id;
     await saveQueue.current;
-    setWorkspace(await api(prefix));
+    const fresh: Workspace = await api(prefix);
+    setWorkspace((current) => (current?.id === id ? fresh : current));
   }
   async function change(r: Region, patch: Partial<Region>) {
     if (!workspace) return;
     setWorkspace((w) =>
-      w
+      w?.id === workspace.id
         ? {
             ...w,
             regions: w.regions.map((x) =>
